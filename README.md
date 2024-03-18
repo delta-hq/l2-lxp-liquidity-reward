@@ -1,8 +1,8 @@
-# L2 LXP Liquidity Reward Program
+# L2 Liquidity Reward Program
 ## TVL by User - Adapters
 
 ### Background
-Welcome to the L2-LXP-Liquidity-Reward Program! We've partnered with OpenBlock Labs to provide analysis and evaluation. Please follow the documentation below to satisfy your protocol’s data requirements. Failure to comply with these standards will result in disqualification from the incentive distribution.
+Welcome to the L2-Liquidity-Reward Program! We've partnered with OpenBlock Labs to provide analysis and evaluation. Please follow the documentation below to satisfy your protocol’s data requirements. Failure to comply with these standards will result in disqualification from the incentive distribution.
 
 ### Onboarding Checklist
 To finalize your enrollment and confirm eligibility, please complete the following:
