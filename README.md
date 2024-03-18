@@ -129,7 +129,7 @@ Below is the query being used in the example we have in the repo link. For query
 Please submit your Contract Addresses and Pool Addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6).
 
 ### Adapter Example
-In this repo there is adapter example. Chto get data positions from the subrgaph and calculate the TVL by users.
+In this repo there is adapter example. This adapter is charged to get data positions from the subrgaph and calculate the TVL by users.
 The main scripts is generating a output as CSV file.
 
 [Adapter Example](adapters/example/dex/src/index.ts)
