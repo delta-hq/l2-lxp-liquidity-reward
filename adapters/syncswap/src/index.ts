@@ -6,36 +6,6 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
 
-//Uncomment the following lines to test the getPositionAtBlock function
-
-// const position = getPositionAtBlock(
-//         0, // block number 0 for latest block
-//         2, // position id
-//         CHAINS.MODE, // chain id
-//         PROTOCOLS.SUPSWAP, // protocol
-//         AMM_TYPES.UNISWAPV3 // amm type
-//     );
-// position.then((position) => {
-//     // print response
-//     const result = getPositionDetailsFromPosition(position);
-//     console.log(`${JSON.stringify(result,null, 4)}
-//     `)
-// });
-
-interface LPValueDetails {
-    pool: string;
-    lpValue: string;
-}
-
-interface UserLPData {
-    totalLP: string;
-    pools: LPValueDetails[];
-}
-
-// Define an object type that can be indexed with string keys, where each key points to a UserLPData object
-interface OutputData {
-    [key: string]: UserLPData;
-}
 
 interface CSVRow {
     user: string;
@@ -91,6 +61,4 @@ const getData = async () => {
 getData().then(() => {
     console.log("Done");
 });
-// getPrice(new BigNumber('1579427897588720602142863095414958'), 6, 18); //Uniswap
-// getPrice(new BigNumber('3968729022398277600000000'), 18, 6); //SupSwap
 
