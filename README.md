@@ -13,7 +13,7 @@ To finalize your enrollment and confirm eligibility, please complete the followi
         1.  create an account at app.goldsky.com
         2.  deploy a subgraph or migrate an existing subgraph - https://docs.goldsky.com/subgraphs/introduction
         3.  Use the slugs `linea-testnet` and `linea` when deploying the config
-2.  Prepare Subquery query code according to the [data requirement](/l2-lxp-liquidity-reward?tab=readme-ov-file#data-requirement) section below.
+2.  Prepare Subquery query code according to the Data Requirement section below.
 3.  Submit your response as a Pull Request to: https://github.com/delta-hq/l2-lxp-liquidity-reward
     1.  With path being ‘/<your_protocol_handle>’ 
 4.  Submit your contract addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6)
@@ -132,7 +132,7 @@ Below is the query being used in the example we have in the repo link. For query
 Please submit your Contract Addresses and Pool Addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6).
 
 ### Adapter Example
-In this repo there is adapter example. This adapter is charged to get data positions from the subrgaph and calculate the TVL by users.
+In this repo, there is an adapter example. This adapter aims to get data positions from the subrgaph and calculate the TVL by users.
 The main scripts is generating a output as CSV file.
 
 [Adapter Example](adapters/example/dex/src/index.ts)
