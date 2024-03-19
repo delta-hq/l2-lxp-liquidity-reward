@@ -1,11 +1,8 @@
 # L2 Liquidity Reward Program
 ## TVL by User - Adapters
 
-### Background
-Welcome to the L2-Liquidity-Reward Program! We've partnered with OpenBlock Labs to provide analysis and evaluation. Please follow the documentation below to satisfy your protocol’s data requirements. Failure to comply with these standards will result in disqualification from the incentive distribution.
-
 ### Onboarding Checklist
-To finalize your enrollment and confirm eligibility, please complete the following:
+Please complete the following:
 
 1.  Set up a subquery indexer (e.g. Goldsky Subgraph)
     1.  Follow the docs here: https://docs.goldsky.com/guides/create-a-no-code-subgraph
@@ -15,7 +12,7 @@ To finalize your enrollment and confirm eligibility, please complete the followi
         3.  Use the slugs `linea-testnet` and `linea` when deploying the config
 2.  Prepare Subquery query code according to the Data Requirement section below.
 3.  Submit your response as a Pull Request to: https://github.com/delta-hq/l2-lxp-liquidity-reward
-    1.  With path being ‘/<your_protocol_handle>’ 
+    1.  With path being `/<your_protocol_handle>` 
 4.  Submit your contract addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6)
 
 ### Data Requirement
