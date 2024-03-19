@@ -7,7 +7,6 @@ Welcome to the L2-Liquidity-Reward Program! We've partnered with OpenBlock Labs 
 ### Onboarding Checklist
 To finalize your enrollment and confirm eligibility, please complete the following:
 
-
 1.  Set up a subquery indexer (e.g. Goldsky Subgraph)
     1.  Follow the docs here: https://docs.goldsky.com/guides/create-a-no-code-subgraph
     2. General Step
