@@ -9,7 +9,7 @@ To finalize your enrollment and confirm eligibility, please complete the followi
 
 1.  Set up a subquery indexer (e.g. Goldsky Subgraph)
     1.  Follow the docs here: https://docs.goldsky.com/guides/create-a-no-code-subgraph
-    2. General Step
+    2. General Steps
         1.  create an account at app.goldsky.com
         2.  deploy a subgraph or migrate an existing subgraph - https://docs.goldsky.com/subgraphs/introduction
         3.  Use the slugs `linea-testnet` and `linea` when deploying the config
