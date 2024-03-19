@@ -33,7 +33,7 @@ Teams can refer to the example we have in there to write the code required.
 | user_address              |                                                                                        |
 | token_address             |                                                                                        |
 | token_symbol (optional)   | Symbol of token                                                                        |
-| token_balance             | Balance of token (If the token was borrowed, this balance should be negative)          |
+| token_balance             | Balance of token (**If the token was borrowed, this balance should be negative**)          |
 | usd_price (from oracle)   | Price of token (optional)                                                              |
 
 
