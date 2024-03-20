@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { CHAINS, PROTOCOLS, AMM_TYPES, SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { CHAINS, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
 import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
@@ -18,13 +18,11 @@ interface UserLPData {
   pools: LPValueDetails[];
 }
 
-// Define an object type that can be indexed with string keys, where each key points to a UserLPData object
 interface OutputData {
   [key: string]: UserLPData;
 }
 
 const getData = async () => {
-  // Object to hold the final structure for JSON output
   let outputData: OutputData = {};
 
   for (let block of SNAPSHOTS_BLOCKS) {

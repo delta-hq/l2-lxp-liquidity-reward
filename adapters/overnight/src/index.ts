@@ -1,4 +1,4 @@
-import { CHAINS, PROTOCOLS, AMM_TYPES, SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { CHAINS, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
 import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
@@ -24,12 +24,10 @@ const getData = async () => {
     const positions = await getPositionsForAddressByPoolAtBlock(
       block, "", "", CHAINS.LINEA, PROTOCOLS.OVN
     );
-    // graph init --product subgraph-studio ovn_linea --from-contract 0x58AaCbccAeC30938cb2bb11653Cad726e5c4194a --network linea 
     
     console.log(`Block: ${block}`);
     console.log("Positions: ", positions.length);
 
-    // Assuming this part of the logic remains the same
     let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
 
     lpValueByUsers.forEach((value, key) => {
@@ -40,7 +38,7 @@ const getData = async () => {
           user: key,
           pool: poolKey,
           block,
-          position: positions.length, // Adjust if you have a specific way to identify positions
+          position: positions.length,
           lpvalue: lpValueStr,
         });
       });

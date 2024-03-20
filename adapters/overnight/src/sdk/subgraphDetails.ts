@@ -1,5 +1,5 @@
 import BigNumber from "bignumber.js";
-import { AMM_TYPES, CHAINS, OVNPOOLS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
+import { CHAINS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
 // import fetch from "node-fetch";
 
 export interface Position{
