@@ -1,5 +1,5 @@
-import { CHAINS, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
-import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock } from "./sdk/subgraphDetails";
+import { CHAINS, LP_LYNEX, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -9,11 +9,11 @@ import fs from 'fs';
 import { write } from 'fast-csv';
 
 interface CSVRow {
-  user: string;
-  pool: string;
-  block: number;
-  position: number;
-  lpvalue: string;
+  block_number: string;
+  timestamp: string;
+  user_address: string;
+  token_address: string;
+  token_balance: string;
 }
 
 
@@ -30,16 +30,18 @@ const getData = async () => {
 
     let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
 
+    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+
     lpValueByUsers.forEach((value, key) => {
       value.forEach((lpValue, poolKey) => {
         const lpValueStr = lpValue.toString();
         // Accumulate CSV row data
         csvRows.push({
-          user: key,
-          pool: poolKey,
-          block,
-          position: positions.length,
-          lpvalue: lpValueStr,
+          user_address: key,
+          token_address: LP_LYNEX,
+          token_balance: lpValueStr,
+          block_number: block.toString(),
+          timestamp
         });
       });
     });

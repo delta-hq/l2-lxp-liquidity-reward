@@ -28,12 +28,16 @@ export const SUBGRAPH_URLS = {
       }
   }
 }
+
 export const RPC_URLS = {
-  [CHAINS.LINEA]: "https://rpc.goldsky.com"
-}
+  [CHAINS.LINEA]: "https://rpc.linea.build",
+};
+
 
 export const SNAPSHOTS_BLOCKS = [
     2361808, 2505008, 2548208, 2591408, 2677808,
     2721008, 2764208, 2807408, 2850608, 2893808,
-    2953808, 3090005, 3150000
+    2953808, 3020000
 ];
+
+export const LP_LYNEX = "0x63349BA5E1F71252eCD56E8F950D1A518B400b60"

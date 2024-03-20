@@ -1,6 +1,7 @@
 import BigNumber from "bignumber.js";
-import { CHAINS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
-// import fetch from "node-fetch";
+import { CHAINS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS } from "./config";
+import { createPublicClient, extractChain, http } from "viem";
+import { linea } from "viem/chains";
 
 export interface Position{
     id: string;
@@ -104,3 +105,16 @@ export const getLPValueByUserAndPoolFromPositions = (
     }
     return result;
 }
+
+export const getTimestampAtBlock = async (blockNumber: number) => {
+    const publicClient = createPublicClient({
+      chain: extractChain({ chains: [linea], id: CHAINS.LINEA }),
+      transport: http(RPC_URLS[CHAINS.LINEA]),
+    });
+  
+    const block = await publicClient.getBlock({
+      blockNumber: BigInt(blockNumber),
+    });
+    return Number(block.timestamp * 1000n);
+  };
+  
