@@ -8,11 +8,13 @@ import { write } from 'fast-csv';
 
 
 interface CSVRow {
-    user: string;
-    pool: string;
-    block: number;
-    position: number;
-    lpvalue: string;
+    block_number: number
+    timestamp: string
+    user_address: string
+    token_address: string
+    token_symbol: string
+    token_balance: string
+    usd_price: string
 }
 
 

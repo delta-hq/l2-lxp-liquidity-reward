@@ -5,11 +5,14 @@ interface LiquidityPositionSnapshot {
     account: string
     pair: {
         id: string
+        token0: {symbol: string}
+        token1: {symbol: string}
     }
     liquidityTokenBalance: string
     liquidityTokenTotalSupply: string
     reserveUSD: string
     block: number
+    timestamp: number
 }
 
 interface SubgraphResponse {
@@ -19,11 +22,13 @@ interface SubgraphResponse {
 }
 
 interface UserPositionSnapshotsAtBlockData {
-    user: string
-    pool: string
-    block: number
-    position: number // Position Identify
-    lpvalue: string // LP USD value
+    block_number: number
+    timestamp: string
+    user_address: string
+    token_address: string
+    token_symbol: string
+    token_balance: string
+    usd_price: string
 }
 
 export const getPositionsForAddressByPoolAtBlock = async  (
@@ -49,12 +54,17 @@ export const getPositionsForAddressByPoolAtBlock = async  (
               block_lte: ${b_end},
             }
           ) {
-              pair {id}
+               pair {
+                id
+                token0 {symbol}
+                token1 {symbol}
+              }
               account
               liquidityTokenBalance
               liquidityTokenTotalSupply
               reserveUSD
               block
+              timestamp
           }
         }
   `
@@ -91,11 +101,13 @@ export const getPositionsForAddressByPoolAtBlock = async  (
                 return
             }
             userPositionSnapshotsAtBlockData.push({
-                user: positionSnapshot.account,
-                pool: positionSnapshot.pair.id,
-                block: snapshotBlockNumber,
-                position: snapshotsArrays.length,
-                lpvalue: valueUSD.toFixed(2)
+                user_address: positionSnapshot.account,
+                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                token_address: positionSnapshot.pair.id,
+                block_number: snapshotBlockNumber,
+                token_symbol: `${positionSnapshot.pair.token0.symbol}/${positionSnapshot.pair.token1.symbol} cSLP`,
+                token_balance: positionSnapshot.liquidityTokenBalance,
+                usd_price: positionSnapshot.reserveUSD
             })
         })
     }))
