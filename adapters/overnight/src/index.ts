@@ -1,4 +1,4 @@
-import { CHAINS, LP_LYNEX, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { CHAINS, LP_LYNEX_SYMBOL, LP_LYNEX, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
 import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
@@ -14,8 +14,8 @@ interface CSVRow {
   user_address: string;
   token_address: string;
   token_balance: string;
+  token_symbol: string;
 }
-
 
 const getData = async () => {
   const csvRows: CSVRow[] = [];
@@ -33,12 +33,13 @@ const getData = async () => {
     const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
 
     lpValueByUsers.forEach((value, key) => {
-      value.forEach((lpValue, poolKey) => {
+      value.forEach((lpValue) => {
         const lpValueStr = lpValue.toString();
         // Accumulate CSV row data
         csvRows.push({
           user_address: key,
           token_address: LP_LYNEX,
+          token_symbol: LP_LYNEX_SYMBOL,
           token_balance: lpValueStr,
           block_number: block.toString(),
           timestamp
