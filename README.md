@@ -18,24 +18,26 @@ Please complete the following:
 ### Code Changes Expected
 
 1. Create a function like below:
-
+```
   export const getUserTVLByBlock = async (blocks: BlockData) => {
       const { blockNumber, blockTimestamp } = blocks
-      //    Retrieve data using block number and timestamp
-    // YOUR LOGIC HERE
+          //    Retrieve data using block number and timestamp
+        // YOUR LOGIC HERE
+      
       return csvRows
 
   };
-
+```
 2. Interface for input Block Data is, in below blockTimestamp is in epoch format.
-  
+ ``` 
   interface BlockData {
     blockNumber: number;
     blockTimestamp: number;
 }
-
+```
 3. Output "csvRow" is a list. 
-  const csvRows: OutputDataSchemaRow[] = [];
+```
+const csvRows: OutputDataSchemaRow[] = [];
 
   type OutputDataSchemaRow = {
       block_number: number;
@@ -45,8 +47,9 @@ Please complete the following:
       token_balance: bigint;
       token_symbol: string; //token symbol should be empty string if it is not available
   };
-
-4. You can check the index.ts in Gravita project to refer this in use.
+```
+4. Make sure you add relevant package.json and tsconfig.json
+5. You can check the index.ts in Gravita project to refer this in use.
 
 ### Data Requirement
 Goal: **Hourly snapshot of TVL by User by Asset**
