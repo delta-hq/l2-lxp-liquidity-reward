@@ -15,6 +15,43 @@ Please complete the following:
     1.  With path being `/<your_protocol_handle>` 
 4.  Submit your contract addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6)
 
+### Code Changes Expected
+
+1. Create a function like below:
+```
+  export const getUserTVLByBlock = async (blocks: BlockData) => {
+      const { blockNumber, blockTimestamp } = blocks
+          //    Retrieve data using block number and timestamp
+        // YOUR LOGIC HERE
+      
+      return csvRows
+
+  };
+```
+2. Interface for input Block Data is, in below blockTimestamp is in epoch format.
+ ``` 
+  interface BlockData {
+    blockNumber: number;
+    blockTimestamp: number;
+}
+```
+3. Output "csvRow" is a list. 
+```
+const csvRows: OutputDataSchemaRow[] = [];
+
+  type OutputDataSchemaRow = {
+      block_number: number;
+      timestamp: number;
+      user_address: string;
+      token_address: string;
+      token_balance: bigint;
+      token_symbol: string; //token symbol should be empty string if it is not available
+      usd_price: number; //assign 0 if not available
+  };
+```
+4. Make sure you add relevant package.json and tsconfig.json
+5. You can check the index.ts in Gravita project to refer this in use. https://github.com/delta-hq/l2-lxp-liquidity-reward/blob/33a155a3c81e6cd5b8f4beec96056495b8146740/adapters/gravita/src/index.ts#L168
+
 ### Data Requirement
 Goal: **Hourly snapshot of TVL by User by Asset**
 
@@ -33,15 +70,15 @@ Teams can refer to the example we have in there to write the code required.
 | user_address              |                                                                                        |
 | token_address             |                                                                                        |
 | token_symbol (optional)   | Symbol of token                                                                        |
-| token_balance             | Balance of token (**If the token was borrowed, this balance should be negative**)          |
+| token_balance             | Balance of token (**If the token was borrowed, this balance should be negative**)      |
 | usd_price (from oracle)   | Price of token (optional)                                                              |
 
 
 Sample output row will look like this:
 
-| blocknumber | timestamp | user_address | token_address | token_symbol (optional) | token_balance |
-|---|---|---|---|---|---|
-| 2940306 | 2024-03-16 19:19:57 | 0x4874459FE…d689 | 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 | WETH | 100 |
+| blocknumber | timestamp | user_address | token_address | token_balance | token_symbol (optional) | usd_price(optional)|
+|---|---|---|---|---|---|---|
+| 2940306 | 2024-03-16 19:19:57 | 0x4874459FE…d689 | 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 | 100 | WETH | 0|
 
 Note: **Expect multiple entries per user if the protocols has more than one token asset**
 
