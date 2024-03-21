@@ -15,6 +15,39 @@ Please complete the following:
     1.  With path being `/<your_protocol_handle>` 
 4.  Submit your contract addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6)
 
+### Code Changes Expected
+
+1. Create a function like below:
+
+  export const getUserTVLByBlock = async (blocks: BlockData) => {
+      const { blockNumber, blockTimestamp } = blocks
+      //    Retrieve data using block number and timestamp
+    // YOUR LOGIC HERE
+      return csvRows
+
+  };
+
+2. Interface for input Block Data is, in below blockTimestamp is in epoch format.
+  
+  interface BlockData {
+    blockNumber: number;
+    blockTimestamp: number;
+}
+
+3. Output "csvRow" is a list. 
+  const csvRows: OutputDataSchemaRow[] = [];
+
+  type OutputDataSchemaRow = {
+      block_number: number;
+      timestamp: number;
+      user_address: string;
+      token_address: string;
+      token_balance: bigint;
+      token_symbol: string; //token symbol should be empty string if it is not available
+  };
+
+4. You can check the index.ts in Gravita project to refer this in use.
+
 ### Data Requirement
 Goal: **Hourly snapshot of TVL by User by Asset**
 
