@@ -1,0 +1,24 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "node", // Use Node.js's module resolution algorithm
+    "strict": true, // Enable all strict type-checking options
+    "esModuleInterop": true, // Enables ESM-style imports
+    "skipLibCheck": true, // Skip type checking of all declaration files (*.d.ts)
+    "forceConsistentCasingInFileNames": true, // Disallow inconsistently-cased references to the same file.
+    "allowJs": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "rootDir": "src/",
+    "outDir": "dist/"
+  },
+  "ts-node": {
+    "esm": true,
+    "experimentalResolver": true,
+    "experimentalSpecifierResolution": "node",
+    "files": true
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["node_modules"]
+}
