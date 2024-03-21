@@ -14,8 +14,9 @@ type OutputDataSchemaRow = {
     timestamp: number;
     user_address: string;
     token_address: string;
-    token_balance: bigint;
+    token_balance: number;
     token_symbol: string;
+    usd_price: number;
 };
 
 const LINEA_RPC = "https://rpc.linea.build";
@@ -100,6 +101,7 @@ const getStabilityPoolData = async (blockNumber: number, blockTimestamp: number)
             token_address: GRAI_ADDRESS,
             token_balance: item.amountA,
             token_symbol: "",
+            usd_price: 0
         });
     }
     return csvRows;
@@ -118,6 +120,7 @@ const getVesselDepositsData = async (blockNumber: number, blockTimestamp: number
             token_address: item.asset,
             token_balance: updatedAssetAmount,
             token_symbol: "",
+            usd_price: 0
         });
     }
     return csvRows;
