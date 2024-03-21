@@ -46,6 +46,7 @@ const csvRows: OutputDataSchemaRow[] = [];
       token_address: string;
       token_balance: bigint;
       token_symbol: string; //token symbol should be empty string if it is not available
+      usd_price: number; //assign 0 if not available
   };
 ```
 4. Make sure you add relevant package.json and tsconfig.json
