@@ -77,7 +77,7 @@ Teams can refer to the example we have in there to write the code required.
 Sample output row will look like this:
 
 | blocknumber | timestamp | user_address | token_address | token_balance | token_symbol (optional) | usd_price(optional)|
-|---|---|---|---|---|---|
+|---|---|---|---|---|---|---|
 | 2940306 | 2024-03-16 19:19:57 | 0x4874459FE…d689 | 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 | 100 | WETH | 0|
 
 Note: **Expect multiple entries per user if the protocols has more than one token asset**
