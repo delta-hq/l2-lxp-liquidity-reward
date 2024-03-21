@@ -50,7 +50,7 @@ const csvRows: OutputDataSchemaRow[] = [];
   };
 ```
 4. Make sure you add relevant package.json and tsconfig.json
-5. You can check the index.ts in Gravita project to refer this in use.
+5. You can check the index.ts in Gravita project to refer this in use. https://github.com/delta-hq/l2-lxp-liquidity-reward/blob/33a155a3c81e6cd5b8f4beec96056495b8146740/adapters/gravita/src/index.ts#L168
 
 ### Data Requirement
 Goal: **Hourly snapshot of TVL by User by Asset**
@@ -70,15 +70,15 @@ Teams can refer to the example we have in there to write the code required.
 | user_address              |                                                                                        |
 | token_address             |                                                                                        |
 | token_symbol (optional)   | Symbol of token                                                                        |
-| token_balance             | Balance of token (**If the token was borrowed, this balance should be negative**)          |
+| token_balance             | Balance of token (**If the token was borrowed, this balance should be negative**)      |
 | usd_price (from oracle)   | Price of token (optional)                                                              |
 
 
 Sample output row will look like this:
 
-| blocknumber | timestamp | user_address | token_address | token_symbol (optional) | token_balance |
+| blocknumber | timestamp | user_address | token_address | token_balance | token_symbol (optional) | usd_price(optional)|
 |---|---|---|---|---|---|
-| 2940306 | 2024-03-16 19:19:57 | 0x4874459FE…d689 | 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 | WETH | 100 |
+| 2940306 | 2024-03-16 19:19:57 | 0x4874459FE…d689 | 0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2 | 100 | WETH | 0|
 
 Note: **Expect multiple entries per user if the protocols has more than one token asset**
 
