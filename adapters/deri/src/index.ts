@@ -51,7 +51,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            lTokenPositions(where: {blockNumber: ${blockNumber}, first: 2000, skip:${skip}}) {
+            lTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
               user
               bToken
               tokenB0
@@ -71,10 +71,45 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
       let position = positions[i];
       result.push(position);
     }
-    if (positions.length < 2000) {
+    if (positions.length < 5000) {
       fetchNext = false;
     } else {
-      skip += 2000;
+      skip += 5000;
+    }
+  }
+  return result;
+};
+
+const getPTokenPositions = async (blockNumber: number): Promise<Position[]> => {
+  let skip = 0;
+  let fetchNext = true;
+  let result: Position[] = [];
+  while (fetchNext) {
+    let query = `{
+            pTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+              user
+              bToken
+              tokenB0
+              bAmount
+              b0Amount
+            }
+          }`;
+
+    let response = await fetch(DERI_SUBGRAPH_QUERY_URL, {
+      method: "POST",
+      body: JSON.stringify({ query }),
+      headers: { "Content-Type": "application/json" },
+    });
+    let data = await response.json();
+    let positions = data.data.pTokenPositions;
+    for (let i = 0; i < positions.length; i++) {
+      let position = positions[i];
+      result.push(position);
+    }
+    if (positions.length < 5000) {
+      fetchNext = false;
+    } else {
+      skip += 5000;
     }
   }
   return result;
@@ -138,8 +173,9 @@ const main = async () => {
   const { blockNumber, blockTimestamp } =
     await getLatestBlockNumberAndTimestamp();
   const lTokenPositions = await getLTokenPositions(blockNumber);
+  const pTokenPositions = await getPTokenPositions(blockNumber);
   const csvRows = convertPositionsToCsvRows(
-    lTokenPositions,
+    lTokenPositions.concat(pTokenPositions),
     blockNumber,
     blockTimestamp
   );
