@@ -7,6 +7,8 @@ type OutputDataSchemaRow = {
   user_address: string;
   token_address: string;
   token_balance: bigint;
+  token_symbol: string; //token symbol should be empty string if it is not available
+  usd_price: number; //assign 0 if not available
 };
 
 type Position = {
@@ -141,6 +143,8 @@ function convertPositionsToCsvRows(
           user_address: position.user,
           token_address: position.bToken,
           token_balance: bAmount,
+          token_symbol: "",
+          usd_price: 0,
         });
       }
     }
@@ -161,6 +165,8 @@ function convertPositionsToCsvRows(
           user_address: position.user,
           token_address: position.tokenB0,
           token_balance: b0Amount,
+          token_symbol: "",
+          usd_price: 0,
         });
       }
     }
@@ -169,9 +175,58 @@ function convertPositionsToCsvRows(
   return Array.from(mergedRowsMap.values());
 }
 
-const main = async () => {
-  const { blockNumber, blockTimestamp } =
-    await getLatestBlockNumberAndTimestamp();
+interface BlockData {
+  blockNumber: number;
+  blockTimestamp: number;
+}
+
+export const main = async (blocks: BlockData[]) => {
+  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+  const batchSize = 10; // Size of batch to trigger writing to the file
+  let i = 0;
+  let started = false;
+
+  for (const { blockNumber, blockTimestamp } of blocks) {
+    try {
+      // Retrieve data using block number and timestamp
+      const lTokenPositions = await getLTokenPositions(blockNumber);
+      const pTokenPositions = await getPTokenPositions(blockNumber);
+      const csvRows = convertPositionsToCsvRows(
+        lTokenPositions.concat(pTokenPositions),
+        blockNumber,
+        blockTimestamp
+      );
+
+      // Accumulate CSV rows for all blocks
+      allCsvRows.push(...csvRows);
+
+      i++;
+      console.log(`Processed block ${blockNumber}`);
+
+      // Write to file when batch size is reached or at the end of loop
+      if (i % batchSize === 0 || i === blocks.length) {
+        const ws = fs.createWriteStream(`outputData.csv`, {
+          flags: started ? "a" : "w",
+        });
+        write(allCsvRows, { headers: !started })
+          .pipe(ws)
+          .on("finish", () => {
+            console.log(`CSV file has been written.`);
+          });
+        started = true;
+
+        // Clear the accumulated CSV rows
+        allCsvRows.length = 0;
+      }
+    } catch (error) {
+      console.error(`An error occurred for block ${blockNumber}:`, error);
+    }
+  }
+};
+
+export const getUserTVLByBlock = async (blocks: BlockData) => {
+  const { blockNumber, blockTimestamp } = blocks;
+  //    Retrieve data using block number and timestamp
   const lTokenPositions = await getLTokenPositions(blockNumber);
   const pTokenPositions = await getPTokenPositions(blockNumber);
   const csvRows = convertPositionsToCsvRows(
@@ -179,16 +234,14 @@ const main = async () => {
     blockNumber,
     blockTimestamp
   );
-
-  // Write the CSV output to a file
-  const ws = fs.createWriteStream("outputData.csv");
-  write(csvRows, { headers: true })
-    .pipe(ws)
-    .on("finish", () => {
-      console.log("CSV file has been written.");
-    });
+  return csvRows;
 };
 
-main().then(() => {
-  console.log("Done");
-});
+// const input = {
+//   blockNumber: 3036578,
+//   blockTimestamp: 1711004285,
+// };
+
+// main([input]).then(() => {
+//   console.log("Done");
+// });
