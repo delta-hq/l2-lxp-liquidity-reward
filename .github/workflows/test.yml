@@ -1,0 +1,30 @@
+name: Test-PRs
+on:
+  pull_request:
+    paths:
+      - '**/' 
+jobs:
+  print_new_folder_name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Get PR details
+        id: pr
+        run: |
+          echo "::set-output name=files::$(jq -r '.pull_request.additions, .pull_request.changed_files' $GITHUB_EVENT_PATH)"
+
+      - name: Extract new folder names
+        run: |
+          additions=$(echo "${{ steps.pr.outputs.files }}" | jq '.additions')
+          changed_files=$(echo "${{ steps.pr.outputs.files }}" | jq -r '.changed_files')
+          for file in $changed_files; do
+            if [ $(echo $file | grep '/' | wc -l) -eq 1 ]; then
+              dirname=$(dirname $file)
+              if ! echo "$additions" | grep -q "^$dirname\$"; then
+                echo "New folder added: $dirname"
+              fi
+            fi
+          done
+  
