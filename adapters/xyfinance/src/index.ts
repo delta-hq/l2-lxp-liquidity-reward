@@ -96,7 +96,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       });
     }
   }
-  console.log("csvRows", csvRows);
+  // console.log("csvRows", csvRows);
   
   return csvRows
 };
