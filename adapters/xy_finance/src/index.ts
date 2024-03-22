@@ -102,4 +102,3 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 };
 
 // getUserTVLByBlock({ blockNumber: 3059710, blockTimestamp: 1711096813 })
-getUserTVLByBlock({ blockNumber: 50000, blockTimestamp: 1690265613 })
