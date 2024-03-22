@@ -175,7 +175,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     const csvRowsVessels = await getVesselDepositsData(blockNumber, blockTimestamp);
     const csvRows = csvRowsStabilityPool.concat(csvRowsVessels);
     return csvRows
-
 };
 
 // main().then(() => {
