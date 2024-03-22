@@ -3,10 +3,8 @@ import stream from "stream";
 import csv from "csv-parser";
 import fs from "fs";
 import { write } from "fast-csv";
-import { balancesSnapshotAt } from "./balancesSnapshotAt";
-
-const tokenSymbol = "LUSDC";
-const tokenAddress = "0x4AF215DbE27fc030F37f73109B85F421FAB45B7a";
+import { getUserTVLByBlock } from "./getUserTVLByBlock";
+import { client } from "./client";
 
 const pipeline = promisify(stream.pipeline);
 const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
@@ -24,14 +22,24 @@ const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
   return blocks;
 };
 
+const getBlockTimestamp = async (blockNumber: bigint): Promise<number> => {
+  const blockInfos = await client.getBlock({
+    blockNumber,
+  });
+  return Number(blockInfos.timestamp);
+};
+
 const getData = async () => {
   const snapshotBlocks = [3000000, 3043054]; // await readBlocksFromCSV('src/sdk/L2_CHAIN_ID_chain_daily_blocks.csv');
 
   // Generate balances snapshot for each block
   const csvRows = (
     await Promise.all(
-      snapshotBlocks.map((block) =>
-        balancesSnapshotAt(BigInt(block), tokenSymbol, tokenAddress)
+      snapshotBlocks.map(async (block) =>
+        getUserTVLByBlock({
+          blockNumber: block,
+          blockTimestamp: await getBlockTimestamp(BigInt(block)),
+        })
       )
     )
   ).flat();

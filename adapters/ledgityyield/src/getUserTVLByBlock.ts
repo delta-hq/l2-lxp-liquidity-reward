@@ -4,12 +4,14 @@ import { client } from "./client";
 let holdersRetrieved = false;
 const holders: Set<`0x${string}`> = new Set();
 
-export const balancesSnapshotAt = async (
-  blockNumber: bigint,
-  tokenSymbol: string,
-  tokenAddress: `0x${string}`
-): Promise<CSVRow[]> => {
-  const csvRows: CSVRow[] = [];
+const tokenSymbol = "LUSDC";
+const tokenAddress = "0x4AF215DbE27fc030F37f73109B85F421FAB45B7a";
+
+export const getUserTVLByBlock = async (
+  blocks: BlockData
+): Promise<OutputDataSchemaRow[]> => {
+  const { blockNumber, blockTimestamp } = blocks;
+  const csvRows: OutputDataSchemaRow[] = [];
 
   // Retrieve holders' addresses list (if not already done)
   if (!holdersRetrieved) {
@@ -33,11 +35,6 @@ export const balancesSnapshotAt = async (
     holdersRetrieved = true;
   }
 
-  // Retrieve timestamp at the given block
-  const blockInfos = await client.getBlock({
-    blockNumber,
-  });
-
   // Compute all holders balances
   const reads: any[] = [];
   holders.forEach((holder) => {
@@ -55,13 +52,13 @@ export const balancesSnapshotAt = async (
   for (let i = 0; i < Array.from(holders).length; i++) {
     if (balances[i].result)
       csvRows.push({
-        block_number: blockNumber.toString(),
-        timestamp: new Date(Number(blockInfos.timestamp) * 1000).toISOString(),
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
         user_address: Array.from(holders)[i],
         token_address: tokenAddress,
         token_symbol: tokenSymbol,
-        token_balance: balances[i].result!.toString(),
-        usd_price: "1",
+        token_balance: balances[i].result! as bigint,
+        usd_price: 1,
       });
   }
 
