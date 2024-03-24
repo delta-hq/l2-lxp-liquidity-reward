@@ -1,5 +1,5 @@
 import {CHAINS, SUBGRAPH_URLS} from "./config";
-const fetch = require("node-fetch");
+// const fetch = require("node-fetch");
 
 
 interface LiquidityPositionSnapshot {
