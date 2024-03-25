@@ -1,0 +1,39 @@
+name: Print New Folder Name
+
+on:
+  pull_request:
+    paths:
+      - '**/'  # Listen for changes in any directory
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      FOLDER_NAME: ""
+    steps:
+      - uses: actions/checkout@v2.1.0
+      - uses: jitterbit/get-changed-files@v1
+        id: abc
+        with:
+          format: space-delimited
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract folder name
+        run: |
+          added="${{ steps.abc.outputs.added }}"
+          folder=$(echo "$added" | awk -F/ '{print $2}' | sort -u)
+          echo "FOLDER_NAME=$folder" >> $GITHUB_ENV
+      - name: Print folder name
+        run: |
+          echo "Folder name: $FOLDER_NAME"
+      - name: Checkout PR
+        uses: actions/checkout@v2.1.0
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+      - name: Run command from t1 folder
+        run: |
+          cd adapters 
+          cd $FOLDER_NAME
+          # Run your command here
+          npm run compile
+          cd ..
+          npm run test
