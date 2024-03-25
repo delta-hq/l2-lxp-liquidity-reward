@@ -65,7 +65,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     }
     const userAddress = event.sender.toLowerCase();
     const tokenAddress = VAULT_TO_TOKEN[event.contractId_];
-    const tokenBalance = event.amountDepositToken;
+    const tokenBalance = BigInt(event.amountDepositToken);
     userTVL[userAddress] = userTVL[userAddress] ?? {};
     userTVL[userAddress][tokenAddress] = (
       userTVL[userAddress][tokenAddress] ?? BigInt(0)
@@ -74,7 +74,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   for (let event of events.withdrawalFulfilleds) {
     const userAddress = event.recipient.toLowerCase();
     const tokenAddress = VAULT_TO_TOKEN[event.contractId_];
-    const tokenBalance = event.amountDepositToken;
+    const tokenBalance = BigInt(event.amountDepositToken);
     userTVL[userAddress] = userTVL[userAddress] ?? {};
     userTVL[userAddress][tokenAddress] = (
       userTVL[userAddress][tokenAddress] ?? BigInt(0)
