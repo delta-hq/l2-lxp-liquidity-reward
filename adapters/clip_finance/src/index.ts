@@ -13,7 +13,7 @@ interface CSVRow {
 }
 
 const getData = async () => {
-  const snapshotBlocks: number[] = [2713644, 3019240];
+  const snapshotBlocks: number[] = [3122780];
 
   const csvRows: CSVRow[] = [];
 
