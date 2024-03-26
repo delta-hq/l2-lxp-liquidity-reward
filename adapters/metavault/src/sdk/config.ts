@@ -14,7 +14,7 @@ export const SUBGRAPH_URLS = {
     [CHAINS.L2_CHAIN_ID]: {
         [PROTOCOLS.METAVAULT]: {
             [AMM_TYPES.UNISWAPV3]: "https://api.studio.thegraph.com/query/55804/linea-v3/version/latest",
-            [AMM_TYPES.TRADE]: "http://localhost:8000/subgraphs/name/metavault/perpv1"
+            [AMM_TYPES.TRADE]: "https://api.studio.thegraph.com/query/55804/linea-trade/version/latest"
         }
     },
     
