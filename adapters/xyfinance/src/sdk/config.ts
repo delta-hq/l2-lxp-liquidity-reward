@@ -1,0 +1,1 @@
+export const SUBGRAPH_URL = "https://api.goldsky.com/api/public/project_clu1c9omuycol01y96kk76azg/subgraphs/ybridge-vault-linea/1.0/gn"
