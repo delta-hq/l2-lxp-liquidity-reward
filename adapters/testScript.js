@@ -34,9 +34,9 @@ const result = getUserTVLByBlock({
     blockTimestamp: 1711023841,
     blockNumber: 3041467
 }).then((result) => {
-    console.log({
-        result
-    });
+    if(!result.length){
+      throw new Error("Empty result")
+    }
 });
 
 
