@@ -29,21 +29,6 @@ import { pipeline as streamPipeline } from "stream";
 import { captureRejectionSymbol } from "events";
 import { getV2LpValue } from "./sdk/poolDetails";
 
-//Uncomment the following lines to test the getPositionAtBlock function
-
-// const position = getPositionAtBlock(
-//         0, // block number 0 for latest block
-//         2, // position id
-//         CHAINS.L2_CHAIN_ID, // chain id
-//         PROTOCOLS.PROTOCOL_NAME, // protocol
-//         AMM_TYPES.UNISWAPV3 // amm type
-//     );
-// position.then((position) => {
-//     // print response
-//     const result = getPositionDetailsFromPosition(position);
-//     console.log(`${JSON.stringify(result,null, 4)}
-//     `)
-// });
 
 interface LPValueDetails {
     pool: string;
@@ -60,78 +45,7 @@ interface OutputData {
     [key: string]: UserLPData;
 }
 
-interface CSVRow {
-    user: string;
-    pool: string;
-    block: number;
-    position: number;
-    lpvalue: string;
-}
-
 const pipeline = promisify(stream.pipeline);
-
-// Assuming you have the following functions and constants already defined
-// getPositionsForAddressByPoolAtBlock, CHAINS, PROTOCOLS, AMM_TYPES, getPositionDetailsFromPosition, getLPValueByUserAndPoolFromPositions, BigNumber
-
-// const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
-//   const blocks: number[] = [];
-//   await pipeline(
-//     fs.createReadStream(filePath),
-//     csv(),
-//     async function* (source) {
-//       for await (const chunk of source) {
-//         // Assuming each row in the CSV has a column 'block' with the block number
-//         if (chunk.block) blocks.push(parseInt(chunk.block, 10));
-//       }
-//     }
-//   );
-//   return blocks;
-// };
-
-// const getData = async () => {
-//   const snapshotBlocks = [
-//     3116208, 3159408, 3202608, 3245808, 3289008, 3332208,
-//     3375408, 3418608, 3461808, 3505008, 3548208, 3591408,
-//     3634608, 3677808, 3721008, 3764208, 3807408, 3850608,
-//     3893808, 3937008, 3980208, 3983003,
-//   ]; //await readBlocksFromCSV('src/sdk/L2_CHAIN_ID_chain_daily_blocks.csv');
-
-//   const csvRows: CSVRow[] = [];
-
-//   for (let block of snapshotBlocks) {
-//     const positions = await getPositionsForAddressByPoolAtBlock(
-//       block, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.PROTOCOL_NAME, AMM_TYPES.UNISWAPV3
-//     );
-
-//     console.log(`Block: ${block}`);
-//     console.log("Positions: ", positions.length);
-
-//     // Assuming this part of the logic remains the same
-//     let positionsWithUSDValue = positions.map(getPositionDetailsFromPosition);
-//     let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positionsWithUSDValue);
-
-//     lpValueByUsers.forEach((value, key) => {
-//       let positionIndex = 0; // Define how you track position index
-//       value.forEach((lpValue, poolKey) => {
-//         const lpValueStr = lpValue.toString();
-//         // Accumulate CSV row data
-//         csvRows.push({
-//           user: key,
-//           pool: poolKey,
-//           block,
-//           position: positions.length, // Adjust if you have a specific way to identify positions
-//           lpvalue: lpValueStr,
-//         });
-//       });
-//     });
-//   }
-
-//   // Write the CSV output to a file
-//   const ws = fs.createWriteStream('outputData.csv');
-//   write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
-//     console.log("CSV file has been written.");
-//   });
-// };
 
 interface BlockData {
     blockNumber: number;
@@ -174,6 +88,7 @@ type OutputDataSchemaRow = {
     token_address: string;
     token_balance: bigint;
     token_symbol: string;
+    usd_price: number;
 };
 
 export const getUserTVLByBlock = async (blocks: BlockData) => {
@@ -184,7 +99,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         blockNumber,
         "",
         "",
-        CHAINS.LINEA_ID,
+        CHAINS.LINEA,
         PROTOCOLS.SECTA,
         AMM_TYPES.SECTAV3
     );
@@ -193,19 +108,19 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
     let pairs = await getV2Pairs(
         blockNumber,
-        CHAINS.LINEA_ID,
+        CHAINS.LINEA,
         PROTOCOLS.SECTA,
         AMM_TYPES.SECTAV2
     );
     let mintedAddresses = await getMintedAddresses(
         blockNumber,
-        CHAINS.LINEA_ID,
+        CHAINS.LINEA,
         PROTOCOLS.SECTA,
         AMM_TYPES.SECTAV2
     );
 
     let v2LpValue = await getV2LpValue(
-        RPC_URLS[CHAINS.LINEA_ID],
+        RPC_URLS[CHAINS.LINEA],
         pairs,
         mintedAddresses,
         blockNumber
@@ -229,6 +144,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
                         .toNumber()
                 ),
                 token_symbol: "",
+                usd_price: 0,
             });
         });
     });
@@ -236,9 +152,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     return csvRows;
 };
 
-/*readBlocksFromCSV(
-    path.resolve(__dirname, "../../block_numbers.tsv")
-)
+/*readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
     .then(async (blocks) => {
         console.log(blocks);
         const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
