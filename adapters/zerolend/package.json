@@ -1,0 +1,23 @@
+{
+  "name": "zerolend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "start": "ts-node src/index.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@types/node": "^20.11.30",
+    "axios": "^1.6.8",
+    "ethereum-multicall": "^2.23.0",
+    "ethers": "^5.0.15",
+    "fast-csv": "^5.0.1",
+    "fs": "^0.0.1-security"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.3"
+  }
+}
