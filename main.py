@@ -56,9 +56,6 @@ def main():
     elif args.pipeline == Pipeline.LOAD_TVL_SNAPSHOT.value:
         logging.info("Loading TVL snapshot.")
         data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}_tvl_snapshot.parquet")
-        # hourly_blocks = pd.read_parquet(f"{args.chain}_{args.protocol}_hourly_blocks.parquet")
-        # hourly_blocks = hourly_blocks.drop_duplicates(subset=["block"])
-        # data = data.merge(hourly_blocks, on="block", how="inner") # Inner join to get the date column from the hourly_blocks data.
         write_tvl_parquet_table(
             protocol_table_name=args.athena_table,
             chain_database_name=args.athena_database,
