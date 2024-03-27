@@ -1,5 +1,6 @@
 import fs from "fs";
 import { write } from "fast-csv";
+import { ParquetWriter, ParquetSchema } from "parquetjs"
 
 /**
  * The objective is to quantify:
@@ -18,6 +19,16 @@ type OutputDataSchemaRow = {
     token_symbol: string;
     usd_price: number;
 };
+
+const DATA_SCHEMA = new ParquetSchema({
+    block_number: { type: 'INT64' },
+    timestamp: { type: 'INT64' },
+    user_address: { type: 'UTF8' },
+    token_address: { type: 'UTF8' },
+    token_balance: { type: 'DOUBLE' },
+    token_symbol: { type: 'UTF8' },
+    usd_price: { type: 'DOUBLE' }
+});
 
 const LINEA_RPC = "https://rpc.linea.build";
 
@@ -176,17 +187,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     const csvRowsStabilityPool = await getStabilityPoolData(blockNumber, blockTimestamp);
     const csvRowsVessels = await getVesselDepositsData(blockNumber, blockTimestamp);
     const csvRows = csvRowsStabilityPool.concat(csvRowsVessels);
-    // console.log(csvRows)
     return csvRows
 };
-
-
-const csvData = fs.createReadStream('/home/ramon/Workspace/l2-lxp-liquidity-reward/linea_gravita_hourly_blocks.csv')
-csvData.on('data', async (row: BlockData) => {
-    // console.log(row)
-    await main(row);
-    throw new Error("Stop")
-});
 
 // main().then(() => {
 //     console.log("Done");
