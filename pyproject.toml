@@ -1,0 +1,20 @@
+[tool.poetry]
+name = "l2-lxp-liquidity-reward"
+version = "0.1.0"
+description = ""
+authors = ["Your Name <you@example.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.9"
+awswrangler = "^3.7.1"
+dynaconf = "^3.2.5"
+duckdb = "^0.10.1"
+web3 = "^6.15.1"
+tqdm = "^4.66.2"
+pandas = "^2.2.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
