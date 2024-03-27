@@ -1,0 +1,12 @@
+[default]
+RPC_URL='https://rpc.linea.build'
+CHAIN_NAME='linea'
+PROTOCOLS_STARTING_BLOCKS={gravita=2952006}
+
+[dev]
+S3_BUCKET='mode-openblocklabs-dev'
+ATHENA_DATABASE='db_mode_dev'
+
+[prod]
+S3_BUCKET='mode-openblocklabs'
+ATHENA_DATABASE='mode'

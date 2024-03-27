@@ -136,6 +136,8 @@ export const main = async (blocks: BlockData[]) => {
     const batchSize = 10; // Size of batch to trigger writing to the file
     let i = 0;
 
+    allCsvRows.push(["block_number", "timestamp", "user_address", "token_address", "token_balance", "token_symbol", "usd_price"]);
+
     for (const { blockNumber, blockTimestamp } of blocks) {
         try {
             // Retrieve data using block number and timestamp
@@ -174,11 +176,20 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     const csvRowsStabilityPool = await getStabilityPoolData(blockNumber, blockTimestamp);
     const csvRowsVessels = await getVesselDepositsData(blockNumber, blockTimestamp);
     const csvRows = csvRowsStabilityPool.concat(csvRowsVessels);
+    // console.log(csvRows)
     return csvRows
 };
 
+
+const csvData = fs.createReadStream('/home/ramon/Workspace/l2-lxp-liquidity-reward/linea_gravita_hourly_blocks.csv')
+csvData.on('data', async (row: BlockData) => {
+    // console.log(row)
+    await main(row);
+    throw new Error("Stop")
+});
+
 // main().then(() => {
 //     console.log("Done");
-// });
+//});
 
 // getBlockTimestamp(3041106).then(() => { console.log("done") });
