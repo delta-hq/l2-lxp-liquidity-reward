@@ -12,7 +12,8 @@
     "@types/node": "^20.11.30",
     "axios": "^1.6.8",
     "ethereum-multicall": "^2.23.0",
-    "ethers": "^5.0.15",
+    "ethers": "^6",
+    "ethers-multicall-provider": "^6.2.0",
     "fast-csv": "^5.0.1",
     "fs": "^0.0.1-security"
   },
