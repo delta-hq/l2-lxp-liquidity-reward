@@ -55,11 +55,14 @@ def main():
 
     elif args.pipeline == Pipeline.LOAD_TVL_SNAPSHOT.value:
         logging.info("Loading TVL snapshot.")
-        data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}_tvl_snapshot.parquet")
+        # read csv and transform data to parquet
+
+        data = pd.read_csv(f"./adapters/{args.protocol}/outputData.csv")
+        # data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}.parquet")
         write_tvl_parquet_table(
             protocol_name=args.protocol,
             data=data,
-            partition_column="date",
+            partition_column="timestamp",
             mode_write="append",
         )
         logging.info("TVL snapshot loaded successfully.")
