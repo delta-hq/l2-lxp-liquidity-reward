@@ -57,8 +57,7 @@ def main():
         logging.info("Loading TVL snapshot.")
         data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}_tvl_snapshot.parquet")
         write_tvl_parquet_table(
-            protocol_table_name=args.athena_table,
-            chain_database_name=args.athena_database,
+            protocol_name=args.protocol,
             data=data,
             partition_column="date",
             mode_write="append",
