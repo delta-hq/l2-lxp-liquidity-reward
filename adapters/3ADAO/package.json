@@ -1,0 +1,25 @@
+{
+  "name": "3a-dao",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node dist/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist",
+    "test": "node "
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "ethers": "^6.11.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.3"
+  }
+}
