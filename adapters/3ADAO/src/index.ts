@@ -14,18 +14,21 @@ export const getTVLByVault = async (blocks: BlockData, logOutput?: boolean) => {
   const csvRowsTvl: OutputDataSchemaRow[] = [];
 
   const euro3Prices = await euro3Price();
-  const { owners, tvls } = await getTvlByVaultAtBlock(blockNumber);
+  const { vaultsTvl, owners, collateralsByVaults, balancesByVault } =
+    await getTvlByVaultAtBlock(blockNumber);
 
   for (let i = 0; i < owners.length; i++) {
-    csvRowsTvl.push({
-      block_number: blockNumber,
-      timestamp: blockTimestamp,
-      user_address: owners[i],
-      token_address: addresses.euro3,
-      token_balance: tvls[i],
-      token_symbol: "EURO3",
-      usd_price: Number((tvls[i] * euro3Prices.USD).toFixed(2)),
-    });
+    for (let j = 0; j < collateralsByVaults[i].length; j++) {
+      csvRowsTvl.push({
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address: owners[i],
+        token_address: collateralsByVaults[i][j],
+        token_balance: balancesByVault[i][j],
+        token_symbol: "",
+        usd_price: Number((vaultsTvl[i][j] * euro3Prices.USD).toFixed(2)),
+      });
+    }
   }
 
   if (logOutput) console.log(csvRowsTvl);
@@ -47,6 +50,7 @@ export const main = async (blocks: BlockData[], logOutput?: boolean) => {
         },
         logOutput
       );
+
       allCsvRows.push(...csvRowsTvl);
       i++;
       console.log(`Processed block ${i}`);
@@ -72,5 +76,5 @@ export const main = async (blocks: BlockData[], logOutput?: boolean) => {
 };
 
 // * Test
-// const when = { blockNumber: 3371364, blockTimestamp: 0 };
+// const when = { blockNumber: 3394331, blockTimestamp: 0 };
 // main([when], true);
