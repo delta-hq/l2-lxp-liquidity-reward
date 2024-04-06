@@ -7,102 +7,193 @@ import {
   fetchUserVotes,
 } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
-
-interface CSVRow {
-  block_number: string;
-  timestamp: string;
-  user_address: string;
-  token_address: string;
-  token_balance: string;
-}
+import { BlockData, OutputSchemaRow } from "./sdk/types";
+import {
+  getV2UserPositionsAtBlock,
+  getV3UserPositionsAtBlock,
+} from "./sdk/pools";
 
 const getData = async () => {
-  const snapshotBlocks = [2999728];
+  const snapshotBlocks = [3460121];
 
-  const csvRows: CSVRow[] = [];
+  const csvRows: OutputSchemaRow[] = [];
 
   for (let block of snapshotBlocks) {
-    const [userAddresses] = await Promise.all([getUserAddresses(block)]);
-    console.log(`Block: ${block}`);
-    console.log("UserAddresses: ", userAddresses.length);
+    const timestamp = await getTimestampAtBlock(block);
+    csvRows.push(
+      ...(await getUserTVLByBlock({
+        blockNumber: block,
+        blockTimestamp: timestamp,
+      }))
+    );
+  }
 
-    const tokenBalanceMap = {} as {
-      [userAddress: string]: { [tokenAddress: string]: BigNumber };
-    };
+  const ws = fs.createWriteStream("outputData.csv");
+  write(csvRows, { headers: true })
+    .pipe(ws)
+    .on("finish", () => {
+      console.log("CSV file has been written.");
+    });
+};
 
-    const userPoolFetch = [];
-    const userVotesFetch = [];
+export const getUserTVLByBlock = async ({
+  blockNumber,
+  blockTimestamp,
+}: BlockData): Promise<OutputSchemaRow[]> => {
+  const result: OutputSchemaRow[] = [];
 
-    for (const user of userAddresses) {
-      userPoolFetch.push(fetchUserPools(BigInt(block), user.id, user.pools));
-      userVotesFetch.push(fetchUserVotes(BigInt(block), user.id));
+  const [stakedTvl, liquidityTvl] = await Promise.all([
+    getUserStakedTVLByBlock({ blockNumber, blockTimestamp }),
+    getUserLiquidityTVLByBlock({ blockNumber, blockTimestamp }),
+  ]);
+
+  // combine staked & unstaked
+  const combinedPositions = [...stakedTvl, ...liquidityTvl];
+  const balances: Record<string, Record<string, bigint>> = {};
+  for (const position of combinedPositions) {
+    balances[position.user_address] = balances[position.user_address] || {};
+
+    if (position.token_balance > 0n)
+      balances[position.user_address][position.token_address] =
+        (balances?.[position.user_address]?.[position.token_address] ?? 0n) +
+        position.token_balance;
+  }
+
+  for (const [user, tokenBalances] of Object.entries(balances)) {
+    for (const [token, balance] of Object.entries(tokenBalances)) {
+      result.push({
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address: user,
+        token_address: token,
+        token_balance: balance,
+      });
     }
+  }
 
-    const userFetchResult = await Promise.all(userPoolFetch);
-    const userVotesResult = await Promise.all(userVotesFetch);
-    const block_number = block.toString();
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+  return result;
+};
 
-    for (const userFetchedPools of userFetchResult) {
-      for (const userPool of userFetchedPools) {
-        const user_address = userPool.result.userAddress.toLowerCase();
-        const totalLPBalance =
-          userPool.result.account_lp_balance +
-          userPool.result.account_gauge_balance;
-        const total0 =
-          (totalLPBalance * userPool.result.reserve0) /
-          userPool.result.total_supply;
-        const total1 =
-          (totalLPBalance * userPool.result.reserve1) /
-          userPool.result.total_supply;
-        const token0Address = userPool.result.token0.toLowerCase();
-        const token1Address = userPool.result.token1.toLowerCase();
+export const getUserStakedTVLByBlock = async ({
+  blockNumber,
+  blockTimestamp,
+}: BlockData): Promise<OutputSchemaRow[]> => {
+  const result: OutputSchemaRow[] = [];
+  const [userAddresses] = await Promise.all([getUserAddresses(blockNumber)]);
+  console.log(`Block: ${blockNumber}`);
+  console.log("UserAddresses: ", userAddresses.length);
 
-        // Aggregate tokens
-        tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
-        tokenBalanceMap[user_address][token0Address] = BigNumber(
-          tokenBalanceMap[user_address][token0Address] ?? 0
-        ).plus(total0.toString());
-        tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
-        tokenBalanceMap[user_address][token1Address] = BigNumber(
-          tokenBalanceMap[user_address][token1Address] ?? 0
-        ).plus(total1.toString());
+  const tokenBalanceMap = {} as {
+    [userAddress: string]: { [tokenAddress: string]: BigNumber };
+  };
+
+  const userPoolFetch = [];
+  const userVotesFetch = [];
+
+  for (const user of userAddresses) {
+    userPoolFetch.push(
+      fetchUserPools(BigInt(blockNumber), user.id, user.pools)
+    );
+    userVotesFetch.push(fetchUserVotes(BigInt(blockNumber), user.id));
+  }
+
+  const userFetchResult = await Promise.all(userPoolFetch);
+  const userVotesResult = await Promise.all(userVotesFetch);
+
+  for (const userFetchedPools of userFetchResult) {
+    for (const userPool of userFetchedPools) {
+      const user_address = userPool.result.userAddress.toLowerCase();
+      const totalLPBalance = userPool.result.account_gauge_balance;
+      const total0 =
+        (totalLPBalance * userPool.result.reserve0) /
+        userPool.result.total_supply;
+      const total1 =
+        (totalLPBalance * userPool.result.reserve1) /
+        userPool.result.total_supply;
+      const token0Address = userPool.result.token0.toLowerCase();
+      const token1Address = userPool.result.token1.toLowerCase();
+
+      // Aggregate tokens
+      tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
+      tokenBalanceMap[user_address][token0Address] = BigNumber(
+        tokenBalanceMap[user_address][token0Address] ?? 0
+      ).plus(total0.toString());
+      tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
+      tokenBalanceMap[user_address][token1Address] = BigNumber(
+        tokenBalanceMap[user_address][token1Address] ?? 0
+      ).plus(total1.toString());
+    }
+  }
+
+  for (const userFecthedVotes of userVotesResult) {
+    for (const userVote of userFecthedVotes) {
+      const user_address = userVote.result.userAddress.toLowerCase();
+      const token0Address = VE_LYNX_ADDRESS.toLowerCase();
+      tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
+      tokenBalanceMap[user_address][token0Address] = BigNumber(
+        tokenBalanceMap[user_address][token0Address] ?? 0
+      ).plus(userVote.result.amount.toString());
+    }
+  }
+
+  Object.entries(tokenBalanceMap).forEach(([user_address, balances]) => {
+    Object.entries(balances).forEach(([token_address, token_balance]) => {
+      if (token_balance.dp(0).lte(0)) {
+        return;
       }
-    }
-
-    for (const userFecthedVotes of userVotesResult) {
-      for (const userVote of userFecthedVotes) {
-        const user_address = userVote.result.userAddress.toLowerCase();
-        const token0Address = VE_LYNX_ADDRESS.toLowerCase();
-        tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
-        tokenBalanceMap[user_address][token0Address] = BigNumber(
-          tokenBalanceMap[user_address][token0Address] ?? 0
-        ).plus(userVote.result.amount.toString());
-      }
-    }
-
-    Object.entries(tokenBalanceMap).forEach(([user_address, balances]) => {
-      Object.entries(balances).forEach(([token_address, token_balance]) => {
-        if (token_balance.dp(0).lte(0)) {
-          return;
-        }
-        csvRows.push({
-          block_number,
-          timestamp,
-          user_address,
-          token_address,
-          token_balance: token_balance.dp(0).toString(),
-        });
+      result.push({
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address,
+        token_address,
+        token_balance: BigInt(token_balance.dp(0).toNumber()),
       });
     });
+  });
+  return result;
+};
 
-    const ws = fs.createWriteStream("outputData.csv");
-    write(csvRows, { headers: true })
-      .pipe(ws)
-      .on("finish", () => {
-        console.log("CSV file has been written.");
-      });
+export const getUserLiquidityTVLByBlock = async ({
+  blockNumber,
+  blockTimestamp,
+}: BlockData): Promise<OutputSchemaRow[]> => {
+  const result: OutputSchemaRow[] = [];
+
+  const [v2Positions, v3Positions] = await Promise.all([
+    getV2UserPositionsAtBlock(blockNumber),
+    getV3UserPositionsAtBlock(blockNumber),
+  ]);
+
+  // combine v2 & v3
+  const combinedPositions = [...v2Positions, ...v3Positions];
+  const balances: Record<string, Record<string, bigint>> = {};
+  for (const position of combinedPositions) {
+    balances[position.user] = balances[position.user] || {};
+
+    if (position.token0.balance > 0n)
+      balances[position.user][position.token0.address] =
+        (balances?.[position.user]?.[position.token0.address] ?? 0n) +
+        position.token0.balance;
+
+    if (position.token1.balance > 0n)
+      balances[position.user][position.token1.address] =
+        (balances?.[position.user]?.[position.token1.address] ?? 0n) +
+        position.token1.balance;
   }
+
+  for (const [user, tokenBalances] of Object.entries(balances)) {
+    for (const [token, balance] of Object.entries(tokenBalances)) {
+      result.push({
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address: user,
+        token_address: token,
+        token_balance: balance,
+      });
+    }
+  }
+
+  return result;
 };
 
 getData().then(() => {

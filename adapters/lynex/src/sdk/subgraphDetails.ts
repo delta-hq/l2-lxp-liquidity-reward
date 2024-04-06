@@ -1,6 +1,6 @@
 import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
-import { CHAINS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS } from "./config";
+import { GAUGE_SUBGRAPH_URL, client } from "./config";
 
 interface UserStake {
   id: string;
@@ -10,8 +10,7 @@ interface UserStake {
 export const getUserAddresses = async (
   blockNumber: number
 ): Promise<UserStake[]> => {
-  let subgraphUrl =
-    SUBGRAPH_URLS[CHAINS.L2_CHAIN_ID][PROTOCOLS.LYNEX][PROTOCOLS.LYNEX];
+  let subgraphUrl = GAUGE_SUBGRAPH_URL;
   let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
 
   let skip = 0;
@@ -70,10 +69,7 @@ export const getUserAddresses = async (
 };
 
 export const getTimestampAtBlock = async (blockNumber: number) => {
-  const publicClient = createPublicClient({
-    chain: extractChain({ chains: [linea], id: CHAINS.L2_CHAIN_ID }),
-    transport: http(RPC_URLS[CHAINS.L2_CHAIN_ID]),
-  });
+  const publicClient = client;
 
   const block = await publicClient.getBlock({
     blockNumber: BigInt(blockNumber),

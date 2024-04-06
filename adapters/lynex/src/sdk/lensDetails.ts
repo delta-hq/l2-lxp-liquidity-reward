@@ -7,8 +7,7 @@ import {
   MulticallParameters,
   PublicClient,
 } from "viem";
-import { linea } from "viem/chains";
-import { CHAINS, RPC_URLS } from "./config";
+import { client } from "./config";
 import lensABI from "./abis/PairAPIABI.json";
 import veLYNXAbi from "./abis/veLYNX.json";
 
@@ -67,10 +66,7 @@ export const fetchUserPools = async (
   userAddress: string,
   userPools: string[]
 ): Promise<LensResponseWithBlock[]> => {
-  const publicClient = createPublicClient({
-    chain: extractChain({ chains: [linea], id: CHAINS.L2_CHAIN_ID }),
-    transport: http(RPC_URLS[CHAINS.L2_CHAIN_ID]),
-  });
+  const publicClient = client;
 
   const calls = userPools.map((pool: string) => {
     return {
@@ -95,10 +91,7 @@ export const fetchUserVotes = async (
   blockNumber: bigint,
   userAddress: string
 ): Promise<VoteResponse[]> => {
-  const publicClient = createPublicClient({
-    chain: extractChain({ chains: [linea], id: CHAINS.L2_CHAIN_ID }),
-    transport: http(RPC_URLS[CHAINS.L2_CHAIN_ID]),
-  });
+  const publicClient = client;
 
   const userBalanceCall = await multicall(
     publicClient,
