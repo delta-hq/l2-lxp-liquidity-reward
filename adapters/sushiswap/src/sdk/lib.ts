@@ -147,13 +147,7 @@ const getV3PositionReserves = (position: V3Position) => {
     const sqrtRatioB = Math.sqrt(1.0001 ** tickUpper)
     const sqrtPrice = _sqrtPrice / (2 ** 96)
 
-    if (currentTick < tickLower) {
-        reserve0 = BigInt(Math.floor(
-          liquidity * ((sqrtRatioB - sqrtRatioA) / (sqrtRatioA * sqrtRatioB)),
-        ))
-    } else if (currentTick >= tickUpper) {
-        reserve1 = BigInt(Math.floor(liquidity * (sqrtRatioB - sqrtRatioA)))
-    } else if (currentTick >= tickLower && currentTick < tickUpper) {
+    if (currentTick >= tickLower && currentTick < tickUpper) {
         reserve0 = BigInt(Math.floor(liquidity * ((sqrtRatioB - sqrtPrice) / (sqrtPrice * sqrtRatioB))))
         reserve1 = BigInt(Math.floor(liquidity * (sqrtPrice - sqrtRatioA)))
     }
