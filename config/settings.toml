@@ -2,6 +2,7 @@
 RPC_URL='https://rpc.linea.build'
 CHAIN_NAME='linea'
 PROTOCOLS_STARTING_BLOCKS={gravita=2952006}
+BLOCKS_CSV_FILE_LOC='adapters/block_numbers.csv'
 
 [dev]
 S3_BUCKET='mode-openblocklabs-dev'

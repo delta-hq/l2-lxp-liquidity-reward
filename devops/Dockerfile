@@ -14,14 +14,16 @@ WORKDIR "$APP_DIR"
 ENV PYTHONPATH "${PYTHONPATH}:${APP_DIR}"
 
 # Add Python project files
-COPY ./poetry.lock .
-COPY ./pyproject.toml .
-COPY ./config.py .
-COPY ./main.py .
-COPY ./src/ ${APP_DIR}/src/
-COPY ./config/ ${APP_DIR}/config/
+COPY poetry.lock .
+COPY pyproject.toml .
+COPY config.py .
+COPY main.py .
+COPY Makefile .
+COPY src/ ./src/
+COPY config/ ./config/
+COPY adapters/block_numbers.csv ./adapters/
 
-RUN mkdir -p ${APP_DIR}/data/
+RUN mkdir -p ./data/
 
 # Install dependencies
 RUN apt-get update && \

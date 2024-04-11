@@ -15,10 +15,15 @@
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "fast-csv": "^5.0.1"
+    "aws-sdk": "^2.1597.0",
+    "fast-csv": "^5.0.1",
+    "parquetjs": "^0.11.2"
   },
   "devDependencies": {
+    "@aws-sdk/client-athena": "^3.552.0",
+    "@aws-sdk/client-s3": "^3.552.0",
     "@types/node": "^20.11.17",
+    "@types/parquetjs": "^0.10.6",
     "typescript": "^5.3.3"
   }
 }

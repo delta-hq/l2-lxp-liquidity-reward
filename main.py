@@ -43,24 +43,32 @@ def main():
     logging.info("Starting the pipeline.")
     args = get_args()
 
-    if args.pipeline == Pipeline.FETCH_BLOCKS.value:
+    pipeline = args.pipeline
+    protocol = args.protocol
+
+    db_name = f"{settings.CHAIN_NAME}_raw"
+    table_name = f"{protocol}_tvl_by_user"
+    s3_prefix = f"s3://{settings.CHAIN_NAME}-openblocklabs/raw/{settings.CHAIN_NAME}/{protocol}_tvl_by_user/"
+
+    if pipeline == Pipeline.FETCH_BLOCKS.value:
         rpc_url = settings.RPC_URL
 
-        logging.info(f"Fetching blocks from 'Linea' chain and protocol: '{args.protocol}'")
-        fetch_blocks_run_pipeline(
-            protocol_name=args.protocol,
-            rpc_url=rpc_url
-        )
+        logging.info(f"Fetching blocks from 'Linea' chain and protocol: '{protocol}'")
+        hourly_blocks_to_fetch = fetch_blocks_run_pipeline(db_name=db_name, table_name=table_name, rpc_url=rpc_url)
+
+        hourly_blocks_to_fetch.to_csv(f"./adapters/{protocol}/src/hourly_blocks.csv", index=False, header=True)
         logging.info("Blocks fetched successfully.")
 
-    elif args.pipeline == Pipeline.LOAD_TVL_SNAPSHOT.value:
+    elif pipeline == Pipeline.LOAD_TVL_SNAPSHOT.value:
         logging.info("Loading TVL snapshot.")
         # read csv and transform data to parquet
 
         data = pd.read_csv(f"./adapters/{args.protocol}/outputData.csv")
         # data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}.parquet")
         write_tvl_parquet_table(
-            protocol_name=args.protocol,
+            path=s3_prefix,
+            db_name=db_name,
+            table_name=table_name,
             data=data,
             partition_column="timestamp",
             mode_write="append",

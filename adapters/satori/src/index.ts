@@ -11,7 +11,7 @@ const getData = async () => {
         snapshots = snapshots.concat(await getSnapshotsForAddressAtBlock(block,''))
     }
 
-    let csvRows: UserLpSnapshot[] = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());;
+    let csvRows: UserLpSnapshot[] = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());
     console.log(`length:---${csvRows.length}`);
     const ws = fs.createWriteStream('outputData.csv');
     write(csvRows, { headers: true }).pipe(ws).on('finish', () => {

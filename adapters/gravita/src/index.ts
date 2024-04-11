@@ -1,6 +1,6 @@
 import fs from "fs";
 import { write } from "fast-csv";
-import { ParquetWriter, ParquetSchema } from "parquetjs"
+import { ParquetSchema } from "parquetjs"
 import csv from 'csv-parser';
 
 /**
@@ -178,12 +178,13 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   };
   
 
-readBlocksFromCSV('./block_numbers.csv').then(async (blocks) => {
+readBlocksFromCSV('src/hourly_blocks.csv').then(async (blocks) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
     const batchSize = 1000; // Size of batch to trigger writing to the file
     let i = 0;
 
+    allCsvRows.push({ block_number: 'block_number', timestamp: 'timestamp', user_address: 'user_address', token_address: 'token_address', token_balance: 'token_balance', token_symbol: 'token_symbol', usd_price: 'usd_price' });
     for (const block of blocks) {
         try {
             const result = await getUserTVLByBlock(block);
