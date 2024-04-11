@@ -161,7 +161,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
         .pipe(csv()) // Specify the separator as '\t' for TSV files
         .on('data', (row) => {
           const blockNumber = parseInt(row.number, 10);
-          const blockTimestamp = parseInt(row.block_timestamp, 10);
+          const blockTimestamp = parseInt(row.timestamp, 10);
           if (!isNaN(blockNumber) && blockTimestamp) {
             blocks.push({ blockNumber: blockNumber, blockTimestamp });
           }
@@ -175,7 +175,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     });
   
     return blocks;
-  };
+};
   
 
 readBlocksFromCSV('src/hourly_blocks.csv').then(async (blocks) => {
