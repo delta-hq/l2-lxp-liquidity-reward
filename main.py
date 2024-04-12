@@ -1,8 +1,10 @@
 import sys
+import os
 import pandas as pd
 import logging
 from argparse import ArgumentParser, Namespace, RawTextHelpFormatter
 from enum import Enum
+import subprocess
 
 from config import settings
 from src.fetch_blocks_from_chain import fetch_blocks_run_pipeline
@@ -14,6 +16,7 @@ logging.basicConfig(format="%(asctime)s %(levelname)s %(name)s %(message)s", lev
 class Pipeline(Enum):
     FETCH_BLOCKS = "fetch_blocks"            # Fetch the blocks numbers and timestamps from the Blockchain.
     LOAD_TVL_SNAPSHOT = "load_tvl_snapshot"  # Load the TVL snapshot to Athena and S3.
+    ALL = "all"                              # Run all the pipelines in order until history data is completely processed.
 
 
 def get_args() -> Namespace:
@@ -49,9 +52,52 @@ def main():
     db_name = f"{settings.CHAIN_NAME}_raw"
     table_name = f"{protocol}_tvl_by_user"
     s3_prefix = f"s3://{settings.CHAIN_NAME}-openblocklabs/raw/{settings.CHAIN_NAME}/{protocol}_tvl_by_user/"
+    rpc_url = settings.RPC_URL
+
+    if pipeline == Pipeline.ALL.value:
+        while (True):
+            try:
+                logging.info(f"Fetching blocks from 'Linea' chain and protocol: '{protocol}'")
+
+                hourly_blocks_to_fetch = fetch_blocks_run_pipeline(db_name=db_name, table_name=table_name, rpc_url=rpc_url)
+                if len(hourly_blocks_to_fetch) == 0:
+                    logging.info("No more blocks to fetch.")
+                    break
+
+                hourly_blocks_to_fetch.to_csv(f"./adapters/{protocol}/src/hourly_blocks.csv", index=False, header=True)
+                logging.info("Blocks fetched successfully.")
+
+
+                # will execute: cd adapters/${PROTOCOL} && npm install && tsc && npm run start
+                completed_process = subprocess.run(
+                    [f"sh", "-c", f"cd ./adapters/{protocol} && npm install && tsc && npm run start"],
+                    capture_output=True, text=True, check=True
+                )
+                logging.info("Loading TVL snapshot.")
+                # read csv and transform data to parquet
+
+                data = pd.read_csv(f"./adapters/{args.protocol}/outputData.csv")
+                # data = pd.read_parquet(f"{settings.CHAIN_NAME}_{args.protocol}.parquet")
+                write_tvl_parquet_table(
+                    path=s3_prefix,
+                    db_name=db_name,
+                    table_name=table_name,
+                    data=data,
+                    partition_column="timestamp",
+                    mode_write="append",
+                )
+                logging.info("TVL snapshot loaded successfully.")
+            except Exception as e:
+                logging.error(f"An error occurred: {e}")
+                raise e
+            finally:
+                try:
+                    os.remove(f"./adapters/{protocol}/src/hourly_blocks.csv")
+                    os.remove(f"./adapters/{args.protocol}/outputData.csv")
+                except Exception as _:
+                    logging.info("Extraction iteration completed. Updated to most recent hourly block.")
 
     if pipeline == Pipeline.FETCH_BLOCKS.value:
-        rpc_url = settings.RPC_URL
 
         logging.info(f"Fetching blocks from 'Linea' chain and protocol: '{protocol}'")
         hourly_blocks_to_fetch = fetch_blocks_run_pipeline(db_name=db_name, table_name=table_name, rpc_url=rpc_url)
