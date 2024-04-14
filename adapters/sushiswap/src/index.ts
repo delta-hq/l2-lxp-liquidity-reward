@@ -1,13 +1,10 @@
-import { promisify } from 'util';
-import stream from 'stream';
 import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
 
 import { BlockData, OutputSchemaRow } from './sdk/types';
-import { getTimestampAtBlock, getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
+import { getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
 
-const pipeline = promisify(stream.pipeline);
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     const blocks: BlockData[] = [];
