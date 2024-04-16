@@ -17,37 +17,13 @@ type OutputDataSchemaRow = {
     token_balance: bigint;
 };
 
-const LINEA_RPC = "https://rpc.linea.build";
+type BlockData = {
+    blockNumber: number;
+    blockTimestamp: number;
+};
 
 const GRAI_ADDRESS = "0x894134a25a5faC1c2C26F1d8fBf05111a3CB9487";
-
 const GRAVITA_SUBGRAPH_QUERY_URL = "https://api.studio.thegraph.com/query/54829/gravita-sp-lp-linea-v1/version/latest";
-
-const GRAVITA_STABILITY_POOL_QUERY = `
-    query StabilityPoolQuery {
-        poolDeposits(first: 1000, where: { poolName: "Gravita StabilityPool", withdrawTxHash: null }) {
-            user {
-                id
-            }
-            amountA
-        }
-    }
-`;
-
-const GRAVITA_VESSELS_QUERY = `
-    query VesselsQuery {
-        vessels(first: 1000, where: { closeTimestamp: null }) {
-            asset
-            user {
-                id
-            }
-            updates {
-                timestamp
-                assetAmount
-            }
-        }
-    }
-`;
 
 const post = async (url: string, data: any): Promise<any> => {
     const response = await fetch(url, {
@@ -61,19 +37,21 @@ const post = async (url: string, data: any): Promise<any> => {
     return await response.json();
 };
 
-const getLatestBlockNumberAndTimestamp = async () => {
-    const data = await post(LINEA_RPC, {
-        jsonrpc: "2.0",
-        method: "eth_getBlockByNumber",
-        params: ["latest", false],
-        id: 1,
-    });
-    const blockNumber = parseInt(data.result.number);
-    const blockTimestamp = parseInt(data.result.timestamp);
-    return { blockNumber, blockTimestamp };
-};
-
 const getStabilityPoolData = async (blockNumber: number, blockTimestamp: number): Promise<OutputDataSchemaRow[]> => {
+    const GRAVITA_STABILITY_POOL_QUERY = `
+        query StabilityPoolQuery {
+            poolDeposits(
+                first: 1000, 
+                where: { poolName: "Gravita StabilityPool", withdrawTxHash: null },
+                block: { number: ${blockNumber} }
+            ) {
+                user {
+                    id
+                }
+                amountA
+            }
+        }
+    `;
     const csvRows: OutputDataSchemaRow[] = [];
     const responseJson = await post(GRAVITA_SUBGRAPH_QUERY_URL, { query: GRAVITA_STABILITY_POOL_QUERY });
     for (const item of responseJson.data.poolDeposits) {
@@ -89,6 +67,24 @@ const getStabilityPoolData = async (blockNumber: number, blockTimestamp: number)
 };
 
 const getVesselDepositsData = async (blockNumber: number, blockTimestamp: number): Promise<OutputDataSchemaRow[]> => {
+    const GRAVITA_VESSELS_QUERY = `
+        query VesselsQuery {
+            vessels(
+                first: 1000, 
+                where: { closeTimestamp: null },
+                block: { number: ${blockNumber} }
+            ) {
+                asset
+                user {
+                    id
+                }
+                updates {
+                    timestamp
+                    assetAmount
+                }
+            }
+        }
+    `;
     const csvRows: OutputDataSchemaRow[] = [];
     const responseJson = await post(GRAVITA_SUBGRAPH_QUERY_URL, { query: GRAVITA_VESSELS_QUERY });
     for (const item of responseJson.data.vessels) {
@@ -105,11 +101,20 @@ const getVesselDepositsData = async (blockNumber: number, blockTimestamp: number
     return csvRows;
 };
 
-const main = async () => {
-    const { blockNumber, blockTimestamp } = await getLatestBlockNumberAndTimestamp();
+export const getUserTVLByBlock = async ({
+    blockNumber,
+    blockTimestamp,
+}: BlockData): Promise<OutputDataSchemaRow[]> => {
     const csvRowsStabilityPool = await getStabilityPoolData(blockNumber, blockTimestamp);
     const csvRowsVessels = await getVesselDepositsData(blockNumber, blockTimestamp);
     const csvRows = csvRowsStabilityPool.concat(csvRowsVessels);
+    return csvRows;
+};
+
+const main = async () => {
+    const blockNumber = 3753688
+    const blockTimestamp = 1713304435
+    const csvRows = await getUserTVLByBlock({ blockNumber, blockTimestamp });
     // Write the CSV output to a file
     const ws = fs.createWriteStream("outputData.csv");
     write(csvRows, { headers: true })
