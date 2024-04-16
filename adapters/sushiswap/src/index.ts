@@ -64,6 +64,10 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 //         console.log("CSV file has been written.");
 //     });
 // };
+export interface BlockData {
+    blockNumber: number;
+    blockTimestamp: number;
+}
 
 export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockData): Promise<OutputSchemaRow[]> => {
     const result: OutputSchemaRow[] = []

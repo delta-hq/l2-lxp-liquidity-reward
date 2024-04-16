@@ -111,8 +111,8 @@ export const getUserStakedTVLByBlock = async ({
       const total1 =
         (totalLPBalance * userPool.result.reserve1) /
         userPool.result.total_supply;
-      const token0Address = userPool.result.token0.toLowerCase();
-      const token1Address = userPool.result.token1.toLowerCase();
+      const token0Address = userPool.result.hasOwnProperty('token0') ? userPool.result.token0.toLowerCase() : 'not defined';
+      const token1Address = userPool.result.hasOwnProperty('token1') ? userPool.result.token1.toLowerCase(): 'not defined';
 
       // Aggregate tokens
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
