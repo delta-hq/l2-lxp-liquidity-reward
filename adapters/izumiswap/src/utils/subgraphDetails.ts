@@ -262,6 +262,12 @@ export const getLPValueByUserAndPoolFromPositions = (
     let result = new Map<string, Map<string, UserTokenBalanceInfo>>();
     for (let i = 0; i < positions.length; i++) {
         let position = positions[i];
+
+        let positionWithUSDValue = getPositionDetailsFromPosition(position);
+        if (positionWithUSDValue.token0DecimalValue == 0 || positionWithUSDValue.token1DecimalValue == 0){
+            continue
+        }
+
         let tokenXAddress = position.tokenX.id;
         let tokenYAddress = position.tokenY.id;
         let owner = position.owner;
@@ -281,8 +287,7 @@ export const getLPValueByUserAndPoolFromPositions = (
         if (tokenYAmount === undefined) {
             tokenYAmount = {tokenBalance: new BigNumber(0), tokenSymbol: position.tokenY.symbol, usdPrice: 0};
         }
-
-        let positionWithUSDValue = getPositionDetailsFromPosition(position);
+       
         tokenXAmount.tokenBalance = tokenXAmount.tokenBalance.plus(new BigNumber(positionWithUSDValue.token0DecimalValue));  
         tokenYAmount.tokenBalance = tokenYAmount.tokenBalance.plus(new BigNumber(positionWithUSDValue.token1DecimalValue));
 
