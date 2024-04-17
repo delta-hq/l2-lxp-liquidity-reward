@@ -7,6 +7,7 @@ The main scripts is generating a output as CSV
 
 ```
 npm install // install all packages
+npm run watch //other terminal tab
 npm run start // other terminal tab
 ```
 
