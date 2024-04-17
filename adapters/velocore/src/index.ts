@@ -10,78 +10,22 @@ import {
 } from "./sdk/subgraphDetails";
 import { getGaugesAtBlock, VE_VC_ADDRESS } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
-
-interface CSVRow {
-  block_number: string;
-  timestamp: string;
-  user_address: string;
-  token_address: string;
-  token_balance: string;
-}
+import { BlockData, OutputSchemaRow } from "./sdk/types";
+BigNumber.set({ EXPONENTIAL_AT: 256 });
 
 const getData = async () => {
   const snapshotBlocks = [2999728];
 
-  const csvRows: CSVRow[] = [];
+  const csvRows: OutputSchemaRow[] = [];
 
   for (let block of snapshotBlocks) {
-    const [userStakes, userVotes] = await Promise.all([
-      getUserStakesForAddressByPoolAtBlock(block, "", ""),
-      getUserVoteForAddressByPoolAtBlock(block, ""),
-    ]);
-    console.log(`Block: ${block}`);
-    console.log("UserStakes: ", userStakes.length);
-    console.log("UserVotes: ", userVotes.length);
-
-    const tokenBalanceMap = {} as {
-      [userAddress: string]: { [tokenAddress: string]: BigNumber };
-    };
-
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
-    const block_number = block.toString();
-    const gauges = await getGaugesAtBlock(block);
-    userStakes.forEach((userStake) => {
-      const user_address = userStake.owner.toLowerCase();
-      const lpBalance = userStake.balance;
-      const underlyingTokens = gauges[userStake.poolId.toLowerCase()];
-      if (!underlyingTokens) {
-        // old pool
-        return;
-      }
-      underlyingTokens.forEach(({ address, amountPerLp }) => {
-        const token_address = address.toLowerCase();
-        const token_balance = amountPerLp.times(lpBalance);
-        tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
-        tokenBalanceMap[user_address][token_address] = BigNumber(
-          tokenBalanceMap[user_address][token_address] ?? 0
-        ).plus(token_balance);
-      });
-    });
-
-    userVotes.forEach((userVote) => {
-      const user_address = userVote.owner.toLowerCase();
-      const token_balance = userVote.balance;
-      const token_address = VE_VC_ADDRESS.toLowerCase();
-      tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
-      tokenBalanceMap[user_address][token_address] = BigNumber(
-        tokenBalanceMap[user_address][token_address] ?? 0
-      ).plus(token_balance);
-    });
-
-    Object.entries(tokenBalanceMap).forEach(([user_address, balances]) => {
-      Object.entries(balances).forEach(([token_address, token_balance]) => {
-        if (token_balance.dp(0).lte(0)) {
-          return;
-        }
-        csvRows.push({
-          block_number,
-          timestamp,
-          user_address,
-          token_address,
-          token_balance: token_balance.dp(0).toString(),
-        });
-      });
-    });
+    const timestamp = await getTimestampAtBlock(block);
+    csvRows.push(
+      ...(await getUserTVLByBlock({
+        blockNumber: block,
+        blockTimestamp: timestamp,
+      }))
+    );
   }
 
   // Write the CSV output to a file
@@ -96,3 +40,69 @@ const getData = async () => {
 getData().then(() => {
   console.log("Done");
 });
+
+export const getUserTVLByBlock = async ({
+  blockNumber,
+  blockTimestamp,
+}: BlockData): Promise<OutputSchemaRow[]> => {
+  const result: OutputSchemaRow[] = [];
+
+  const [userStakes, userVotes] = await Promise.all([
+    getUserStakesForAddressByPoolAtBlock(blockNumber, "", ""),
+    getUserVoteForAddressByPoolAtBlock(blockNumber, ""),
+  ]);
+  console.log(`Block: ${blockNumber}`);
+  console.log("UserStakes: ", userStakes.length);
+  console.log("UserVotes: ", userVotes.length);
+
+  const tokenBalanceMap = {} as {
+    [userAddress: string]: { [tokenAddress: string]: BigNumber };
+  };
+
+  const gauges = await getGaugesAtBlock(blockNumber);
+  userStakes.forEach((userStake) => {
+    const user_address = userStake.owner.toLowerCase();
+    const lpBalance = userStake.balance;
+    const underlyingTokens = gauges[userStake.poolId.toLowerCase()];
+    if (!underlyingTokens) {
+      // old pool
+      return;
+    }
+    underlyingTokens.forEach(({ address, amountPerLp }) => {
+      const token_address = address.toLowerCase();
+      const token_balance = amountPerLp.times(lpBalance);
+      tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
+      tokenBalanceMap[user_address][token_address] = BigNumber(
+        tokenBalanceMap[user_address][token_address] ?? 0
+      ).plus(token_balance);
+    });
+  });
+
+  userVotes.forEach((userVote) => {
+    const user_address = userVote.owner.toLowerCase();
+    const token_balance = userVote.balance;
+    const token_address = VE_VC_ADDRESS.toLowerCase();
+    tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
+    tokenBalanceMap[user_address][token_address] = BigNumber(
+      tokenBalanceMap[user_address][token_address] ?? 0
+    ).plus(token_balance);
+  });
+
+  Object.entries(tokenBalanceMap).forEach(([user_address, balances]) => {
+    Object.entries(balances).forEach(([token_address, token_balance]) => {
+      if (token_balance.dp(0).lte(0)) {
+        return;
+      }
+      result.push({
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address,
+        token_address,
+        token_balance: BigInt(token_balance.dp(0).toString()),
+        token_symbol: "",
+        usd_price: 0,
+      });
+    });
+  });
+  return result;
+};
