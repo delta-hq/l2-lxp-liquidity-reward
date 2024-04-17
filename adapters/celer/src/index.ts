@@ -45,13 +45,23 @@ export const getUserTVLByBlock = async (data: BlockData) => {
       usd_price: 0,
     });
   });
+  return csvRows;
+};
+
+const getData = async () => {
   // Write the CSV output to a file
+  const dataList = await getUserTVLByBlock({
+    blockNumber: 19506984,
+    blockTimestamp: 1711429021,
+  });
   const ws = fs.createWriteStream("outputData.csv");
-  write(csvRows, { headers: true })
+  write(dataList, { headers: true })
     .pipe(ws)
     .on("finish", () => {
       console.log("CSV file has been written.");
     });
 };
 
-getUserTVLByBlock({ blockNumber: 19506984, blockTimestamp: 1711429021 });
+getData().then(() => {
+  console.log("Done");
+});
