@@ -15,6 +15,7 @@
     "author": "",
     "license": "ISC",
     "dependencies": {
+        "@connext/nxtp-utils": "2.4.1",
         "fast-csv": "5.0.1",
         "viem": "2.8.16"
     },

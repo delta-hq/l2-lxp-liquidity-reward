@@ -1,4 +1,5 @@
 import { getUserTVLByBlock, writeCsv } from "./utils";
+import { getPoolInformationFromLpToken } from "./utils/cartographer";
 
 const input = {
     blockNumber: 2954869,
@@ -7,7 +8,6 @@ const input = {
 
 const fileName = 'output.csv';
 console.log('Getting TVL at block:', input.blockNumber);
-
 
 // returns all user balances at the input block by looking at the latest
 // balance for each user and token on the subgraph, capped at given block.
