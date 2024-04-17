@@ -35,7 +35,10 @@ export const getTVLByVault = async (blocks: BlockData, logOutput?: boolean) => {
   return csvRowsTvl;
 };
 
-export const main = async (blocks: BlockData[], logOutput?: boolean) => {
+export const getUserTVLByBlock = async (
+  blocks: BlockData[],
+  logOutput?: boolean
+) => {
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
   const batchSize = 10; // Size of batch to trigger writing to the file
   let i = 0;
@@ -77,4 +80,4 @@ export const main = async (blocks: BlockData[], logOutput?: boolean) => {
 
 // * Test
 // const when = { blockNumber: 3394331, blockTimestamp: 0 };
-// main([when], true);
+// getUserTVLByBlock ([when], true);
