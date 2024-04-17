@@ -62,7 +62,6 @@ export const getUserTVLByBlock = async ({
 
   const v3Positions = await getV3UserPositionsAtBlock(blockNumber);
 
-  // combine v2 & v3
   const combinedPositions = v3Positions;
   const balances: Record<string, Record<string, bigint>> = {};
   for (const position of combinedPositions) {
