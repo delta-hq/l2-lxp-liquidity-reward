@@ -1,11 +1,11 @@
 {
-  "name": "uniswap-calculator",
+  "name": "satori-calculator",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "dist/example/dex/src/index.js",
+    "start": "node dist/index.js",
     "compile": "tsc",
     "watch": "tsc -w",
     "clear": "rm -rf dist"
