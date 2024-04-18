@@ -1,8 +1,10 @@
-import { CHAINS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS } from "./config";
 import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
-import { getMarketInfos } from "./marketDetails";
-import { bigMath } from "./abi/helpers";
+import { CHAINS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS } from "./config";
+import {
+  getBorrowBalanceStoredByAccounts,
+  getMarketInfos,
+} from "./marketDetails";
 
 export interface MarketActivity {
   id: string;
@@ -151,9 +153,48 @@ export const getActivitiesForAddressByPoolAtBlock = async (
     })
     .filter((x) => x !== undefined);
 
+  accountBorrows = await normalizeAccountBorrows(blockNumber, accountBorrows);
   accountBorrows.forEach((t: any) => (t.amount = t.amount * BigInt(1e18)));
 
   return { tokens, accountBorrows };
+};
+
+export const normalizeAccountBorrows = async (
+  blockNumber: number,
+  accountBorrows: MarketActivity[]
+): Promise<MarketActivity[]> => {
+  const result: MarketActivity[] = [];
+
+  accountBorrows.sort((a, b) => b.blockNumber - a.blockNumber);
+
+  for (let i = 0; i < accountBorrows.length; i++) {
+    var marketActivity = accountBorrows[i];
+
+    var doesExist =
+      result.findIndex(
+        (x: MarketActivity) =>
+          x.owner == marketActivity.owner && x.market == marketActivity.market
+      ) > -1;
+    if (doesExist) continue;
+
+    result.push(marketActivity);
+  }
+
+  const chuckCount = 2000;
+  for (let i = 0; i < result.length; i += chuckCount) {
+    var end = Math.min(result.length, i + chuckCount);
+
+    var currentBorrows = await getBorrowBalanceStoredByAccounts(
+      result.slice(i, end),
+      BigInt(blockNumber)
+    );
+
+    for (let j = 0; j < currentBorrows.length; j++) {
+      result[i + j].amount = -BigInt(currentBorrows[j]);
+    }
+  }
+
+  return result;
 };
 
 export const getLPValueByUserAndPoolFromActivities = (

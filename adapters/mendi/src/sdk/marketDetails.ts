@@ -3,6 +3,7 @@ import { CHAINS, RPC_URLS } from "./config";
 import { linea } from "viem/chains";
 import comptrollerAbi from "./abi/comptroller.abi";
 import ctokenAbi from "./abi/ctoken.abi";
+import { MarketActivity } from "./subgraphDetails";
 
 export interface MarketInfo {
   address: string;
@@ -98,4 +99,31 @@ export const getMarketInfos = async (
   }
 
   return marketInfos;
+};
+
+export const getBorrowBalanceStoredByAccounts = async (
+  activities: MarketActivity[],
+  blockNumber?: bigint
+) => {
+  const publicClient = createPublicClient({
+    chain: extractChain({ chains: [linea], id: CHAINS.LINEA }),
+    transport: http(RPC_URLS[CHAINS.LINEA]),
+  });
+
+  const borrowBalanceResults = await publicClient.multicall({
+    contracts: activities
+      .map((m) => [
+        {
+          address: m.market,
+          abi: ctokenAbi,
+          functionName: "borrowBalanceStored",
+          args: [m.owner],
+        },
+      ])
+      .flat() as any,
+    blockNumber,
+  });
+  const borrowBalances = borrowBalanceResults.map((v) => v.result as bigint);
+
+  return borrowBalances;
 };
