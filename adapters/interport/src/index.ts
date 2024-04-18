@@ -1,5 +1,5 @@
 import {client} from "./utils/client";
-import {searchStartBlock, vaultsAddresses} from "./utils/constants";
+import {searchStartBlock, stablecoinFarmAddress, vaultsAddresses, zeroAddress} from "./utils/constants";
 import {vaultAbi} from "./utils/vault-abi"
 
 interface BlockData {
@@ -24,24 +24,37 @@ const getBlockTimestamp = async (blockNumber: bigint) => {
     return Number(data.timestamp);
 }
 
-const collectEvents = async (events: any[], token_symbol: string, isDeposit: boolean) => {
+const collectTransferEvents = async (events: any[], token_symbol: string) => {
     const csvRows: OutputDataSchemaRow[] = [];
     for (let i = 0; i < events.length; i++) {
         const {
-            args: {caller: user_address, assetAmount: token_balance},
+            args: {from: senderAddress_address, to: receiver_address, amount: token_balance},
             blockNumber,
             address: token_address
         } = events[i]
         const timestamp = await getBlockTimestamp(blockNumber)
-        csvRows.push({
-            block_number: Number(blockNumber),
-            timestamp,
-            user_address,
-            token_address,
-            token_balance: isDeposit ? token_balance : -token_balance,
-            token_symbol,
-            usd_price: 0
-        })
+        if(senderAddress_address !== stablecoinFarmAddress && senderAddress_address !== zeroAddress) {
+            csvRows.push({
+                block_number: Number(blockNumber),
+                timestamp,
+                user_address: senderAddress_address,
+                token_address,
+                token_balance: -BigInt(token_balance),
+                token_symbol,
+                usd_price: 0
+            })
+        }
+        if (receiver_address !== stablecoinFarmAddress && receiver_address !== zeroAddress) {
+            csvRows.push({
+                block_number: Number(blockNumber),
+                timestamp,
+                user_address: receiver_address,
+                token_address,
+                token_balance: BigInt(token_balance),
+                token_symbol,
+                usd_price: 0
+            })
+        }
     }
     return csvRows;
 }
@@ -49,31 +62,22 @@ const collectEvents = async (events: any[], token_symbol: string, isDeposit: boo
 export const getUserTVLByBlock = async (
     blocks: BlockData
 ): Promise<OutputDataSchemaRow[]> => {
-    const {blockNumber, blockTimestamp} = blocks
+    const {blockNumber} = blocks
     const allCsvRows: OutputDataSchemaRow[] = [];
     for (let i = 0; i < vaultsAddresses.length; i++) {
         const {address, token_symbol} = vaultsAddresses[i];
         let currentStartingBlock = searchStartBlock;
         while (currentStartingBlock < blockNumber) {
             const endBlock = currentStartingBlock + 799 > blockNumber ? blockNumber : currentStartingBlock + 799
-            const depositEvents = await client.getContractEvents({
+            const transferEvents = await client.getContractEvents({
                 address,
                 abi: vaultAbi,
-                eventName: "Deposit",
+                eventName: "Transfer",
                 fromBlock: BigInt(currentStartingBlock),
                 toBlock: BigInt(endBlock),
             });
-            const depositCsvRows = await collectEvents(depositEvents, token_symbol, true);
-
-            const withdrawEvents = await client.getContractEvents({
-                address,
-                abi: vaultAbi,
-                eventName: "Withdraw",
-                fromBlock: BigInt(currentStartingBlock),
-                toBlock: BigInt(endBlock),
-            });
-            const withdrawCsvRows = await collectEvents(withdrawEvents, token_symbol, false);
-            allCsvRows.push(...depositCsvRows, ...withdrawCsvRows)
+            const transferCsvRows = await collectTransferEvents(transferEvents, token_symbol);
+            allCsvRows.push(...transferCsvRows)
             currentStartingBlock = endBlock
         }
     }
