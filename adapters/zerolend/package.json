@@ -3,22 +3,22 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
+  "type": "commonjs",
   "scripts": {
-    "compile": "tsc",
     "start": "node dist/index.js",
-    "dev": "ts-node src/index.ts"
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist",
+    "test": "node "
   },
+  "keywords": [],
   "author": "",
-  "license": "ISC",
+  "license": "UNLICENSED",
   "dependencies": {
-    "@types/node": "^20.11.30",
-    "axios": "^1.6.8",
-    "ethers": "^6",
-    "fast-csv": "^5.0.1",
-    "fs": "^0.0.1-security"
+    "fast-csv": "^5.0.1"
   },
   "devDependencies": {
-    "ts-node": "^10.9.2",
-    "typescript": "^5.4.3"
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.3"
   }
 }
