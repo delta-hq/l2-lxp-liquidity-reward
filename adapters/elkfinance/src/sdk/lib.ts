@@ -1,4 +1,4 @@
-import { V2_SUBGRAPH_URL, V3_SUBGRAPH_URL, client } from "./config"
+import { SUBGRAPH_URL, client } from "./config"
 import { UserPosition } from "./types"
 
 type V2Position = {
@@ -65,7 +65,7 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             }
         }`
 
-        const response = await fetch(V2_SUBGRAPH_URL, {
+        const response = await fetch(SUBGRAPH_URL, {
             method: "POST",
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
@@ -196,7 +196,7 @@ export const getV3UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             }
         }`
 
-        const response = await fetch(V3_SUBGRAPH_URL, {
+        const response = await fetch(SUBGRAPH_URL, {
             method: "POST",
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
