@@ -95,7 +95,7 @@ const getData = async () => {
   console.log(csvRows_rebase.length, '__csvRows_rebase')
 
   // Write the CSV output to a file
-  const ws = fs.createWriteStream('outputData_pools.csv');
+  const ws = fs.createWriteStream('outputData.csv');
   const ws_rebase = fs.createWriteStream('outputData_rebase.csv');
   write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
     console.log("CSV file has been written.");
