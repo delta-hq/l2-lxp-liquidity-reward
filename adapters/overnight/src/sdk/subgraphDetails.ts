@@ -95,21 +95,7 @@ const countNetRebase = async (
             }
     
             const rebased = balanceDiff.minus(val).plus(userRedeem);
-
-            // if (rebased.lt(0)) {
-            //     console.log("NEGATIVE REBASE", {
-            //         address: key,
-            //         blockNumberTo,
-            //         blockNumberFrom
-            //     })
-            //     console.log(balanceTo.toString(), "___balanceTo")
-            //     console.log(balanceFrom.toString(), "____balanceFrom")
-            //     console.log(val, "____val")
-            //     console.log(userRedeem, "____userRedeem")
-            // }
-
-            const rebasedChecked = rebased.toFixed();
-            usersRebaseProfit.set(key, rebasedChecked);
+            usersRebaseProfit.set(key, rebased.toFixed());
         } catch(e) {
             console.log(e)
             console.log("ERROR FOR:", {
