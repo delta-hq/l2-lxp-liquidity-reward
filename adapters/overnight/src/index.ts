@@ -63,7 +63,6 @@ const getData = async () => {
       token: OVN_CONTRACTS.USDTPLUS
     });
 
-    console.log(`Block: ${block}`);
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
     // all results are counted for the END block
@@ -91,8 +90,6 @@ const getData = async () => {
       });
     });
   }
-
-  console.log(csvRows_rebase.length, '__csvRows_rebase')
 
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData.csv');

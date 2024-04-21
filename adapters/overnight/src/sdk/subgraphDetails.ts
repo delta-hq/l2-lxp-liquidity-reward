@@ -96,9 +96,20 @@ const countNetRebase = async (
     
             const rebased = balanceDiff.minus(val).plus(userRedeem);
 
+            // if (rebased.lt(0)) {
+            //     console.log("NEGATIVE REBASE", {
+            //         address: key,
+            //         blockNumberTo,
+            //         blockNumberFrom
+            //     })
+            //     console.log(balanceTo.toString(), "___balanceTo")
+            //     console.log(balanceFrom.toString(), "____balanceFrom")
+            //     console.log(val, "____val")
+            //     console.log(userRedeem, "____userRedeem")
+            // }
+
             // sometimes rebase can be negative
-            // const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
-            const rebasedChecked = rebased.toFixed()
+            const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
             usersRebaseProfit.set(key, rebasedChecked);
         } catch(e) {
             console.log(e)
@@ -184,7 +195,6 @@ export const getRebaseForUsersByPoolAtBlock = async ({
                     console.log("skip > 1000: ", skip)
                 }
 
-
                 let positions = data.data.transfers;
                 for (let i = 0; i < positions.length; i++) {
                     let position = positions[i];
@@ -228,9 +238,6 @@ export const getRebaseForUsersByPoolAtBlock = async ({
     await asyncLoad();
 
     const listNetRebase = await countNetRebase(usersMinted, usersRedeemed, blockNumberFrom, blockNumberTo)
-
-    console.log(listNetRebase?.get("0xa30b8deFcC9eDdf9E960ef810D89E194C1f65771"?.toLowerCase()), '___REBASE')
-
     if (!listNetRebase) return new Map()
 
     return listNetRebase;
@@ -331,115 +338,4 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
     });
     return Number(block.timestamp * 1000n);
   };
-
-  const arr = [
-    {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "650000000000000000",
-        "to": "0x0000000000000000000000000000000000000000"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "806208175489362960",
-        "to": "0xf2d0a6699fea86fff3eb5b64cdc53878e1d19d6f"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "500000000000000000",
-        "to": "0xb70ab4c4be5872fdd22f43c5907428198cdcb2d5"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "199990587604151292",
-        "to": "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "1000000000000000000",
-        "to": "0x0000000000000000000000000000000000000000"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "13732926251488636100",
-        "to": "0x0000000000000000000000000000000000000000"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "999952938020756462",
-        "to": "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "500000000000000000",
-        "to": "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "499999999999999709",
-        "to": "0x21f25b792d2e14378f93a4c3260a53f4a889e68d"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "200000000000000000",
-        "to": "0xf2d0a6699fea86fff3eb5b64cdc53878e1d19d6f"
-      },
-      {
-        "from": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771",
-        "value": "1000000000000000000",
-        "to": "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "99960000000000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "1999200000000000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd",
-        "value": "3432743814200517579",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "1230741506400000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "999600000000000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "1111867375080000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "1999200000000000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      },
-      {
-        "from": "0x0000000000000000000000000000000000000000",
-        "value": "9996000000000000000",
-        "to": "0xa30b8defcc9eddf9e960ef810d89e194c1f65771"
-      }
-  ]
   
-  const checkFunc = () => {
-    const val = arr.reduce((acc, curr) => {
-        if (curr.to === "0x0000000000000000000000000000000000000000" || curr.to === "0xa30b8defcc9eddf9e960ef810d89e194c1f65771") {
-            return acc.plus(curr.value)
-        }
-
-        return acc
-    }, new BN(0))
-
-    return val.toFixed(0)
-  }
-
-  console.log(checkFunc(), '__checkFunc')
