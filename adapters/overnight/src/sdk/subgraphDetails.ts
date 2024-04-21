@@ -1,5 +1,5 @@
 import BN from "bignumber.js";
-import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, USD_PLUS_LINEA, ZERO_ADD } from "./config";
+import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, USD_PLUS_LINEA, ZERO_ADD, CHUNKS_SPLIT } from "./config";
 import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
 import { ethers } from "ethers";
@@ -123,7 +123,7 @@ export const getRebaseForUsersByPoolAtBlock = async (
 
     const urlData = SUBGRAPH_URLS[chainId][protocol]
 
-    const slices = 10;
+    const slices = CHUNKS_SPLIT;
     const step = (blockNumberTo - blockNumberFrom) / slices;
     const blocksBatches = Array.from({ length: slices }).map((_, index) => {
         const blockNumber = blockNumberFrom + index * step;
