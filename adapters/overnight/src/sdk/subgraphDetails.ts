@@ -1,6 +1,6 @@
 import BN from "bignumber.js";
-import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, USD_PLUS_LINEA, ZERO_ADD, CHUNKS_SPLIT } from "./config";
-import { createPublicClient, extractChain, http } from "viem";
+import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, USD_PLUS_LINEA, ZERO_ADD, CHUNKS_SPLIT, USDT_PLUS_LINEA } from "./config";
+import { Address, createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "./abi";
@@ -49,7 +49,8 @@ const countNetRebase = async (
     usersMinted: Map<string, string>,
     usersRedeemed: Map<string, string>,
     blockNumberFrom: number,
-    blockNumberTo: number
+    blockNumberTo: number,
+    tokenContract: string
 ) => {
     const PRIVATE = "0x1bbac7f04cf9a4ce3a011c139af70fafe8921cf4a66d49c6634a04ef2118d0b7";
 
@@ -57,8 +58,7 @@ const countNetRebase = async (
     // Connect to wallet to sign transactions
     const wallet = new ethers.Wallet(PRIVATE, provider);
 
-
-    const etherC = new ethers.Contract(USD_PLUS_LINEA, ERC20_ABI, wallet) as any;
+    const etherC = new ethers.Contract(tokenContract, ERC20_ABI, wallet) as any;
     const usersRebaseProfit: Map<string, string> = new Map();
 
     // top holders (pools, contracts)
@@ -108,8 +108,7 @@ const countNetRebase = async (
             //     console.log(userRedeem, "____userRedeem")
             // }
 
-            // sometimes rebase can be negative
-            const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
+            const rebasedChecked = rebased.toFixed();
             usersRebaseProfit.set(key, rebasedChecked);
         } catch(e) {
             console.log(e)
@@ -146,7 +145,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 
     const slices = CHUNKS_SPLIT;
     const step = (blockNumberTo - blockNumberFrom) / slices;
-    const blocksBatches = Array.from({ length: slices }).map((_, index) => {
+    const blocksBatches = Array.from({ length: slices + 1 }).map((_, index) => {
         const blockNumber = blockNumberFrom + index * step;
         return Math.floor(blockNumber).toString();
     });
@@ -158,17 +157,18 @@ export const getRebaseForUsersByPoolAtBlock = async ({
     // user address -> value of redeemed/transfered
     const usersRedeemed: Map<string, string> = new Map();
 
+
     console.log(blocksBatches, '___blocksBatches');
     const asyncLoad = async () => {
         for (let i = 0; i < blocksBatches.length; i++) {
             console.log('Batch done:', i + " from ", blocksBatches.length);
             console.log('usersMinted: ', usersMinted.size);
-            await new Promise((res) => setTimeout(res, 100))
+            await new Promise((res) => setTimeout(res, 10));
             const nextValue = blocksBatches[i + 1];
     
             const url = urlData[token].url;
             let result: PositionRebase[] = [];
-            let whereQuery = `where: { blockNumber_gt: ${blocksBatches[i]}, blockNumber_lt: ${nextValue}}`;
+            let whereQuery = `where: { blockNumber_gte: ${blocksBatches[i]}, blockNumber_lte: ${Number(nextValue) - 1}}`;
             let fetchNext = true;
             let skip = 0;
     
@@ -237,7 +237,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 
     await asyncLoad();
 
-    const listNetRebase = await countNetRebase(usersMinted, usersRedeemed, blockNumberFrom, blockNumberTo)
+    const listNetRebase = await countNetRebase(usersMinted, usersRedeemed, blockNumberFrom, blockNumberTo, urlData[token].address)
     if (!listNetRebase) return new Map()
 
     return listNetRebase;
@@ -338,4 +338,3 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
     });
     return Number(block.timestamp * 1000n);
   };
-  

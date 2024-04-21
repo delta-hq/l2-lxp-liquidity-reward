@@ -55,7 +55,7 @@ export const RPC_URLS = {
 
 
 export const SNAPSHOTS_BLOCKS = [
-  2361808, 2761808, 3161808, 3461808
+  3461808, 3885185
 ];
 
 export const CHUNKS_SPLIT = 10;
