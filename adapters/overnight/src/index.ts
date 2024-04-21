@@ -62,6 +62,7 @@ const getData = async () => {
       blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
       token: OVN_CONTRACTS.USDTPLUS
     });
+    
     console.log(`Block: ${block}`);
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
