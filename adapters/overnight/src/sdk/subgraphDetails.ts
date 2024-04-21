@@ -5,6 +5,17 @@ import { linea } from "viem/chains";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "./abi";
 
+export interface BlockData {
+    blockNumber: number;
+    blockTimestamp: number;
+}
+
+export interface BlockDataRebase {
+    blockNumberFrom: number;
+    blockNumberTo: number;
+    token: OVN_CONTRACTS.USDPLUS | OVN_CONTRACTS.USDTPLUS;
+}
+
 export interface Position{
     id: string;
     liquidity: bigint;
@@ -112,17 +123,15 @@ const countNetRebase = async (
 }
 
 
-export const getRebaseForUsersByPoolAtBlock = async (
-    blockNumberFrom: number,
-    blockNumberTo: number,
-    chainId: CHAINS,
-    protocol: PROTOCOLS.OVN_REBASE,
-    contract: OVN_CONTRACTS.USDPLUS | OVN_CONTRACTS.USDTPLUS
-): Promise<Map<string, string>> => {
+export const getRebaseForUsersByPoolAtBlock = async ({
+    blockNumberFrom,
+    blockNumberTo,
+    token
+}: BlockDataRebase): Promise<Map<string, string>> => {
     if (!blockNumberFrom || !blockNumberTo) return new Map();
     console.log("INIT")
 
-    const urlData = SUBGRAPH_URLS[chainId][protocol]
+    const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN_REBASE]
 
     const slices = CHUNKS_SPLIT;
     const step = (blockNumberTo - blockNumberFrom) / slices;
@@ -146,7 +155,7 @@ export const getRebaseForUsersByPoolAtBlock = async (
             await new Promise((res) => setTimeout(res, 100))
             const nextValue = blocksBatches[i + 1];
     
-            const url = urlData[contract].url;
+            const url = urlData[token].url;
             let result: PositionRebase[] = [];
             let whereQuery = `where: { blockNumber_gt: ${blocksBatches[i]}, blockNumber_lt: ${nextValue}}`;
             let fetchNext = true;
@@ -230,19 +239,17 @@ export const getRebaseForUsersByPoolAtBlock = async (
 // OVN pools
 // 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
 // 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
-export const getUserTVLByBlock = async (
-    blockNumber: number,
-    address: string,
-    poolId: string,
-    chainId: CHAINS,
-    protocol: PROTOCOLS,
-): Promise<Position[]> => {
+export const getUserTVLByBlock = async ({
+    blockNumber,
+    blockTimestamp,
+  }: BlockData): Promise<Position[]> => {
     let whereQuery = blockNumber ? `where: { blockNumber_lt: ${blockNumber} }` : "";
+    const poolsData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN]
 
     let skip = 0;
     let fetchNext = true;
 
-    const allPoolsRes = await Promise.all(Object.values(SUBGRAPH_URLS[chainId][protocol]).map(async (_) => {
+    const allPoolsRes = await Promise.all(Object.values(poolsData).map(async (_) => {
         const url = _.url
         const poolId = _.address
         let result: Position[] = [];

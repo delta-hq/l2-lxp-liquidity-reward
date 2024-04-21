@@ -22,13 +22,14 @@ const getData = async () => {
   const csvRows_rebase: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
-    const positions = await getUserTVLByBlock(
-      block, "", "", CHAINS.LINEA, PROTOCOLS.OVN
-    );
+    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+    const positions = await getUserTVLByBlock({
+      blockNumber: block,
+      blockTimestamp: Number(timestamp),
+    });
+    
     console.log("Positions: ", positions.length);
     let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
-    // all results are counted for the END block
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
 
     lpValueByUsers.forEach((value, key) => {
       value.forEach((lpValue) => {
@@ -50,12 +51,17 @@ const getData = async () => {
     if (!SNAPSHOTS_BLOCKS[index + 1]) continue;
     console.log(`Blocks: ${block} -> ${SNAPSHOTS_BLOCKS[index + 1]}`);
 
-    const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock(
-      block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDPLUS
-    );
-    const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock(
-      block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDTPLUS
-    );
+    const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock({
+      blockNumberFrom: block,
+      blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
+      token: OVN_CONTRACTS.USDPLUS
+    });
+
+    const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock({
+      blockNumberFrom: block,
+      blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
+      token: OVN_CONTRACTS.USDTPLUS
+    });
     console.log(`Block: ${block}`);
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
