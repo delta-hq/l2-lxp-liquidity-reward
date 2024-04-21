@@ -1,4 +1,4 @@
-import { CHAINS, PROTOCOLS, SNAPSHOTS_BLOCKS, OVN_CONTRACTS, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_SYMBOL, USDT_PLUS_LINEA } from "./sdk/config";
+import { SNAPSHOTS_BLOCKS, OVN_CONTRACTS, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_SYMBOL, USDT_PLUS_LINEA } from "./sdk/config";
 import { getLPValueByUserAndPoolFromPositions, getUserTVLByBlock, getRebaseForUsersByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
@@ -47,6 +47,8 @@ const getData = async () => {
     });
   }
 
+  // counting rebase by blocks range
+  // [0, 100, 200] -> gonna be counted like [0, 100] + [100, 200]
   for (let [index, block] of SNAPSHOTS_BLOCKS.entries()) {
     if (!SNAPSHOTS_BLOCKS[index + 1]) continue;
     console.log(`Blocks: ${block} -> ${SNAPSHOTS_BLOCKS[index + 1]}`);
