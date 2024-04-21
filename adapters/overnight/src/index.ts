@@ -18,7 +18,7 @@ interface CSVRow {
 }
 
 const getData = async () => {
-  const csvRows_pools: CSVRow[] = [];
+  const csvRows: CSVRow[] = [];
   const csvRows_rebase: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
@@ -35,7 +35,7 @@ const getData = async () => {
       value.forEach((lpValue) => {
           const lpValueStr = lpValue.toString();
           // Accumulate CSV row data
-          csvRows_pools.push({
+          csvRows.push({
             user_address: key,
             token_address: LP_LYNEX,
             token_symbol: LP_LYNEX_SYMBOL,
@@ -62,7 +62,7 @@ const getData = async () => {
       blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
       token: OVN_CONTRACTS.USDTPLUS
     });
-    
+
     console.log(`Block: ${block}`);
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
@@ -97,7 +97,7 @@ const getData = async () => {
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData_pools.csv');
   const ws_rebase = fs.createWriteStream('outputData_rebase.csv');
-  write(csvRows_pools, { headers: true }).pipe(ws).on('finish', () => {
+  write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
     console.log("CSV file has been written.");
   });
   write(csvRows_rebase, { headers: true }).pipe(ws_rebase).on('finish', () => {
