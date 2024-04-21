@@ -86,7 +86,8 @@ const countNetRebase = async (
             const rebased = balanceDiff.minus(val).plus(userRedeem);
 
             // sometimes rebase can be negative
-            const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
+            // const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
+            const rebasedChecked = rebased.toFixed()
             usersRebaseProfit.set(key, rebasedChecked);
         } catch(e) {
             console.log(e)
@@ -229,7 +230,7 @@ export const getRebaseForUsersByPoolAtBlock = async (
 // OVN pools
 // 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
 // 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
-export const getPositionsForAddressByPoolAtBlock = async (
+export const getUserTVLByBlock = async (
     blockNumber: number,
     address: string,
     poolId: string,

@@ -55,10 +55,10 @@ export const RPC_URLS = {
 
 
 export const SNAPSHOTS_BLOCKS = [
-  2361808, 2761808, 3161808
+  2361808, 2761808, 3161808, 3461808
 ];
 
-export const CHUNKS_SPLIT = 100;
+export const CHUNKS_SPLIT = 10;
 export const LINEA_RPC = "https://lb.drpc.org/ogrpc?network=linea&dkey=AsCWb9aYukugqNphr9pEGw5L893HadYR7ooVbrjxQOzW"
 export const LP_LYNEX_SYMBOL = "oLYNX";
 export const LP_LYNEX = "0x63349BA5E1F71252eCD56E8F950D1A518B400b60"

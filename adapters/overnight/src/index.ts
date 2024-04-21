@@ -1,5 +1,5 @@
 import { CHAINS, PROTOCOLS, SNAPSHOTS_BLOCKS, OVN_CONTRACTS, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_SYMBOL, USDT_PLUS_LINEA } from "./sdk/config";
-import { Position, getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock, getRebaseForUsersByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
+import { getLPValueByUserAndPoolFromPositions, getUserTVLByBlock, getRebaseForUsersByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -22,7 +22,7 @@ const getData = async () => {
   const csvRows_rebase: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
-    const positions = await getPositionsForAddressByPoolAtBlock(
+    const positions = await getUserTVLByBlock(
       block, "", "", CHAINS.LINEA, PROTOCOLS.OVN
     );
     console.log("Positions: ", positions.length);
