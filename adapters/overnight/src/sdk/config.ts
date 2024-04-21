@@ -55,7 +55,7 @@ export const RPC_URLS = {
 
 
 export const SNAPSHOTS_BLOCKS = [
-  2361808, 3020000, 3867401
+  2361808, 2461808, 2561808, 2661808, 2761808
 ];
 
 export const LINEA_RPC = "https://lb.drpc.org/ogrpc?network=linea&dkey=AsCWb9aYukugqNphr9pEGw5L893HadYR7ooVbrjxQOzW"

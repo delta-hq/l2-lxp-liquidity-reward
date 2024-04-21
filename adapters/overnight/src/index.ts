@@ -7,7 +7,6 @@ import { Position, getLPValueByUserAndPoolFromPositions, getPositionsForAddressB
 
 import fs from 'fs';
 import { write } from 'fast-csv';
-import BN from "bignumber.js";
 
 interface CSVRow {
   block_number: string;
@@ -48,27 +47,20 @@ const getData = async () => {
   }
 
   for (let [index, block] of SNAPSHOTS_BLOCKS.entries()) {
-    console.log(`Block: ${block}`);
-    let positionsRebaseUsd: Map<string, string> = new Map()
-    let positionsRebaseUsdt: Map<string, string> = new Map()
-    if (!SNAPSHOTS_BLOCKS[index + 1]) return
-    console.log(block, '__index')
-    if (SNAPSHOTS_BLOCKS[index + 1]) {
-      positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock(
-        block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDPLUS
-      );
-    }
-    if (SNAPSHOTS_BLOCKS[index + 1]) {
-      positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock(
-        block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDTPLUS
-      );
-    }
+    if (!SNAPSHOTS_BLOCKS[index + 1]) continue;
+    console.log(`Blocks: ${block} -> ${SNAPSHOTS_BLOCKS[index + 1]}`);
+
+    const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock(
+      block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDPLUS
+    );
+    const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock(
+      block, SNAPSHOTS_BLOCKS[index + 1], CHAINS.LINEA, PROTOCOLS.OVN_REBASE, OVN_CONTRACTS.USDTPLUS
+    );
     console.log(`Block: ${block}`);
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
     // all results are counted for the END block
     const timestamp = new Date(await getTimestampAtBlock(SNAPSHOTS_BLOCKS[index + 1])).toISOString();
-
 
     positionsRebaseUsd.forEach((value, key) => {
       csvRows_rebase.push({
@@ -92,6 +84,8 @@ const getData = async () => {
       });
     });
   }
+
+  console.log(csvRows_rebase.length, '__csvRows_rebase')
 
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData_pools.csv');

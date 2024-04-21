@@ -50,38 +50,53 @@ const countNetRebase = async (
     const etherC = new ethers.Contract(USD_PLUS_LINEA, ERC20_ABI, wallet) as any;
     const usersRebaseProfit: Map<string, string> = new Map();
 
+    // top holders (pools, contracts)
     const exclude = [
-        "0x49b6992dbacf7caa9cbf4dbc37234a0167b8edcd",
-        "0xf2d0a6699fea86fff3eb5b64cdc53878e1d19d6f",
-        "0xb70ab4c4be5872fdd22f43c5907428198cdcb2d5",
-        "0x21f25b792d2e14378f93a4c3260a53f4a889e68d",
-        "0x10f6b147d51f7578f760065df7f174c3bc95382c",
-        '0x9030d5c596d636eefc8f0ad7b2788ae7e9ef3d46',
-        '0xf02d9f19060ee2dd50047dc6e1e9ebac9ba436fe',
+        // usd+
+        "0x58aacbccaec30938cb2bb11653cad726e5c4194a",
+        "0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91",
+        "0x3f006b0493ff32b33be2809367f5f6722cb84a7b",
+        "0x65d97bdfd4c1076cd1f95cbe3b56954277d0956f",
+        // usdt+
+        "0xb30e7a2e6f7389ca5ddc714da4c991b7a1dcc88e",
+        "0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91"
     ]
 
     let index = 0;
     console.log('Counting net rebases for users...');
     for (const [key, val] of usersMinted.entries()) {
-        const balanceTo = (await etherC.balanceOf(key, { blockTag: blockNumberTo })).toString();
-        let balanceFrom = 0;
+        try {
+            const balanceTo = (await etherC.balanceOf(key, { blockTag: blockNumberTo })).toString();
+            let balanceFrom = 0;
+    
+            const userRedeem = usersRedeemed.get(key) ?? "0";
+    
+            if (!balanceTo) return;
+            if (blockNumberFrom !== 0) {
+                balanceFrom = (await etherC.balanceOf(key, { blockTag: blockNumberFrom })).toString();
+            };
+    
+            const balanceDiff = new BN(balanceTo).minus(balanceFrom);
+            index += 1;
+    
+            if (index % 10 === 0) {
+                console.log("Loading", index, " -> ", usersMinted.size)
+            }
+    
+            const rebased = balanceDiff.minus(val).plus(userRedeem);
 
-        const userRedeem = usersRedeemed.get(key) ?? "0";
-
-        if (!balanceTo) return;
-        if (blockNumberFrom !== 0) {
-            balanceFrom = (await etherC.balanceOf(key, { blockTag: blockNumberFrom })).toString();
-        };
-
-        const balanceDiff = new BN(balanceTo).minus(balanceFrom);
-        index += 1;
-
-        if (index % 10 === 0) {
-            console.log("Loading", index, " -> ", usersMinted.size)
+            // sometimes rebase can be negative
+            const rebasedChecked = rebased.gt(0) ? rebased.toFixed() : "0"
+            usersRebaseProfit.set(key, rebasedChecked);
+        } catch(e) {
+            console.log(e)
+            console.log("ERROR FOR:", {
+                address: key,
+                blockNumberTo,
+                blockNumberFrom
+            })
+            usersRebaseProfit.set(key, "0");
         }
-
-        const rebased = balanceDiff.minus(val).plus(userRedeem);
-        usersRebaseProfit.set(key, rebased.toString());
     }
 
     const sortedMap = new Map([...usersRebaseProfit.entries()].sort((a, b) => new BN(a[1]).gt(b[1]) ? -1 : 1));
@@ -108,7 +123,7 @@ export const getRebaseForUsersByPoolAtBlock = async (
 
     const urlData = SUBGRAPH_URLS[chainId][protocol]
 
-    const slices = 100;
+    const slices = 10;
     const step = (blockNumberTo - blockNumberFrom) / slices;
     const blocksBatches = Array.from({ length: slices }).map((_, index) => {
         const blockNumber = blockNumberFrom + index * step;
