@@ -1,5 +1,4 @@
 import { getUserTVLByBlock, writeCsv } from "./utils";
-import { getPoolInformationFromLpToken } from "./utils/cartographer";
 
 const input = {
     blockNumber: 2954869,

@@ -1,4 +1,3 @@
-import { parseUnits } from "viem";
 import { getCompositeBalances, getLpAccountBalanceAtBlock } from "./subgraph";
 import { BlockData, OutputDataSchemaRow } from "./types";
 
@@ -14,16 +13,16 @@ export const getUserTVLByBlock = async (blocks: BlockData): Promise<OutputDataSc
   const results: OutputDataSchemaRow[] = [];
   composite.forEach(({ block, modified, account, underlyingBalances, underlyingTokens }) => {
     results.push(...underlyingBalances.map((b, i) => {
-      return {
+      const formatted: OutputDataSchemaRow = {
         timestamp: +modified,
         block_number: +block,
-        modified,
         user_address: account.id,
         token_address: underlyingTokens[i],
         token_balance: BigInt(b),
         token_symbol: "",
         usd_price: 0,
       }
+      return formatted;
     }));
   })
 
