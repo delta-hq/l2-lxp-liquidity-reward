@@ -14,7 +14,7 @@ type OutputDataSchemaRow = {
 	timestamp: number;
 	user_address: string;
 	token_address: string;
-	token_balance: number;
+	token_balance: bigint;
 	token_symbol: string;
 	usd_price: number;
 };
@@ -135,7 +135,7 @@ function formatUnits(value: bigint, decimals: number) {
 interface SumPosition {
 	user: string;
 	tokenAddress: string;
-	tokenBalance: number;
+	tokenBalance: bigint;
 	tokenSymbol: string;
 }
 
@@ -169,7 +169,7 @@ const getPositionData = async (
 				  };
 		const id = `${element.user}-${depositToken.tokenAddress}`
         let position: SumPosition | undefined = userPositionMap.get(id)
-        const depositAmt = parseFloat(formatUnits(element.depositAmt, depositToken.decimals))
+        const depositAmt = BigInt(element.depositAmt)
         if(position){
             position.tokenBalance += depositAmt
         } else {
