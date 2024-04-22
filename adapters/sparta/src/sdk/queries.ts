@@ -1,28 +1,27 @@
 import { gql } from "@apollo/client";
 
-export const LIQUIDITY_QUERY = gql`
-  query GetLiquidityBalances($blockNumber: Int!) {
-    mints(where: { block_number_lte: $blockNumber }) {
-      amount0
-      amount1
-      contractId_
-      transactionHash_
-    }
-    burns(where: { block_number_lte: $blockNumber }) {
+export const TRANSFERS_QUERY = gql`
+  query GetLiquidityTransfers($blockNumber: Int!) {
+    transfers(where: { block_number_lte: $blockNumber }) {
+      from
       to
-      amount0
-      amount1
+      value
       contractId_
       transactionHash_
     }
   }
 `;
 
-export const TOKEN_TRANSFERS_QUERY = gql`
-  query GetLiquidityTransfers($tx: String!) {
-    transfer1S(where: { transactionHash__contains: $tx }) {
-      from
+export const SYNCS_QUERY = gql`
+  query GetSyncs($blockNumber: Int!) {
+    syncs(
+      where: { block_number_lte: $blockNumber }
+      orderBy: timestamp_
+      orderDirection: desc
+    ) {
       contractId_
+      reserve0
+      reserve1
     }
   }
 `;

@@ -4,9 +4,20 @@ import {
   PROTOCOL_DEPLOY_BLOCK,
   SNAPSHOT_PERIOD_BLOCKS,
   FIRST_TIME,
+  POOL_TOKENS,
 } from "./sdk/config";
-import { OutputDataSchemaRow, BlockData, UserPosition } from "./sdk/types";
-import { LIQUIDITY_QUERY, TOKEN_TRANSFERS_QUERY } from "./sdk/queries";
+import {
+  OutputDataSchemaRow,
+  BlockData,
+  UserPositions,
+  Sync,
+  Transaction,
+  CumulativePositions,
+  Reserves,
+  UserReserves,
+  UserPosition,
+} from "./sdk/types";
+import { TRANSFERS_QUERY, SYNCS_QUERY } from "./sdk/queries";
 import {
   getLatestBlockNumberAndTimestamp,
   getTimestampAtBlock,
@@ -15,154 +26,229 @@ import {
 } from "./sdk/utils";
 import fs from "fs";
 
-// Helper function to create a unique key
-function createKey(user: string, tokenAddress: string, block: number): string {
-  return `${user}-${tokenAddress}-${block}`;
-}
-
 // Processes a block range to calculate user positions for mints and burns
-async function processBlockData(
-  block: number
-): Promise<[UserPosition[], UserPosition[]]> {
-  const mintsDict: UserPosition[] = [];
-  const burnsDict: UserPosition[] = [];
+async function processBlockData(block: number): Promise<UserPosition[]> {
+  // fetch lp transfers up to block
+  const liquidityData = await fetchTransfers(block);
+  const { userPositions, cumulativePositions } =
+    processTransactions(liquidityData);
 
-  const liquidityData = await fetchTransfersForMintsAndBurnsTillBlock(block);
-  if (!liquidityData) {
-    console.error(`Failed to fetch liquidity data for block ${block}`);
-    return [[], []]; // Return empty arrays if data is not available
-  }
-  const blockTimestamp = await getTimestampAtBlock(block);
-  await processTransfers(
-    liquidityData.mints,
-    block,
-    blockTimestamp,
-    mintsDict,
-    "mint"
-  );
-  await processTransfers(
-    liquidityData.burns,
-    block,
-    blockTimestamp,
-    burnsDict,
-    "burn"
+  // get reserves at block
+  const reservesSnapshotAtBlock = await fetchReserves(block);
+
+  // calculate tokens based on reserves
+  const userReserves = calculateUserReservePortion(
+    userPositions,
+    cumulativePositions,
+    reservesSnapshotAtBlock
   );
 
-  return [mintsDict, burnsDict];
+  const timestamp = await getTimestampAtBlock(block);
+
+  // convert userReserves to userPositions
+  return convertToUserPositions(userReserves, block, timestamp);
 }
 
-// Fetches sender information from a transaction
-async function fetchSenderFromTransaction(tx: string) {
-  const { data } = await client.query({
-    query: TOKEN_TRANSFERS_QUERY,
-    variables: { tx },
-    fetchPolicy: "no-cache",
+function convertToUserPositions(
+  userData: UserReserves,
+  block_number: number,
+  timestamp: number
+): UserPosition[] {
+  const tempResults: Record<string, UserPosition> = {};
+
+  Object.keys(userData).forEach((user) => {
+    const contracts = userData[user];
+    Object.keys(contracts).forEach((contractId) => {
+      const details = contracts[contractId];
+
+      // Process token0
+      const key0 = `${user}-${details.token0}`;
+      if (!tempResults[key0]) {
+        tempResults[key0] = {
+          block_number,
+          timestamp,
+          user,
+          token: details.token0,
+          balance: details.amount0,
+        };
+      } else {
+        tempResults[key0].balance += details.amount0;
+      }
+
+      // Process token1
+      const key1 = `${user}-${details.token1}`;
+      if (!tempResults[key1]) {
+        tempResults[key1] = {
+          block_number,
+          timestamp,
+          user,
+          token: details.token1,
+          balance: details.amount1,
+        };
+      } else {
+        tempResults[key1].balance += details.amount1;
+      }
+    });
   });
-  return {
-    user: data.transfer1S[0].from,
-    token0: data.transfer1S[0].contractId_,
-    token1: data.transfer1S[1].contractId_,
-  };
-}
 
-// General function to process either mints or burns
-async function processTransfers(
-  transfers: any[],
-  block: number,
-  blockTimestamp: number,
-  dictionary: UserPosition[],
-  type: "mint" | "burn"
-) {
-  for (const transfer of transfers) {
-    const txId = transfer.transactionHash_;
-    const txInfo = await fetchSenderFromTransaction(txId);
-    if (!txInfo) {
-      console.error(`Failed to fetch sender for transaction ${txId}`);
-      continue;
+  // Convert the map to an array of UserPosition
+  return Object.values(tempResults);
+}
+function calculateUserReservePortion(
+  userPositions: UserPositions,
+  totalSupply: CumulativePositions,
+  reserves: Reserves
+): UserReserves {
+  const userReserves: UserReserves = {};
+
+  Object.keys(userPositions).forEach((contractId) => {
+    if (
+      !totalSupply[contractId] ||
+      !reserves[contractId] ||
+      !POOL_TOKENS[contractId]
+    ) {
+      console.log(`Missing data for contract ID: ${contractId}`);
+      return;
     }
 
-    let user;
-    if (type === "mint") {
-      user = txInfo.user;
-    } else {
-      user = transfer.to;
-    }
+    Object.keys(userPositions[contractId]).forEach((user) => {
+      const userPosition = userPositions[contractId][user];
+      const total = totalSupply[contractId];
 
-    dictionary.push({
-      block_number: block,
-      timestamp: blockTimestamp,
-      user: user,
-      token: txInfo.token0,
-      balance: transfer.amount0,
-    });
+      const share = userPosition / total;
+      const reserve0 = parseInt(reserves[contractId].reserve0.toString());
+      const reserve1 = parseInt(reserves[contractId].reserve1.toString());
+      const token0 = POOL_TOKENS[contractId].token0;
+      const token1 = POOL_TOKENS[contractId].token1;
 
-    dictionary.push({
-      block_number: block,
-      timestamp: blockTimestamp,
-      user: user,
-      token: txInfo.token1,
-      balance: transfer.amount1,
+      if (!userReserves[user]) {
+        userReserves[user] = {};
+      }
+
+      userReserves[user][contractId] = {
+        amount0: BigInt(share * reserve0),
+        amount1: BigInt(share * reserve1),
+        token0: token0,
+        token1: token1,
+      };
     });
-  }
+  });
+
+  return userReserves;
 }
 
-// Fetches transactions related to liquidity events
-async function fetchTransfersForMintsAndBurnsTillBlock(blockNumber: number) {
+function processTransactions(transactions: Transaction[]): {
+  userPositions: UserPositions;
+  cumulativePositions: CumulativePositions;
+} {
+  const userPositions: UserPositions = {};
+  const cumulativePositions: CumulativePositions = {};
+
+  transactions.forEach((transaction) => {
+    // Normalize addresses for case-insensitive comparison
+    const fromAddress = transaction.from.toLowerCase();
+    const toAddress = transaction.to.toLowerCase();
+    const contractId = transaction.contractId_.toLowerCase();
+
+    // Skip transactions where 'from' or 'to' match the contract ID, or both 'from' and 'to' are zero addresses
+    if (
+      fromAddress === contractId ||
+      toAddress === contractId ||
+      (fromAddress === "0x0000000000000000000000000000000000000000" &&
+        toAddress === "0x0000000000000000000000000000000000000000")
+    ) {
+      return;
+    }
+
+    // Initialize cumulativePositions if not already set
+    if (!cumulativePositions[contractId]) {
+      cumulativePositions[contractId] = 0;
+    }
+
+    // Convert the transaction value from string to integer.
+    let value = parseInt(transaction.value.toString());
+
+    // Process transactions that increase liquidity (to address isn't zero)
+    if (toAddress !== "0x0000000000000000000000000000000000000000") {
+      if (!userPositions[contractId]) {
+        userPositions[contractId] = {};
+      }
+      if (!userPositions[contractId][toAddress]) {
+        userPositions[contractId][toAddress] = 0;
+      }
+      userPositions[contractId][toAddress] += value;
+      cumulativePositions[contractId] += value;
+    }
+
+    // Process transactions that decrease liquidity (from address isn't zero)
+    if (fromAddress !== "0x0000000000000000000000000000000000000000") {
+      if (!userPositions[contractId]) {
+        userPositions[contractId] = {};
+      }
+      if (!userPositions[contractId][fromAddress]) {
+        userPositions[contractId][fromAddress] = 0;
+      }
+      userPositions[contractId][fromAddress] -= value;
+      cumulativePositions[contractId] -= value;
+    }
+  });
+
+  return { userPositions, cumulativePositions };
+}
+
+async function fetchTransfers(blockNumber: number) {
   const { data } = await client.query({
-    query: LIQUIDITY_QUERY,
+    query: TRANSFERS_QUERY,
     variables: { blockNumber },
     fetchPolicy: "no-cache",
   });
-  return data;
+  return data.transfers;
 }
 
-function calculateUserPositions(
-  deposits: UserPosition[],
-  withdrawals: UserPosition[]
-): UserPosition[] {
-  const userPositionsMap: Map<string, UserPosition> = new Map();
+async function fetchReserves(blockNumber: number): Promise<Reserves> {
+  const { data } = await client.query({
+    query: SYNCS_QUERY,
+    variables: { blockNumber },
+    fetchPolicy: "no-cache",
+  });
 
-  // Helper function to process both deposits and withdrawals
-  const processPosition = (position: UserPosition, isDeposit: boolean) => {
-    const key = createKey(position.user, position.token, position.block_number);
-    const amountChange =
-      BigInt(position.balance) * (isDeposit ? BigInt(1) : BigInt(-1));
+  const latestPerContractId: Record<string, Sync> = {};
+  const reserves: Reserves = {};
 
-    const existing = userPositionsMap.get(key);
-    if (existing) {
-      existing.balance += amountChange;
-    } else {
-      userPositionsMap.set(key, {
-        block_number: position.block_number,
-        timestamp: position.timestamp,
-        user: position.user,
-        token: position.token,
-        balance: amountChange,
-      });
+  data.syncs.forEach((sync: Sync) => {
+    const existingEntry = latestPerContractId[sync.contractId_];
+    if (
+      !existingEntry ||
+      new Date(sync.timestamp_) > new Date(existingEntry.timestamp_)
+    ) {
+      latestPerContractId[sync.contractId_] = sync;
     }
-  };
+  });
 
-  // Process each deposit and withdrawal
-  deposits.forEach((deposit) => processPosition(deposit, true));
-  withdrawals.forEach((withdrawal) => processPosition(withdrawal, false));
+  Object.values(latestPerContractId).forEach((sync) => {
+    reserves[sync.contractId_] = {
+      reserve0: sync.reserve0,
+      reserve1: sync.reserve1,
+    };
+  });
 
-  return Array.from(userPositionsMap.values());
+  return reserves;
 }
 
 function convertToOutputDataSchema(
   userPositions: UserPosition[]
 ): OutputDataSchemaRow[] {
-  return userPositions.flatMap((userPosition) => [
-    {
+  return userPositions.map((userPosition) => {
+    return {
       block_number: userPosition.block_number,
       timestamp: userPosition.timestamp,
       user_address: userPosition.user,
       token_address: userPosition.token,
-      token_balance: userPosition.balance, // Keep as bigint
-      token_symbol: "", // Adjust accordingly if you have the data
-      usd_price: 0, // Adjust if you need to calculate this value
-    },
-  ]);
+      token_balance: BigInt(userPosition.balance), // Ensure balance is treated as bigint
+      token_symbol: "", // You may want to fill this based on additional token info you might have
+      usd_price: 0, // Adjust if you need to calculate this value or pull from another source
+    };
+  });
 }
 
 // Get block ranges for processing
@@ -177,8 +263,6 @@ async function getBlockRangesToFetch() {
   }
 
   const { blockNumber } = await getLatestBlockNumberAndTimestamp();
-
-  console.log("Fetching blocks from", startBlock, "to", blockNumber);
 
   const blocks = [];
   for (let i = startBlock; i <= blockNumber; i += SNAPSHOT_PERIOD_BLOCKS) {
@@ -211,15 +295,13 @@ async function saveToCSV(outputData: OutputDataSchemaRow[]) {
 }
 
 export const getUserTVLByBlock = async (blocks: BlockData) => {
-  const [deposits, withdrawals] = await processBlockData(blocks.blockNumber);
-  const userPositions = calculateUserPositions(deposits, withdrawals);
-  return convertToOutputDataSchema(userPositions);
+  const data: UserPosition[] = await processBlockData(blocks.blockNumber);
+  return convertToOutputDataSchema(data);
 };
+
 async function main() {
   console.log(`Starting data fetching process mode: ${FIRST_TIME}`);
   const blocks = await getBlockRangesToFetch();
-
-  const userData: OutputDataSchemaRow[] = [];
 
   let lastblock = 0;
   try {
@@ -228,8 +310,9 @@ async function main() {
         blockNumber: block,
         blockTimestamp: 0,
       });
-      userData.push(...blockData);
+      // userData.push(...blockData);
       console.log("Processed block", block);
+      await saveToCSV(blockData);
       lastblock = block;
     }
   } catch (error: any) {
@@ -237,8 +320,6 @@ async function main() {
   } finally {
     saveLastProcessedBlock(lastblock);
   }
-
-  await saveToCSV(userData);
 }
 
 // IMPORTANT: config::FIRST_TIME is set to true be default
