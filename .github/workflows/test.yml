@@ -1,8 +1,7 @@
-name: Print New Folder Name
+name: Test getUserTVLByBlock method
 
 on:
   pull_request:
-    types: [assigned, opened, synchronize, reopened]
     paths:
       - '**/'  # Listen for changes in any directory
 
@@ -30,9 +29,12 @@ jobs:
         uses: actions/checkout@v2.1.0
         with:
           ref: ${{ github.event.pull_request.head.sha }}
-      - name: Run command from t1 folder
+      - name: Run command from protocol folder
         run: |
           cd adapters 
           cd $FOLDER_NAME
-          # Run your command here
-          npm run start
+          npm install
+          npm run compile
+          cd ..
+          npm install
+          npm run start $FOLDER_NAME
