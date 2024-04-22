@@ -19,16 +19,17 @@ interface BlockData {
 const querySize = 1000;
 const EZ_ETH_ADDRESS = "0x2416092f143378750bb29b79eD961ab195CcEea5";
 const TOKEN_SYMBOL = "EZETH";
-const SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clsxzkxi8dh7o01zx5kyxdga4/subgraphs/renzo-linea-indexer/v0.1/gn";
+const SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clsxzkxi8dh7o01zx5kyxdga4/subgraphs/renzo-linea-indexer/v0.11/gn";
 const USER_BALANCES_QUERY = `
 query BalanceQuery {
-    tokenBalances(first: ${querySize}, skip: $skipCount, orderBy: amount, orderDirection: desc) {
-        id
-        amount
-        updatedAtBlockNumber
-        updatedAtBlockTimestamp
-      }
-}
+    balances(where: {block_lte: $blockNum}, first: ${querySize}, skip: $skipCount, orderBy: value, orderDirection: desc) {
+      id
+      user
+      value
+      block
+      blockTimestamp
+    }
+  }
 `;
 
 const post = async (url: string, data: any) => {
@@ -48,20 +49,18 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     const { blockNumber, blockTimestamp } = blocks
     const csvRows: OutputDataSchemaRow[] = [];
     let skipIndex = 0;
+    let latestBalances: Record<string, string[]> = {};
     while (true) {
-        const responseJson = await post(SUBGRAPH_QUERY_URL, { query: USER_BALANCES_QUERY.replace("$skipCount", skipIndex.toString()) });
+        const responseJson = await post(SUBGRAPH_QUERY_URL, { query: USER_BALANCES_QUERY.replace("$skipCount", skipIndex.toString()).replace("$blockNum", blockNumber.toString()) });
         let rowCount = 0;
-        for (const item of responseJson.data.tokenBalances) {
-            if (item.amount != "0") {
-                csvRows.push({
-                    block_number: blockNumber,
-                    timestamp: blockTimestamp,
-                    user_address: item.id,
-                    token_address: EZ_ETH_ADDRESS,
-                    token_balance: item.amount,
-                    token_symbol: TOKEN_SYMBOL,
-                    usd_price: 0
-                });
+        for (const item of responseJson.data.balances) {
+            let userAddress = item.user.toString();
+            if (latestBalances[userAddress]) {
+                if (latestBalances[userAddress][0] < item.block) {
+                    latestBalances[userAddress] = [item.block.toString(), item.value.toString()];
+                }
+            } else {
+                latestBalances[userAddress] = [item.block.toString(), item.value.toString()];
             }
             rowCount++;
         }
@@ -70,7 +69,22 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         }
         skipIndex += rowCount;
     }
-    console.log(`Processed ${skipIndex} addresses`)
+    console.log(`Fetched ${skipIndex} records`);
+
+    for (let key in latestBalances) {
+        let value = latestBalances[key];
+        if (value[1] != "0") {
+            csvRows.push({
+                block_number: blockNumber,
+                timestamp: blockTimestamp,
+                user_address: key,
+                token_address: EZ_ETH_ADDRESS,
+                token_balance: BigInt(value[1]),
+                token_symbol: TOKEN_SYMBOL,
+                usd_price: 0
+            });
+        }
+    }
     return csvRows;
 };
 
@@ -107,3 +121,6 @@ export const main = async (blocks: BlockData[]) => {
         }
     }
 };
+
+
+//main([{blockNumber: 3825017, blockTimestamp: 123456}]);
