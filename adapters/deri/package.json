@@ -1,15 +1,14 @@
 {
-  "name": "gravita",
+  "name": "deri",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
     "compile": "tsc",
     "watch": "tsc -w",
-    "clear": "rm -rf dist",
-    "test": "node "
+    "clear": "rm -rf dist"
   },
   "keywords": [],
   "author": "",

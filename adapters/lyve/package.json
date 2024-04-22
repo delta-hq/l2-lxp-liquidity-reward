@@ -1,24 +1,24 @@
 {
-  "name": "gravita",
+  "name": "lyve",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type": "commonjs",
   "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
     "compile": "tsc",
     "watch": "tsc -w",
-    "clear": "rm -rf dist",
-    "test": "node "
+    "clear": "rm -rf dist"
   },
   "keywords": [],
   "author": "",
   "license": "UNLICENSED",
   "dependencies": {
-    "fast-csv": "^5.0.1"
+    "fast-csv": "^5.0.1",
+    "node-fetch": "^3.3.2"
   },
   "devDependencies": {
-    "@types/node": "^20.11.17",
-    "typescript": "^5.3.3"
+    "@types/node": "^20.11.30",
+    "typescript": "^5.4.3"
   }
 }
