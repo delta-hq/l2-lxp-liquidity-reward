@@ -102,15 +102,14 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
       // console.log('Total amount 1:', totalAmount1.toString());
 
       // Step 5: Get token symbols for token0 and token1 
-      const token0 = new ethers.Contract(poolInfo.token0, ERC20abi, provider);
-      const token1 = new ethers.Contract(poolInfo.token1, ERC20abi, provider);
-      const token0Symbol = await token0.symbol();
-      const token1Symbol = await token1.symbol();
-
       if (!symbols[poolInfo.token0]) {
+        const token0 = new ethers.Contract(poolInfo.token0, ERC20abi, provider);
+        const token0Symbol = await token0.symbol();
         symbols[poolInfo.token0] = token0Symbol;
       }
       if (!symbols[poolInfo.token1]) {
+        const token1 = new ethers.Contract(poolInfo.token1, ERC20abi, provider);
+        const token1Symbol = await token1.symbol();
         symbols[poolInfo.token1] = token1Symbol;
       }
 
@@ -121,10 +120,7 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
       // Step 6: Iterate over user share token balances and calculate token amounts
       if (usersShareTokenBalances) {
         for (const userBalance of usersShareTokenBalances) {
-            if (userBalance.contractId.toLowerCase() === vaultAddress.toLowerCase() && userBalance.balance > 0n) {
-            // console.log('User:', userBalance.user);
-            // console.log('User share token balance:', userBalance.balance);
-
+          if (userBalance.contractId.toLowerCase() === vaultAddress.toLowerCase() && userBalance.balance > 0n) {
             // Calculate token0 and token1 amounts based on the share ratio
             const token0Amount: bigint = userBalance.balance === 0n || totalSupplyByBlock === 0n
             ? 0n // Handle division by zero or zero balance
@@ -161,18 +157,9 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
   for (const user in amounts) {
     // Get the token amounts for the current user
     const userTokenAmounts = amounts[user];
-
     // Add token amounts to the rowData
     for (const token in userTokenAmounts) {
-      const amount = userTokenAmounts[token];
-
-      // Add token symbol if not already added
-      if (!symbols[token]) {
-        const tokenContract = new ethers.Contract(token, ERC20abi, provider);
-        const tokenSymbol = await tokenContract.symbol();
-        symbols[token] = tokenSymbol;
-      }
-      
+      const amount = userTokenAmounts[token];      
       // Create an OutputDataSchemaRow for the current user
       const rowData: OutputDataSchemaRow = {
         block_number: blockNumber,
