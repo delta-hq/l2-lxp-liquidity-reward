@@ -49,7 +49,7 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
 
     let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
 
-    const timestamp = new Date(await getTimestampAtBlock(block.blockNumber)).toISOString();
+    // const timestamp = new Date(await getTimestampAtBlock(block.blockNumber)).toISOString();
 
     lpValueByUsers.forEach((value, key) => {
       value.forEach((lpValue) => {
@@ -60,8 +60,8 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
           token_address: LP_LYNEX,
           token_symbol: LP_LYNEX_SYMBOL,
           token_balance: lpValueStr,
-          block_number: block.blockNumber.toString(),
-          timestamp
+          block_number: block.blockNumber,
+          timestamp: block.blockNumber
         });
       });
     });
