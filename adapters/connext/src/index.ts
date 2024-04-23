@@ -3,13 +3,12 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
 
-const input = {
-    blockNumber: 2954869,
-    blockTimestamp: 1711044141,
-}
+export { getUserTVLByBlock };
 
-const fileName = 'output.csv';
-console.log('Getting TVL at block:', input.blockNumber);
+// const input = {
+//     blockNumber: 2954869,
+//     blockTimestamp: 1711044141,
+// }
 
 interface BlockData {
     blockNumber: number;

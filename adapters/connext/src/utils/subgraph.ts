@@ -1,6 +1,38 @@
+import { PoolInformation, getPoolInformationFromLpToken } from "./cartographer";
 import { LpAccountBalanceHourly, SubgraphResult } from "./types";
+import { linea } from "viem/chains";
+import { createPublicClient, formatUnits, http, parseUnits } from "viem";
 
 export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/amarok-stableswap-analytics/1.0/gn";
+export const LINEA_CHAIN_ID = 59144;
+export const CONNEXT_LINEA_ADDRESS = "0xa05eF29e9aC8C75c530c2795Fa6A800e188dE0a9";
+
+const CONNEXT_ABI = [
+    {
+        "inputs": [
+            {
+                "internalType": "bytes32",
+                "name": "key",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "amount",
+                "type": "uint256"
+            }
+        ],
+        "name": "calculateRemoveSwapLiquidity",
+        "outputs": [
+            {
+                "internalType": "uint256[]",
+                "name": "",
+                "type": "uint256[]"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    }
+]
 
 const LP_HOURLY_QUERY_BY_BLOCK = (
     first: number,
@@ -91,6 +123,56 @@ export const getLpAccountBalanceAtTimestamp = async (timestamp: number, interval
 
 
     return [...balances.values()].flat();
+}
+
+type CompositeBalanceHourly = LpAccountBalanceHourly & {
+    underlyingTokens: [string, string];
+    underlyingBalances: [string, string];
+}
+
+export const getCompositeBalances = async (data: LpAccountBalanceHourly[]): Promise<CompositeBalanceHourly[]> => {
+    // get lp token balances
+    const poolInfo = new Map<string, PoolInformation>();
+
+    // get pool info
+    await Promise.all(data.map(async d => {
+        const poolId = d.token.id.toLowerCase();
+        if (poolInfo.has(poolId)) {
+            return;
+        }
+        const pool = await getPoolInformationFromLpToken(d.token.id, LINEA_CHAIN_ID);
+        poolInfo.set(poolId, pool);
+    }));
+
+    // get contract interface
+    const client = createPublicClient({ chain: linea, transport: http() });
+
+    // get composite balances
+    const balances = await Promise.all(data.map(async ({ token, amount }) => {
+        const poolId = token.id.toLowerCase();
+        const pool = poolInfo.get(poolId);
+        if (!pool) {
+            throw new Error(`Pool info not found for token: ${token.id}`);
+        }
+        // calculate the swap if you remove equal
+        const withdrawn = await client.readContract({
+            address: CONNEXT_LINEA_ADDRESS,
+            functionName: "calculateRemoveSwapLiquidity",
+            args: [pool.key, parseUnits(amount, 18)],
+            abi: CONNEXT_ABI
+        }) as [bigint, bigint];
+        return withdrawn.map(w => w.toString());
+    }));
+
+    // return composite balance object
+    return data.map((d, idx) => {
+        const { pooledTokens } = poolInfo.get(d.token.id.toLowerCase())!;
+        return {
+            ...d,
+            underlyingTokens: pooledTokens,
+            underlyingBalances: balances[idx] as [string, string]
+        }
+    })
 }
 
 const appendSubgraphData = (data: LpAccountBalanceHourly[], existing: Map<string, LpAccountBalanceHourly[]>) => {
