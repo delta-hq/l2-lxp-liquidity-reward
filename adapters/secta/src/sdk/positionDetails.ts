@@ -32,13 +32,16 @@ export const getTokenAmounts = async(
     console.log("sqrtPrice : " + sqrtPrice);
     
 
-    if (currentTick < tickLow) {
-        amount0 = BigInt(Math.floor(Number(liquidity) * ((sqrtRatioB - sqrtRatioA) / (sqrtRatioA * sqrtRatioB))));
-    } else if (currentTick >= tickHigh) {
-        amount1 = BigInt(Math.floor(Number(liquidity) * (sqrtRatioB - sqrtRatioA)));
-    } else if (currentTick >= tickLow && currentTick < tickHigh) {
-        amount0 = BigInt(Math.floor(Number(liquidity) * ((sqrtRatioB - sqrtPrice) / (sqrtPrice * sqrtRatioB))));
-        amount1 = BigInt(Math.floor(Number(liquidity) * (sqrtPrice - sqrtRatioA)));
+    if (currentTick >= tickLow && currentTick < tickHigh) {
+        amount0 = BigInt(
+            Math.floor(
+                Number(liquidity) *
+                    ((sqrtRatioB - sqrtPrice) / (sqrtPrice * sqrtRatioB))
+            )
+        );
+        amount1 = BigInt(
+            Math.floor(Number(liquidity) * (sqrtPrice - sqrtRatioA))
+        );
     }
 	let amount0Human: string = (Number(amount0) / 10 ** Decimal0).toFixed(Decimal0);
 	let amount1Human: string = (Number(amount1) / 10 ** Decimal1).toFixed(Decimal1);
