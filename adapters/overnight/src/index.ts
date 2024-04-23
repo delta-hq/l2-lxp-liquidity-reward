@@ -61,7 +61,7 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
           token_symbol: LP_LYNEX_SYMBOL,
           token_balance: lpValueStr,
           block_number: block.blockNumber,
-          timestamp: block.blockNumber
+          timestamp: block.blockTimestamp
         });
       });
     });
