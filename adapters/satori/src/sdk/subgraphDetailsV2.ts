@@ -17,7 +17,9 @@ export const getUserTVLByBlock = async (
     let subgraphUrl = SUBGRAPH_URL;
     let blockQuery = blockNumber !== 0 ? `block: {number: ${blockNumber}}` : ``;
     let skip = 0;
-    let result: OutputDataSchemaRow[] = [];
+    let fetchNext = true;
+    let result: OutputDataSchemaRow[] = [];     
+    while (fetchNext) {
         let query = `{
             accounts(${blockQuery} first:1000,skip:${skip}){
                 id
@@ -26,14 +28,12 @@ export const getUserTVLByBlock = async (
             }   
           }
           `;
-        
         let response = await fetch(subgraphUrl, {
             method: "POST",
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         });
         let data = await response.json();
-        console.log(data);
         let accounts = data.data.accounts
         for (const account of accounts) {
             let userLpSnapshot:OutputDataSchemaRow = { 
@@ -46,5 +46,12 @@ export const getUserTVLByBlock = async (
             }
             result.push(userLpSnapshot)
         }
+        if(accounts.length < 1000){
+            fetchNext = false;
+        }else{
+            skip += 1000;
+        }
+    }
+       
     return result
 }
