@@ -1,6 +1,6 @@
 import BigNumber from "bignumber.js";
 import { CHAINS, PROTOCOLS, AMM_TYPES } from "./config/config";
-import { getLPValueByUserAndPoolFromPositions, getPositionAtBlock, getPositionDetailsFromPosition, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./utils/subgraphDetails";
+import { getLPValueByUserAndPoolFromPositions, getPositionDetailsFromPosition, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./utils/subgraphDetails";
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -37,7 +37,7 @@ interface CSVRow {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: string;
+  token_balance: bigint;
   token_symbol: string;
   usd_price: number;
 }
@@ -90,7 +90,7 @@ const getData = async () => {
           user_address: key,
           token_address: tokenKey,
           token_symbol: tokenBalance.tokenSymbol,
-          token_balance: tokenBalance.tokenBalance.toString(),
+          token_balance: tokenBalance.tokenBalance,
           usd_price: tokenBalance.usdPrice,
         });
       });
@@ -122,7 +122,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         user_address: key,
         token_address: tokenKey,
         token_symbol: tokenBalance.tokenSymbol,
-        token_balance: tokenBalance.tokenBalance.toString(),
+        token_balance: tokenBalance.tokenBalance,
         usd_price: tokenBalance.usdPrice,
       });
     });

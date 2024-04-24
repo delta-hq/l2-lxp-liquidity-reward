@@ -41,7 +41,7 @@ export interface PositionWithUSDValue extends Position{
 }
 
 export interface UserTokenBalanceInfo {
-    tokenBalance: BigNumber;
+    tokenBalance: bigint;
     tokenSymbol: string;
     usdPrice: number;
 }
@@ -149,83 +149,83 @@ export const getPositionsForAddressByPoolAtBlock = async (
 }
 
 
-export const getPositionAtBlock = async (
-    blockNumber: number,
-    positionId: number,
-    chainId: CHAINS,
-    protocol: PROTOCOLS,
-    ammType: AMM_TYPES
-): Promise<Position> => {
-    let subgraphUrl = (SUBGRAPH_URLS as any)[chainId][protocol][ammType];
-    let blockQuery = blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
-    let query = `{
-        position(id: "${positionId}" ${blockQuery}) {
-            id
-            pool {
-                id
-                tick
-            }
-            leftPt
-            rightPt
-            }
-            liquidity
-            tokenX {
-                id
-                decimals
-                priceUSD
-                name
-                symbol
-            }
-            tokenY {
-                id
-                decimals
-                priceUSD
-                name
-                symbol
-            }
-        },
-        _meta{
-                block{
-                number
-            }
-        }
-    }`;
-    let response = await fetch(subgraphUrl, {
-        method: "POST",
-        body: JSON.stringify({ query }),
-        headers: { "Content-Type": "application/json" },
-    });
-    let data = await response.json();
-    let position = data.data.position;
+// export const getPositionAtBlock = async (
+//     blockNumber: number,
+//     positionId: number,
+//     chainId: CHAINS,
+//     protocol: PROTOCOLS,
+//     ammType: AMM_TYPES
+// ): Promise<Position> => {
+//     let subgraphUrl = (SUBGRAPH_URLS as any)[chainId][protocol][ammType];
+//     let blockQuery = blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
+//     let query = `{
+//         position(id: "${positionId}" ${blockQuery}) {
+//             id
+//             pool {
+//                 id
+//                 tick
+//             }
+//             leftPt
+//             rightPt
+//             }
+//             liquidity
+//             tokenX {
+//                 id
+//                 decimals
+//                 priceUSD
+//                 name
+//                 symbol
+//             }
+//             tokenY {
+//                 id
+//                 decimals
+//                 priceUSD
+//                 name
+//                 symbol
+//             }
+//         },
+//         _meta{
+//                 block{
+//                 number
+//             }
+//         }
+//     }`;
+//     let response = await fetch(subgraphUrl, {
+//         method: "POST",
+//         body: JSON.stringify({ query }),
+//         headers: { "Content-Type": "application/json" },
+//     });
+//     let data = await response.json();
+//     let position = data.data.position;
 
 
-    return  {
-            id: position.id,
-            liquidity: position.liquidity,
-            owner: position.owner,
-            pool: {
-                tick: Number(position.pool.tick),
-                id: position.pool.id,
-            },
-            leftPt: position.leftPt,
-            rightPt: position.rightPt,
-            tokenX: {
-                id: position.tokenX.id,
-                decimals: position.tokenX.decimals,
-                priceUSD: position.tokenX.priceUSD,
-                name: position.tokenX.name,
-                symbol: position.tokenX.symbol,
-            },
-            tokenY: {
-                id: position.tokenY.id,
-                decimals: position.tokenY.decimals,
-                priceUSD: position.tokenY.derivedUSD,
-                name: position.tokenY.name,
-                symbol: position.tokenY.symbol,
-            },
-        };
+//     return  {
+//             id: position.id,
+//             liquidity: position.liquidity,
+//             owner: position.owner,
+//             pool: {
+//                 tick: Number(position.pool.tick),
+//                 id: position.pool.id,
+//             },
+//             leftPt: position.leftPt,
+//             rightPt: position.rightPt,
+//             tokenX: {
+//                 id: position.tokenX.id,
+//                 decimals: position.tokenX.decimals,
+//                 priceUSD: position.tokenX.priceUSD,
+//                 name: position.tokenX.name,
+//                 symbol: position.tokenX.symbol,
+//             },
+//             tokenY: {
+//                 id: position.tokenY.id,
+//                 decimals: position.tokenY.decimals,
+//                 priceUSD: position.tokenY.derivedUSD,
+//                 name: position.tokenY.name,
+//                 symbol: position.tokenY.symbol,
+//             },
+//         };
 
-}
+// }
 
 export const getPositionDetailsFromPosition =  (
     position: Position
@@ -280,16 +280,16 @@ export const getLPValueByUserAndPoolFromPositions = (
 
         let tokenXAmount = userPositions.get(tokenXAddress);
         if (tokenXAmount === undefined) {
-            tokenXAmount = {tokenBalance: new BigNumber(0), tokenSymbol: position.tokenX.symbol, usdPrice: 0};
+            tokenXAmount = {tokenBalance: BigInt(0), tokenSymbol: position.tokenX.symbol, usdPrice: 0};
         }
 
         let tokenYAmount = userPositions.get(tokenYAddress);
         if (tokenYAmount === undefined) {
-            tokenYAmount = {tokenBalance: new BigNumber(0), tokenSymbol: position.tokenY.symbol, usdPrice: 0};
+            tokenYAmount = {tokenBalance: BigInt(0), tokenSymbol: position.tokenY.symbol, usdPrice: 0};
         }
        
-        tokenXAmount.tokenBalance = tokenXAmount.tokenBalance.plus(new BigNumber(positionWithUSDValue.token0DecimalValue));  
-        tokenYAmount.tokenBalance = tokenYAmount.tokenBalance.plus(new BigNumber(positionWithUSDValue.token1DecimalValue));
+        tokenXAmount.tokenBalance = tokenXAmount.tokenBalance + positionWithUSDValue.token0AmountsInWei;  
+        tokenYAmount.tokenBalance = tokenYAmount.tokenBalance + positionWithUSDValue.token1AmountsInWei;
 
         userPositions.set(tokenXAddress, tokenXAmount);
         userPositions.set(tokenYAddress, tokenYAmount);
