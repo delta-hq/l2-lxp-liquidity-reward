@@ -3,8 +3,9 @@
 };
 import fs from "fs";
 import { write } from "fast-csv";
+import csv from 'csv-parser';
 import {
-  getTimestampAtBlock,
+  // getTimestampAtBlock,
   getUserStakesForAddressByPoolAtBlock,
   getUserVoteForAddressByPoolAtBlock,
 } from "./sdk/subgraphDetails";
@@ -13,33 +14,33 @@ import BigNumber from "bignumber.js";
 import { BlockData, OutputSchemaRow } from "./sdk/types";
 BigNumber.set({ EXPONENTIAL_AT: 256 });
 
-const getData = async () => {
-  const snapshotBlocks = [2999728];
+// const getData = async () => {
+//   const snapshotBlocks = [2999728];
 
-  const csvRows: OutputSchemaRow[] = [];
+//   const csvRows: OutputSchemaRow[] = [];
 
-  for (let block of snapshotBlocks) {
-    const timestamp = await getTimestampAtBlock(block);
-    csvRows.push(
-      ...(await getUserTVLByBlock({
-        blockNumber: block,
-        blockTimestamp: timestamp,
-      }))
-    );
-  }
+//   for (let block of snapshotBlocks) {
+//     const timestamp = await getTimestampAtBlock(block);
+//     csvRows.push(
+//       ...(await getUserTVLByBlock({
+//         blockNumber: block,
+//         blockTimestamp: timestamp,
+//       }))
+//     );
+//   }
 
-  // Write the CSV output to a file
-  const ws = fs.createWriteStream("outputData.csv");
-  write(csvRows, { headers: true })
-    .pipe(ws)
-    .on("finish", () => {
-      console.log("CSV file has been written.");
-    });
-};
+//   // Write the CSV output to a file
+//   const ws = fs.createWriteStream("outputData.csv");
+//   write(csvRows, { headers: true })
+//     .pipe(ws)
+//     .on("finish", () => {
+//       console.log("CSV file has been written.");
+//     });
+// };
 
-getData().then(() => {
-  console.log("Done");
-});
+// getData().then(() => {
+//   console.log("Done");
+// });
 
 export const getUserTVLByBlock = async ({
   blockNumber,
@@ -106,3 +107,55 @@ export const getUserTVLByBlock = async ({
   });
   return result;
 };
+
+
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on('data', (row: { number: string; timestamp: string; }) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err: any) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+  console.log(blocks);
+  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+
+  for (const block of blocks) {
+      try {
+          const result = await getUserTVLByBlock(block);
+          allCsvRows.push(...result);
+      } catch (error) {
+          console.error(`An error occurred for block ${block}:`, error);
+      }
+  }
+  await new Promise((resolve, reject) => {
+    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+    write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+        console.log(`CSV file has been written.`);
+        resolve;
+        });
+  });
+
+}).catch((err) => {
+  console.error('Error reading CSV file:', err);
+});
