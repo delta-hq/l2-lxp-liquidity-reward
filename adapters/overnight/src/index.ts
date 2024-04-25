@@ -19,7 +19,6 @@ interface CSVRow {
 
 const getData = async () => {
   const csvRows: CSVRow[] = [];
-  const csvRows_rebase: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
     const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
@@ -71,7 +70,7 @@ const getData = async () => {
     const timestamp = new Date(await getTimestampAtBlock(SNAPSHOTS_BLOCKS[index + 1])).toISOString();
 
     positionsRebaseUsd.forEach((value, key) => {
-      csvRows_rebase.push({
+      csvRows.push({
         user_address: key,
         token_symbol: USD_PLUS_SYMBOL,
         token_balance: value,
@@ -82,7 +81,7 @@ const getData = async () => {
     });
 
     positionsRebaseUsdt.forEach((value, key) => {
-      csvRows_rebase.push({
+      csvRows.push({
         user_address: key,
         token_symbol: USDT_PLUS_SYMBOL,
         token_balance: value,
@@ -95,11 +94,7 @@ const getData = async () => {
 
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData.csv');
-  const ws_rebase = fs.createWriteStream('outputData_rebase.csv');
   write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
-    console.log("CSV file has been written.");
-  });
-  write(csvRows_rebase, { headers: true }).pipe(ws_rebase).on('finish', () => {
     console.log("CSV file has been written.");
   });
 };
