@@ -1,18 +1,26 @@
-<<<<<<< HEAD
-import csv from 'csv-parser';
-import fs from 'fs';
-import { write } from 'fast-csv';
-import { CHAINS, LP_LYNEX_SYMBOL, LP_LYNEX, PROTOCOLS } from "./sdk/config";
-import { BlockData} from './sdk/types';
-import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
-=======
 import { SNAPSHOTS_BLOCKS, OVN_CONTRACTS, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_SYMBOL, USDT_PLUS_LINEA } from "./sdk/config";
 import { getLPValueByUserAndPoolFromPositions, getUserTVLByBlock, getRebaseForUsersByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
->>>>>>> origin/main
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
+import csv from 'csv-parser';
+import fs from 'fs';
+import { write } from 'fast-csv';
+
+interface CSVRow {
+  block_number: string;
+  timestamp: string;
+  user_address: string;
+  token_address: string;
+  token_balance: string;
+  token_symbol: string;
+}
+
+interface BlockData {
+  blockNumber: number;
+  blockTimestamp: number;
+}
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -35,48 +43,18 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
       });
   });
 
-<<<<<<< HEAD
   return blocks;
 };
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
-  console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
 
-  for (let block of blocks) {
-    const positions = await getPositionsForAddressByPoolAtBlock(
-      block.blockNumber, "", "", CHAINS.LINEA, PROTOCOLS.OVN
-    );
-    
-    console.log(`Block: ${block}`);
-    console.log("Positions: ", positions.length);
-
-    let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
-
-    // const timestamp = new Date(await getTimestampAtBlock(block.blockNumber)).toISOString();
-
-    lpValueByUsers.forEach((value, key) => {
-      value.forEach((lpValue) => {
-        const lpValueStr = lpValue.toString();
-        // Accumulate CSV row data
-        allCsvRows.push({
-          user_address: key,
-          token_address: LP_LYNEX,
-          token_symbol: LP_LYNEX_SYMBOL,
-          token_balance: lpValueStr,
-          block_number: block.blockNumber,
-          timestamp: block.blockTimestamp
-=======
-const getData = async () => {
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   const csvRows: CSVRow[] = [];
   const csvRows_rebase: CSVRow[] = [];
   
-  for (let block of SNAPSHOTS_BLOCKS) {
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+  for (let block of blocks) {
+    const timestamp = block.blockTimestamp  // new Date(await getTimestampAtBlock(block)).toISOString();
     const positions = await getUserTVLByBlock({
-      blockNumber: block,
+      blockNumber: block.blockNumber,
       blockTimestamp: Number(timestamp),
     });
     
@@ -92,9 +70,8 @@ const getData = async () => {
             token_address: LP_LYNEX,
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: lpValueStr,
-            block_number: block.toString(),
-            timestamp
->>>>>>> origin/main
+            block_number: block.blockNumber.toString(),
+            timestamp: block.blockTimestamp.toString()
         });
       })
     });
@@ -146,19 +123,6 @@ const getData = async () => {
     });
   }
 
-<<<<<<< HEAD
-  await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
-        .pipe(ws)
-        .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
-        });
-  });
-=======
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData.csv');
   const ws_rebase = fs.createWriteStream('outputData_rebase.csv');
@@ -168,10 +132,9 @@ const getData = async () => {
   write(csvRows_rebase, { headers: true }).pipe(ws_rebase).on('finish', () => {
     console.log("CSV file has been written.");
   });
-};
->>>>>>> origin/main
-
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
 });
+
+// getData().then(() => {
+//   console.log("Done");
+// });
 
