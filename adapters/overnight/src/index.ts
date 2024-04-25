@@ -79,7 +79,6 @@ const getData = async () => {
         timestamp
       });
     });
-
     positionsRebaseUsdt.forEach((value, key) => {
       csvRows.push({
         user_address: key,
