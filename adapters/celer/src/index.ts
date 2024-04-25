@@ -1,5 +1,3 @@
-import { promisify } from 'util';
-import stream from 'stream';
 import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
@@ -84,12 +82,7 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   for (const block of blocks) {
       try {
           const result = await getUserTVLByBlock(block);
-          // Accumulate CSV rows for all blocks
           allCsvRows.push(...result);
-          // console.log(`Processed block ${i}`);
-          // Write to file when batch size is reached or at the end of loop
-          // if (i % batchSize === 0 || i === blocks.length) {
-          // }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }

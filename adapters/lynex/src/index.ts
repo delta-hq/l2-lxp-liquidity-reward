@@ -1,9 +1,9 @@
 import fs from "fs";
+import csv from 'csv-parser';
 import { write } from "fast-csv";
 import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
   VE_LYNX_ADDRESS,
-  LYNX_ADDRESS,
   fetchUserPools,
   fetchUserVotes,
 } from "./sdk/lensDetails";
@@ -14,28 +14,28 @@ import {
   getV3UserPositionsAtBlock,
 } from "./sdk/pools";
 
-// const getData = async () => {
-//   const snapshotBlocks = [3460121];
+const getData = async () => {
+  const snapshotBlocks = [3460121];
 
-//   const csvRows: OutputSchemaRow[] = [];
+  const csvRows: OutputSchemaRow[] = [];
 
-//   for (let block of snapshotBlocks) {
-//     const timestamp = await getTimestampAtBlock(block);
-//     csvRows.push(
-//       ...(await getUserTVLByBlock({
-//         blockNumber: block,
-//         blockTimestamp: timestamp,
-//       }))
-//     );
-//   }
+  for (let block of snapshotBlocks) {
+    const timestamp = await getTimestampAtBlock(block);
+    csvRows.push(
+      ...(await getUserTVLByBlock({
+        blockNumber: block,
+        blockTimestamp: timestamp,
+      }))
+    );
+  }
 
-//   const ws = fs.createWriteStream("outputData.csv");
-//   write(csvRows, { headers: true })
-//     .pipe(ws)
-//     .on("finish", () => {
-//       console.log("CSV file has been written.");
-//     });
-// };
+  const ws = fs.createWriteStream("outputData.csv");
+  write(csvRows, { headers: true })
+    .pipe(ws)
+    .on("finish", () => {
+      console.log("CSV file has been written.");
+    });
+};
 
 export const getUserTVLByBlock = async ({
   blockNumber,
@@ -129,7 +129,7 @@ export const getUserStakedTVLByBlock = async ({
   for (const userFecthedVotes of userVotesResult) {
     for (const userVote of userFecthedVotes) {
       const user_address = userVote.result.userAddress.toLowerCase();
-      const token0Address = LYNX_ADDRESS.toLowerCase();
+      const token0Address = VE_LYNX_ADDRESS.toLowerCase();
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0
@@ -201,6 +201,7 @@ export const getUserLiquidityTVLByBlock = async ({
 //   console.log("Done");
 // });
 
+
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
 
@@ -237,10 +238,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
           const result = await getUserTVLByBlock(block);
           // Accumulate CSV rows for all blocks
           allCsvRows.push(...result);
-          // console.log(`Processed block ${i}`);
-          // Write to file when batch size is reached or at the end of loop
-          // if (i % batchSize === 0 || i === blocks.length) {
-          // }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }
@@ -256,10 +253,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
         resolve;
         });
   });
-
-    // Clear the accumulated CSV rows
-  // allCsvRows.length = 0;
-
 }).catch((err) => {
   console.error('Error reading CSV file:', err);
 });
