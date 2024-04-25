@@ -73,7 +73,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
   const batchSize = 1000; // Size of batch to trigger writing to the file
@@ -88,8 +88,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
       }
   }
   await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
     write(allCsvRows, { headers: true })
         .pipe(ws)
@@ -98,10 +96,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
         resolve;
         });
   });
-
-    // Clear the accumulated CSV rows
-  // allCsvRows.length = 0;
-
 }).catch((err) => {
   console.error('Error reading CSV file:', err);
 });
