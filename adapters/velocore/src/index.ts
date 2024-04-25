@@ -8,7 +8,7 @@ import {
   getUserStakesForAddressByPoolAtBlock,
   getUserVoteForAddressByPoolAtBlock,
 } from "./sdk/subgraphDetails";
-import { getGaugesAtBlock, VE_VC_ADDRESS } from "./sdk/lensDetails";
+import { getGaugesAtBlock, VC_ADDRESS } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
 import { BlockData, OutputSchemaRow } from "./sdk/types";
 BigNumber.set({ EXPONENTIAL_AT: 256 });
@@ -81,7 +81,7 @@ export const getUserTVLByBlock = async ({
   userVotes.forEach((userVote) => {
     const user_address = userVote.owner.toLowerCase();
     const token_balance = userVote.balance;
-    const token_address = VE_VC_ADDRESS.toLowerCase();
+    const token_address = VC_ADDRESS.toLowerCase();
     tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
     tokenBalanceMap[user_address][token_address] = BigNumber(
       tokenBalanceMap[user_address][token_address] ?? 0
