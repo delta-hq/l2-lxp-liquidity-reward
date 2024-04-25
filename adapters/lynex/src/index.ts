@@ -3,6 +3,7 @@ import { write } from "fast-csv";
 import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
   VE_LYNX_ADDRESS,
+  LYNX_ADDRESS,
   fetchUserPools,
   fetchUserVotes,
 } from "./sdk/lensDetails";
@@ -128,7 +129,7 @@ export const getUserStakedTVLByBlock = async ({
   for (const userFecthedVotes of userVotesResult) {
     for (const userVote of userFecthedVotes) {
       const user_address = userVote.result.userAddress.toLowerCase();
-      const token0Address = VE_LYNX_ADDRESS.toLowerCase();
+      const token0Address = LYNX_ADDRESS.toLowerCase();
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0

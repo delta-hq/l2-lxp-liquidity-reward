@@ -23,7 +23,7 @@ interface SubgraphResponse {
 
 interface UserPositionSnapshotsAtBlockData {
     block_number: number
-    timestamp: string
+    timestamp: number
     user_address: string
     token_address: string
     token_symbol: string
@@ -102,7 +102,7 @@ export const getPositionsForAddressByPoolAtBlock = async  (
             }
             userPositionSnapshotsAtBlockData.push({
                 user_address: positionSnapshot.account,
-                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                timestamp: Math.floor(positionSnapshot.timestamp),
                 token_address: positionSnapshot.pair.id,
                 block_number: snapshotBlockNumber,
                 token_symbol: `${positionSnapshot.pair.token0.symbol}/${positionSnapshot.pair.token1.symbol} cSLP`,
