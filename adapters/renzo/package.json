@@ -15,7 +15,8 @@
     "author": "",
     "license": "UNLICENSED",
     "dependencies": {
-        "fast-csv": "^5.0.1"
+        "fast-csv": "^5.0.1",
+        "csv-parser": "^3.0.0"
     },
     "devDependencies": {
         "@types/node": "^20.12.5",

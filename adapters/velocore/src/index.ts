@@ -2,6 +2,7 @@
   return this.toString();
 };
 import fs from "fs";
+import csv from 'csv-parser';
 import { write } from "fast-csv";
 import {
   getTimestampAtBlock,
