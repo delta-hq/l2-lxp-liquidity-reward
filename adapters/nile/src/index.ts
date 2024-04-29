@@ -6,8 +6,10 @@ import {
   getV3UserPositionsAtBlock,
 } from "./sdk/positions";
 import { getTimestampAtBlock } from "./sdk/common";
-import { VE_NILE_ADDRESS, fetchUserVotes } from "./sdk/lensDetails";
+import { fetchUserVotes } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
+
+const NILE_ADDRESS = "0xAAAac83751090C6ea42379626435f805DDF54DC8".toLowerCase();
 
 const getData = async () => {
   const snapshotBlocks = [3753501];
@@ -122,7 +124,7 @@ export const getUserLiquidityTVLByBlock = async ({
       block_number: blockNumber,
       timestamp: blockTimestamp,
       user_address: userVote.user,
-      token_address: VE_NILE_ADDRESS,
+      token_address: NILE_ADDRESS,
       token_balance: userVote.balance,
     });
   }
