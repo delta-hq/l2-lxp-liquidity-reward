@@ -48,26 +48,25 @@ const getData = async () => {
 
   // counting rebase by blocks range
   // [0, 100, 200] -> gonna be counted like [0, 100] + [100, 200]
-  for (let [index, block] of SNAPSHOTS_BLOCKS.entries()) {
-    if (!SNAPSHOTS_BLOCKS[index + 1]) continue;
-    console.log(`Blocks: ${block} -> ${SNAPSHOTS_BLOCKS[index + 1]}`);
+  for (let block of SNAPSHOTS_BLOCKS) {
+    console.log(`Blocks: 0 -> ${block}`);
+
+    if (block === 0) continue;
 
     const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock({
-      blockNumberFrom: block,
-      blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
+      blockNumber: block,
       token: OVN_CONTRACTS.USDPLUS
     });
 
     const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock({
-      blockNumberFrom: block,
-      blockNumberTo: SNAPSHOTS_BLOCKS[index + 1],
+      blockNumber: block,
       token: OVN_CONTRACTS.USDTPLUS
     });
 
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
     // all results are counted for the END block
-    const timestamp = new Date(await getTimestampAtBlock(SNAPSHOTS_BLOCKS[index + 1])).toISOString();
+    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
 
     positionsRebaseUsd.forEach((value, key) => {
       csvRows.push({
@@ -75,7 +74,7 @@ const getData = async () => {
         token_symbol: USD_PLUS_SYMBOL,
         token_balance: value,
         token_address: USD_PLUS_LINEA,
-        block_number: SNAPSHOTS_BLOCKS[index + 1].toString(),
+        block_number: block.toString(),
         timestamp
       });
     });
@@ -85,7 +84,7 @@ const getData = async () => {
         token_symbol: USDT_PLUS_SYMBOL,
         token_balance: value,
         token_address: USDT_PLUS_LINEA,
-        block_number: SNAPSHOTS_BLOCKS[index + 1].toString(),
+        block_number: block.toString(),
         timestamp
       });
     });
