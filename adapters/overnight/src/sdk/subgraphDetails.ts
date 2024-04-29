@@ -1,6 +1,6 @@
 import BN from "bignumber.js";
-import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, USD_PLUS_LINEA, ZERO_ADD, CHUNKS_SPLIT, USDT_PLUS_LINEA } from "./config";
-import { Address, createPublicClient, extractChain, http } from "viem";
+import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, ZERO_ADD, CHUNKS_SPLIT, BLOCK_STEP } from "./config";
+import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "./abi";
@@ -11,8 +11,7 @@ export interface BlockData {
 }
 
 export interface BlockDataRebase {
-    blockNumberFrom: number;
-    blockNumberTo: number;
+    blockNumber: number;
     token: OVN_CONTRACTS.USDPLUS | OVN_CONTRACTS.USDTPLUS;
 }
 
@@ -74,8 +73,9 @@ const countNetRebase = async (
     ]
 
     let index = 0;
-    console.log('Counting net rebases for users...');
-    for (const [key, val] of usersMinted.entries()) {
+    console.log('Counting net rebases for users...', `from ${blockNumberFrom} -> to ${blockNumberTo}`);
+
+    const asyncBalanceCheck = async (key: string, val: string) => {
         try {
             const balanceTo = (await etherC.balanceOf(key, { blockTag: blockNumberTo })).toString();
             let balanceFrom = 0;
@@ -83,7 +83,7 @@ const countNetRebase = async (
             const userRedeem = usersRedeemed.get(key) ?? "0";
     
             if (!balanceTo) return;
-            if (blockNumberFrom !== 0) {
+            if (new BN(blockNumberFrom).gt(0)) {
                 balanceFrom = (await etherC.balanceOf(key, { blockTag: blockNumberFrom })).toString();
             };
     
@@ -94,8 +94,10 @@ const countNetRebase = async (
                 console.log("Loading", index, " -> ", usersMinted.size)
             }
     
-            const rebased = balanceDiff.minus(val).plus(userRedeem);
-            usersRebaseProfit.set(key, rebased.toFixed());
+            const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
+            const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
+
+            usersRebaseProfit.set(key, valToSave);
         } catch(e) {
             console.log(e)
             console.log("ERROR FOR:", {
@@ -107,6 +109,24 @@ const countNetRebase = async (
         }
     }
 
+    const processMapBatched = async () => {
+        const batchSize = 100;
+        const keys = Array.from(usersMinted.keys());
+    
+        for (let i = 0; i < keys.length; i += batchSize) {
+            const batch = keys.slice(i, i + batchSize);
+            const promises = batch.map(async (key) => {
+                const val = usersMinted.get(key);
+
+                if (!val) return null;
+                return await asyncBalanceCheck(key, val);
+            });
+            await Promise.all(promises);
+        }
+    };
+
+    await processMapBatched()
+
     const sortedMap = new Map([...usersRebaseProfit.entries()].sort((a, b) => new BN(a[1]).gt(b[1]) ? -1 : 1));
 
     // removing pools/working contracts
@@ -117,113 +137,140 @@ const countNetRebase = async (
 
     return sortedMap;
 }
-
-
+  
 export const getRebaseForUsersByPoolAtBlock = async ({
-    blockNumberFrom,
-    blockNumberTo,
+    blockNumber,
     token
 }: BlockDataRebase): Promise<Map<string, string>> => {
-    if (!blockNumberFrom || !blockNumberTo) return new Map();
-    console.log("INIT")
+    if (!blockNumber) return new Map();
 
-    const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN_REBASE]
+    const blockNumberFrom = 0;
+    const blockNumberTo = blockNumber;
 
-    const slices = CHUNKS_SPLIT;
-    const step = (blockNumberTo - blockNumberFrom) / slices;
-    const blocksBatches = Array.from({ length: slices + 1 }).map((_, index) => {
+    const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN_REBASE];
+
+    const blockStep = BLOCK_STEP;
+    const step = (blockNumberTo - blockNumberFrom) / blockStep;
+    const blocksList = Array.from({ length: blockStep + 1 }).map((_, index) => {
         const blockNumber = blockNumberFrom + index * step;
         return Math.floor(blockNumber).toString();
     });
-    const allDataRes: PositionRebase[] = [];
+
+    console.log('Blocks to index: ', blocksList)
+
+    const batchSize = Math.ceil(blocksList.length / CHUNKS_SPLIT);
+    const chunkedBlocks: string[][] = [];
+
+    for (let i = 0; i < blocksList.length; i += batchSize - 1) {
+      const batch = blocksList.slice(i, i + batchSize);
+      chunkedBlocks.push(batch);
+    }
+    
+    const url = urlData[token].url;
 
     // user address -> value of minted
-    const usersMinted: Map<string, string> = new Map();
-
+    const usersMintedTotal: Map<string, string> = new Map();
     // user address -> value of redeemed/transfered
-    const usersRedeemed: Map<string, string> = new Map();
-
-
-    console.log(blocksBatches, '___blocksBatches');
+    const usersRedeemedTotal: Map<string, string> = new Map();
+    
     const asyncLoad = async () => {
-        for (let i = 0; i < blocksBatches.length; i++) {
-            console.log('Batch done:', i + " from ", blocksBatches.length);
-            console.log('usersMinted: ', usersMinted.size);
-            await new Promise((res) => setTimeout(res, 10));
-            const nextValue = blocksBatches[i + 1];
-    
-            const url = urlData[token].url;
-            let result: PositionRebase[] = [];
-            let whereQuery = `where: { blockNumber_gte: ${blocksBatches[i]}, blockNumber_lte: ${Number(nextValue) - 1}}`;
-            let fetchNext = true;
-            let skip = 0;
-    
-            if (!nextValue || !url) return [];
-    
-            while(fetchNext){
-                let query = `{
-                    transfers(${whereQuery} orderBy: value, first: 1000, skip: ${skip}) {
-                        value
-                        from
-                        to
-                        transactionHash
-                    }
-                }`;
-    
-                let response = await fetch(url, {
-                    method: "POST",
-                    body: JSON.stringify({ query }),
-                    headers: { "Content-Type": "application/json" },
-                });
-                let data = await response.json();
+        const totalData = await Promise.all(chunkedBlocks.map(async (item, i) => {
+            return new Promise(async (res) => {
+                // user address -> value of minted
+                const usersMinted: Map<string, string> = new Map();
+                // user address -> value of redeemed/transfered
+                const usersRedeemed: Map<string, string> = new Map();
+                
+                for (let j = 0; j < chunkedBlocks[i].length; j++) {
+                    console.log(`Batch ${i} done:`, j + " from ", chunkedBlocks[i].length);
+                    const nextValue = chunkedBlocks[i][j + 1];
+            
+                    let whereQuery = `where: { blockNumber_gte: ${chunkedBlocks[i][j]}, blockNumber_lte: ${Number(nextValue) - 1}}`;
+                    let fetchNext = true;
+                    let skip = 0;
 
-                if (skip > 1000) {
-                    console.log("skip > 1000: ", skip)
+                    if (!nextValue || !url || new BN(nextValue).isNaN()) continue;
+            
+                    while(fetchNext){
+                        let query = `{
+                            transfers(${whereQuery} orderBy: value, first: 1000, skip: ${skip}) {
+                                value
+                                from
+                                to
+                            }
+                        }`;
+            
+                        let response = await fetch(url, {
+                            method: "POST",
+                            body: JSON.stringify({ query }),
+                            headers: { "Content-Type": "application/json" },
+                        });
+                        let data = await response.json();
+        
+                        if (skip > 1000) {
+                            console.log(`Batch ${i}-${j}:`, " skip > 1000: ", skip)
+                        }
+        
+                        let positions = data.data.transfers;
+                        for (let k = 0; k < positions.length; k++) {
+                            let position = positions[k];
+                            const fromAddress = position.from.toLowerCase();
+                            const toAddress = position.to.toLowerCase();
+        
+                            // redeem
+                            if (fromAddress === ZERO_ADD) {
+                                const data = usersMinted.get(toAddress);
+                                usersMinted.set(toAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
+                                continue;
+                            }
+        
+                            // mint
+                            if (toAddress === ZERO_ADD) {
+                                const data = usersRedeemed.get(fromAddress);
+                                usersRedeemed.set(fromAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
+                                continue;
+                            }
+        
+                            // transfer between accounts
+                            if (![toAddress, fromAddress].includes(ZERO_ADD)) {
+                                const dataFrom = usersRedeemed.get(fromAddress);
+                                const dataTo = usersMinted.get(toAddress);
+                                usersRedeemed.set(fromAddress, dataFrom ? new BN(dataFrom).plus(position.value).toFixed(0) : position.value);
+                                usersMinted.set(toAddress, dataTo ? new BN(dataTo).plus(position.value).toFixed(0) : position.value);
+                                continue;
+                            }
+                        }
+                        if(positions.length < 1000){
+                            fetchNext = false;
+                        }else{
+                            skip += 1000;
+                        }
+                    }
                 }
 
-                let positions = data.data.transfers;
-                for (let i = 0; i < positions.length; i++) {
-                    let position = positions[i];
-                    const fromAddress = position.from.toLowerCase();
-                    const toAddress = position.to.toLowerCase();
+                res({
+                    mint: usersMinted,
+                    redeem: usersRedeemed
+                })
+            })
+        }))
 
-                    // redeem
-                    if (fromAddress === ZERO_ADD) {
-                        const data = usersMinted.get(toAddress);
-                        usersMinted.set(toAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
-                        continue;
-                    }
-
-                    // mint
-                    if (toAddress === ZERO_ADD) {
-                        const data = usersRedeemed.get(fromAddress);
-                        usersRedeemed.set(fromAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
-                        continue;
-                    }
-
-                    // transfer between accounts
-                    if (![toAddress, fromAddress].includes(ZERO_ADD)) {
-                        const dataFrom = usersRedeemed.get(fromAddress);
-                        const dataTo = usersMinted.get(toAddress);
-                        usersRedeemed.set(fromAddress, dataFrom ? new BN(dataFrom).plus(position.value).toFixed(0) : position.value);
-                        usersMinted.set(toAddress, dataTo ? new BN(dataTo).plus(position.value).toFixed(0) : position.value);
-                        continue;
-                    }
-                }
-                if(positions.length < 1000){
-                    fetchNext = false;
-                }else{
-                    skip += 1000;
-                }
-            }
-    
-            allDataRes.push(result.length as any)
-        }
+        totalData.forEach((usersData: any) => {
+            usersData?.mint?.forEach((val: string, key: string) => {
+                const data = usersMintedTotal.get(key);
+                usersMintedTotal.set(key, data ? new BN(data).plus(val).toFixed(0) : val)
+            })
+            usersData?.redeem?.forEach((val: string, key: string) => {
+                const data = usersRedeemedTotal.get(key);
+                usersRedeemedTotal.set(key, data ? new BN(data).plus(val).toFixed(0) : val)
+            })
+        })
     }
 
     await asyncLoad();
 
-    const listNetRebase = await countNetRebase(usersMinted, usersRedeemed, blockNumberFrom, blockNumberTo, urlData[token].address)
+    console.log('usersMinted: ', usersMintedTotal.size);
+    const listNetRebase = await countNetRebase(usersMintedTotal, usersRedeemedTotal, blockNumberFrom, blockNumberTo, urlData[token].address)
     if (!listNetRebase) return new Map()
 
     return listNetRebase;
