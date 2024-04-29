@@ -146,7 +146,6 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 
     const blockNumberFrom = 0;
     const blockNumberTo = blockNumber;
-    console.log("INIT");
 
     const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN_REBASE];
 
@@ -157,7 +156,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
         return Math.floor(blockNumber).toString();
     });
 
-    console.log(blocksList, '___blocksBatches1')
+    console.log('Blocks to index: ', blocksList)
 
     const batchSize = Math.ceil(blocksList.length / CHUNKS_SPLIT);
     const chunkedBlocks: string[][] = [];
@@ -167,7 +166,6 @@ export const getRebaseForUsersByPoolAtBlock = async ({
       chunkedBlocks.push(batch);
     }
     
-    console.log(chunkedBlocks, '___batchesBlocks');
     const url = urlData[token].url;
 
     // user address -> value of minted
