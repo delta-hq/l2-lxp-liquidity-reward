@@ -8,8 +8,9 @@ import {
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
-import csv from 'csv-parser';
+
 import fs from "fs";
+import csv from 'csv-parser';
 import { write } from "fast-csv";
 import { getMarketInfos } from "./sdk/marketDetails";
 import { bigMath } from "./sdk/abi/helpers";
@@ -54,8 +55,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     accountBorrows
   );
 
-  const timestamp = await getTimestampAtBlock(block);
-
   lpValueByUsers.forEach((value, owner) => {
     value.forEach((amount, market) => {
       if (bigMath.abs(amount) < 1) return;
@@ -64,8 +63,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
       // Accumulate CSV row data
       csvRows.push({
-        block_number: block,
-        timestamp: timestamp,
+        block_number: blocks.blockTimestamp,
+        timestamp: blocks.blockTimestamp,
         user_address: owner,
         token_address: marketInfo?.underlyingAddress ?? "",
         token_balance: amount / BigInt(1e18),
@@ -73,7 +72,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         usd_price: 0,
       });
     });
-    return csvRows;
   });
 
   // Write the CSV output to a file
@@ -84,8 +82,9 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   //     console.log("CSV file has been written.");
   //   });
 
-  // return csvRows;
+  return csvRows;
 };
+
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -138,10 +137,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
         resolve;
         });
   });
-
-    // Clear the accumulated CSV rows
-  // allCsvRows.length = 0;
-
 }).catch((err) => {
   console.error('Error reading CSV file:', err);
 });
