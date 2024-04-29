@@ -95,9 +95,9 @@ const countNetRebase = async (
             }
     
             const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
-            // const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
+            const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
 
-            usersRebaseProfit.set(key, rebased.toFixed());
+            usersRebaseProfit.set(key, valToSave);
         } catch(e) {
             console.log(e)
             console.log("ERROR FOR:", {
