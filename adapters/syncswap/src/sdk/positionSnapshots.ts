@@ -82,7 +82,7 @@ export const getPositionsForAddressByPoolAtBlock = async  (
             skip = 0
             b_start = snapshotsArrays[snapshotsArrays.length - 1].block+1
         }
-        writeProgress(b_end, b_start,b_end)
+        // writeProgress(b_end, b_start,b_end)
     }
     for(const snapshot of snapshotsArrays) {
         let userPositionSnapshotMap = snapshotsMap.get(snapshot.account)

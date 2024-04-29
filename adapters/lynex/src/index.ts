@@ -1,9 +1,10 @@
 import fs from "fs";
-import csv from 'csv-parser';
 import { write } from "fast-csv";
+import csv from 'csv-parser';
 import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
   VE_LYNX_ADDRESS,
+  LYNX_ADDRESS,
   fetchUserPools,
   fetchUserVotes,
 } from "./sdk/lensDetails";
@@ -129,7 +130,7 @@ export const getUserStakedTVLByBlock = async ({
   for (const userFecthedVotes of userVotesResult) {
     for (const userVote of userFecthedVotes) {
       const user_address = userVote.result.userAddress.toLowerCase();
-      const token0Address = VE_LYNX_ADDRESS.toLowerCase();
+      const token0Address = LYNX_ADDRESS.toLowerCase();
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0
@@ -201,7 +202,6 @@ export const getUserLiquidityTVLByBlock = async ({
 //   console.log("Done");
 // });
 
-
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
 
@@ -230,8 +230,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
 
   for (const block of blocks) {
       try {
@@ -243,8 +241,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
       }
   }
   await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
     write(allCsvRows, { headers: true })
         .pipe(ws)

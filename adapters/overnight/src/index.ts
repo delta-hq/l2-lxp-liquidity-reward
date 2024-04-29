@@ -4,7 +4,7 @@ import { getLPValueByUserAndPoolFromPositions, getUserTVLByBlock, getRebaseForUs
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
-import csv from 'csv-parser';
+
 import fs from 'fs';
 import { write } from 'fast-csv';
 
@@ -17,44 +17,14 @@ interface CSVRow {
   token_symbol: string;
 }
 
-interface BlockData {
-  blockNumber: number;
-  blockTimestamp: number;
-}
-
-const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
-  const blocks: BlockData[] = [];
-
-  await new Promise<void>((resolve, reject) => {
-    fs.createReadStream(filePath)
-      .pipe(csv()) // Specify the separator as '\t' for TSV files
-      .on('data', (row) => {
-        const blockNumber = parseInt(row.number, 10);
-        const blockTimestamp = parseInt(row.timestamp, 10);
-        if (!isNaN(blockNumber) && blockTimestamp) {
-          blocks.push({ blockNumber: blockNumber, blockTimestamp });
-        }
-      })
-      .on('end', () => {
-        resolve();
-      })
-      .on('error', (err) => {
-        reject(err);
-      });
-  });
-
-  return blocks;
-};
-
-
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+const getData = async () => {
   const csvRows: CSVRow[] = [];
   const csvRows_rebase: CSVRow[] = [];
   
-  for (let block of blocks) {
-    const timestamp = block.blockTimestamp  // new Date(await getTimestampAtBlock(block)).toISOString();
+  for (let block of SNAPSHOTS_BLOCKS) {
+    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
     const positions = await getUserTVLByBlock({
-      blockNumber: block.blockNumber,
+      blockNumber: block,
       blockTimestamp: Number(timestamp),
     });
     
@@ -70,8 +40,8 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
             token_address: LP_LYNEX,
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: lpValueStr,
-            block_number: block.blockNumber.toString(),
-            timestamp: block.blockTimestamp.toString()
+            block_number: block.toString(),
+            timestamp
         });
       })
     });
@@ -132,9 +102,9 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   write(csvRows_rebase, { headers: true }).pipe(ws_rebase).on('finish', () => {
     console.log("CSV file has been written.");
   });
-});
+};
 
-// getData().then(() => {
-//   console.log("Done");
-// });
+getData().then(() => {
+  console.log("Done");
+});
 
