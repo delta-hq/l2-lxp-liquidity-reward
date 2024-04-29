@@ -55,7 +55,7 @@ export const fetchUserVotes = async (
   const detailsCall = userTokensCalls.map((call) => {
     return {
       address: VE_NILE_ADDRESS,
-      name: "balanceOfNFT",
+      name: "locked",
       params: [call.result],
     };
   });
@@ -68,7 +68,7 @@ export const fetchUserVotes = async (
   )) as any;
 
   return res.map((r: any) => {
-    return { result: { amount: r.result, userAddress } };
+    return { result: { amount: r.result[0], userAddress } };
   }) as VoteResponse[];
 };
 

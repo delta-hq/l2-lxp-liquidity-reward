@@ -6,32 +6,32 @@ import {
   getV3UserPositionsAtBlock,
 } from "./sdk/positions";
 import { getTimestampAtBlock } from "./sdk/common";
-import { VE_NILE_ADDRESS, fetchUserVotes } from "./sdk/lensDetails";
+import { fetchUserVotes } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
 import csv from 'csv-parser';
 
-// const getData = async () => {
-//   const snapshotBlocks = [3753501];
+const getData = async () => {
+  const snapshotBlocks = [3753501];
 
-//   const csvRows: OutputSchemaRow[] = [];
+  const csvRows: OutputSchemaRow[] = [];
 
-//   for (let block of snapshotBlocks) {
-//     const timestamp = await getTimestampAtBlock(block);
-//     csvRows.push(
-//       ...(await getUserTVLByBlock({
-//         blockNumber: block,
-//         blockTimestamp: timestamp,
-//       })),
-//     );
-//   }
+  for (let block of snapshotBlocks) {
+    const timestamp = await getTimestampAtBlock(block);
+    csvRows.push(
+      ...(await getUserTVLByBlock({
+        blockNumber: block,
+        blockTimestamp: timestamp,
+      })),
+    );
+  }
 
-//   const ws = fs.createWriteStream("outputData.csv");
-//   write(csvRows, { headers: true })
-//     .pipe(ws)
-//     .on("finish", () => {
-//       console.log("CSV file has been written.");
-//     });
-// };
+  const ws = fs.createWriteStream("outputData.csv");
+  write(csvRows, { headers: true })
+    .pipe(ws)
+    .on("finish", () => {
+      console.log("CSV file has been written.");
+    });
+};
 
 export const getUserTVLByBlock = async ({
   blockNumber,
@@ -123,7 +123,7 @@ export const getUserLiquidityTVLByBlock = async ({
       block_number: blockNumber,
       timestamp: blockTimestamp,
       user_address: userVote.user,
-      token_address: VE_NILE_ADDRESS,
+      token_address: NILE_ADDRESS,
       token_balance: userVote.balance,
     });
   }
@@ -201,7 +201,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  let i = 0;
 
   for (const block of blocks) {
       try {
@@ -221,9 +220,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
         resolve;
         });
   });
-
-    // Clear the accumulated CSV rows
-  // allCsvRows.length = 0;
 
 }).catch((err) => {
   console.error('Error reading CSV file:', err);
