@@ -1,5 +1,5 @@
-import { SNAPSHOTS_BLOCKS, OVN_CONTRACTS, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_SYMBOL, USDT_PLUS_LINEA } from "./sdk/config";
-import { getLPValueByUserAndPoolFromPositions, getUserTVLByBlock, getRebaseForUsersByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
+import { SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { getUserTVLByBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -9,7 +9,7 @@ import fs from 'fs';
 import { write } from 'fast-csv';
 import csv from 'csv-parser';
 
-interface CSVRow {
+export interface CSVRow {
   block_number: number;
   timestamp: number;
   user_address: string;
@@ -19,80 +19,23 @@ interface CSVRow {
   usd_price?: number;
 }
 
+export interface BlockData {
+  blockTimestamp: number;
+  blockNumber: number
+}
+
 const getData = async () => {
-  const csvRows: CSVRow[] = [];
+  let csvRows: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
     const timestamp = await getTimestampAtBlock(block);
-    const positions = await getUserTVLByBlock({
+
+    const list = await getUserTVLByBlock({
       blockNumber: block,
       blockTimestamp: timestamp,
     });
-    
-    console.log("Positions: ", positions.length);
-    let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
 
-    lpValueByUsers.forEach((value, key) => {
-      value.forEach((lpValue) => {
-          const lpValueStr = lpValue.toString();
-          // Accumulate CSV row data
-          csvRows.push({
-            user_address: key,
-            token_address: LP_LYNEX,
-            token_symbol: LP_LYNEX_SYMBOL,
-            token_balance: BigInt(lpValueStr),
-            block_number: block,
-            timestamp,
-            usd_price: 0
-        });
-      })
-    });
-  }
-
-  // counting rebase by blocks range
-  // [0, 100, 200] -> gonna be counted like [0, 100] + [100, 200]
-  for (let block of SNAPSHOTS_BLOCKS) {
-    console.log(`Blocks: 0 -> ${block}`);
-
-    if (block === 0) continue;
-
-    const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock({
-      blockNumber: block,
-      token: OVN_CONTRACTS.USDPLUS
-    });
-
-    const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock({
-      blockNumber: block,
-      token: OVN_CONTRACTS.USDTPLUS
-    });
-
-    console.log("positionsRebase: ", positionsRebaseUsd.size);
-
-    // all results are counted for the END block
-    const timestamp = await getTimestampAtBlock(block);
-
-    positionsRebaseUsd.forEach((value, key) => {
-      csvRows.push({
-        user_address: key,
-        token_symbol: USD_PLUS_SYMBOL,
-        token_balance: BigInt(value),
-        token_address: USD_PLUS_LINEA,
-        block_number: block,
-        timestamp,
-        usd_price: 0
-      });
-    });
-    positionsRebaseUsdt.forEach((value, key) => {
-      csvRows.push({
-        user_address: key,
-        token_symbol: USDT_PLUS_SYMBOL,
-        token_balance: BigInt(value),
-        token_address: USDT_PLUS_LINEA,
-        block_number: block,
-        timestamp,
-        usd_price: 0
-      });
-    });
+    csvRows = csvRows.concat(list)
   }
 
   // Write the CSV output to a file
@@ -105,11 +48,6 @@ const getData = async () => {
 // getData().then(() => {
 //   console.log("Done");
 // });
-
-export interface BlockData {
-  blockNumber: number;
-  blockTimestamp: number;
-}
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
