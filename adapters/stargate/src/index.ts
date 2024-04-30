@@ -3,7 +3,6 @@ import { write } from "fast-csv";
 
 import { BlockData, OutputSchemaRow } from "./sdk/types";
 import { getTimestampAtBlock, getUserBalancesAtBlock } from "./sdk/lib";
-import { parseUnits } from "viem";
 
 const getData = async () => {
   const blocks = [3676829];
@@ -39,7 +38,7 @@ export const getUserTVLByBlock = async ({
     timestamp: blockTimestamp,
     user_address: position.user,
     token_address: position.lpToken,
-    token_balance: BigInt(parseUnits(position.balance, 18)),
+    token_balance: BigInt(position.balance),
     token_symbol: "",
     usd_price: 0,
   }));
