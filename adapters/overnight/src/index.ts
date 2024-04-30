@@ -23,10 +23,10 @@ const getData = async () => {
   const csvRows: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+    const timestamp = await getTimestampAtBlock(block);
     const positions = await getUserTVLByBlock({
       blockNumber: block,
-      blockTimestamp: Number(timestamp),
+      blockTimestamp: timestamp,
     });
     
     console.log("Positions: ", positions.length);
@@ -42,7 +42,7 @@ const getData = async () => {
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: BigInt(lpValueStr),
             block_number: block,
-            timestamp: Number(timestamp),
+            timestamp,
             usd_price: 0
         });
       })
@@ -69,7 +69,7 @@ const getData = async () => {
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
     // all results are counted for the END block
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+    const timestamp = await getTimestampAtBlock(block);
 
     positionsRebaseUsd.forEach((value, key) => {
       csvRows.push({
@@ -78,7 +78,7 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USD_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp),
+        timestamp,
         usd_price: 0
       });
     });
@@ -89,7 +89,7 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USDT_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp),
+        timestamp,
         usd_price: 0
       });
     });
@@ -102,9 +102,10 @@ const getData = async () => {
   });
 };
 
-// getData().then(() => {
-//   console.log("Done");
-// });
+getData().then(() => {
+  console.log("Done");
+});
+
 export interface BlockData {
   blockNumber: number;
   blockTimestamp: number;
@@ -134,29 +135,29 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
-  console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
+// readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+//   console.log(blocks);
+//   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+//   const batchSize = 1000; // Size of batch to trigger writing to the file
+//   let i = 0;
 
-  for (const block of blocks) {
-      try {
-          const result = await getUserTVLByBlock(block);
-          allCsvRows.push(...result);
-      } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
-      }
-  }
-  await new Promise((resolve, reject) => {
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
-        .pipe(ws)
-        .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
-        });
-  });
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
-});
+//   for (const block of blocks) {
+//       try {
+//           const result = await getUserTVLByBlock(block);
+//           allCsvRows.push(...result);
+//       } catch (error) {
+//           console.error(`An error occurred for block ${block}:`, error);
+//       }
+//   }
+//   await new Promise((resolve, reject) => {
+//     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+//     write(allCsvRows, { headers: true })
+//         .pipe(ws)
+//         .on("finish", () => {
+//         console.log(`CSV file has been written.`);
+//         resolve;
+//         });
+//   });
+// }).catch((err) => {
+//   console.error('Error reading CSV file:', err);
+// });
