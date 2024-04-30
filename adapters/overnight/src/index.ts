@@ -138,7 +138,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
   let i = 0;
 
   for (const block of blocks) {
