@@ -369,5 +369,6 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
     const block = await publicClient.getBlock({
       blockNumber: BigInt(blockNumber),
     });
+    
     return Number(block.timestamp * 1000n);
   };
