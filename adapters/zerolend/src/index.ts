@@ -3,20 +3,22 @@ import fs from "fs";
 
 interface IResponse {
   data: {
-    userReserves: {
-      user: {
-        id: string;
-      };
-      currentTotalDebt: string;
-      currentATokenBalance: string;
-      reserve: {
-        underlyingAsset: string;
-        symbol: string;
-        name: string;
-      };
-      liquidityRate: "0";
-    }[];
+    userReserves: IData[];
   };
+}
+
+interface IData {
+  user: {
+    id: string;
+  };
+  currentTotalDebt: string;
+  currentATokenBalance: string;
+  reserve: {
+    underlyingAsset: string;
+    symbol: string;
+    name: string;
+  };
+  liquidityRate: "0";
 }
 
 type OutputDataSchemaRow = {
@@ -76,7 +78,7 @@ export const main = async (
 
     if (batch.data.userReserves.length <= 1) break;
 
-    batch.data.userReserves.forEach((data) => {
+    batch.data.userReserves.forEach((data: IData) => {
       const balance =
         BigInt(data.currentATokenBalance) - BigInt(data.currentTotalDebt);
 
