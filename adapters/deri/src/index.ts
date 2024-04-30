@@ -54,7 +54,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            lTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+            adjustedLTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
               user
               bToken
               tokenB0
@@ -69,7 +69,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
       headers: { "Content-Type": "application/json" },
     });
     let data = await response.json();
-    let positions = data.data.lTokenPositions;
+    let positions = data.data.adjustedLTokenPositions;
     for (let i = 0; i < positions.length; i++) {
       let position = positions[i];
       result.push(position);
@@ -89,7 +89,7 @@ const getPTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            pTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+            adjustedPTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
               user
               bToken
               tokenB0
@@ -104,7 +104,7 @@ const getPTokenPositions = async (blockNumber: number): Promise<Position[]> => {
       headers: { "Content-Type": "application/json" },
     });
     let data = await response.json();
-    let positions = data.data.pTokenPositions;
+    let positions = data.data.adjustedPTokenPositions;
     for (let i = 0; i < positions.length; i++) {
       let position = positions[i];
       result.push(position);
