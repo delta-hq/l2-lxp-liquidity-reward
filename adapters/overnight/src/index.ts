@@ -23,10 +23,10 @@ const getData = async () => {
   const csvRows: CSVRow[] = [];
   
   for (let block of SNAPSHOTS_BLOCKS) {
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+    const timestamp = await getTimestampAtBlock(block);
     const positions = await getUserTVLByBlock({
       blockNumber: block,
-      blockTimestamp: Number(timestamp),
+      blockTimestamp: timestamp,
     });
     
     console.log("Positions: ", positions.length);
@@ -42,7 +42,7 @@ const getData = async () => {
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: BigInt(lpValueStr),
             block_number: block,
-            timestamp: Number(timestamp),
+            timestamp,
             usd_price: 0
         });
       })
@@ -69,7 +69,7 @@ const getData = async () => {
     console.log("positionsRebase: ", positionsRebaseUsd.size);
 
     // all results are counted for the END block
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
+    const timestamp = await getTimestampAtBlock(block);
 
     positionsRebaseUsd.forEach((value, key) => {
       csvRows.push({
@@ -78,7 +78,7 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USD_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp),
+        timestamp,
         usd_price: 0
       });
     });
@@ -89,7 +89,7 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USDT_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp),
+        timestamp,
         usd_price: 0
       });
     });
@@ -105,6 +105,7 @@ const getData = async () => {
 // getData().then(() => {
 //   console.log("Done");
 // });
+
 export interface BlockData {
   blockNumber: number;
   blockTimestamp: number;
