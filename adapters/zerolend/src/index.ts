@@ -1,5 +1,4 @@
 import { write } from "fast-csv";
-import axios from "axios";
 import fs from "fs";
 
 interface IResponse {
@@ -68,14 +67,16 @@ export const main = async (
       }
     }`;
 
-    const headers = {
-      "Content-Type": "application/json",
-    };
+    const response = await fetch(queryURL, {
+      method: "POST",
+      body: JSON.stringify({ query }),
+      headers: { "Content-Type": "application/json" },
+    });
+    const batch: IResponse = await response.json();
 
-    const batch = await axios.post<IResponse>(queryURL, { query }, { headers });
-    if (batch.data.data.userReserves.length <= 1) break;
+    if (batch.data.userReserves.length <= 1) break;
 
-    batch.data.data.userReserves.forEach((data) => {
+    batch.data.userReserves.forEach((data) => {
       const balance =
         BigInt(data.currentATokenBalance) - BigInt(data.currentTotalDebt);
 
@@ -93,7 +94,9 @@ export const main = async (
       lastAddress = data.user.id;
     });
 
-    console.log(`Processed ${rows.length} rows`, lastAddress);
+    console.log(
+      `Processed ${rows.length} rows. Last address is ${lastAddress}`
+    );
   } while (true);
 
   return rows;
@@ -138,8 +141,7 @@ export const writeCSV = async (data: OutputDataSchemaRow[]) => {
 
 export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
-  const csvRowsVessels = await main(blockNumber, blockTimestamp);
-  return csvRowsVessels;
+  return await main(blockNumber, blockTimestamp);
 };
 
 main(0, 0).then(async (data) => {
