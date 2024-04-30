@@ -1,9 +1,10 @@
 import BN from "bignumber.js";
-import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, ZERO_ADD, CHUNKS_SPLIT, BLOCK_STEP } from "./config";
+import { LINEA_RPC, CHAINS, OVN_CONTRACTS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS, ZERO_ADD, CHUNKS_SPLIT, BLOCK_STEP, LP_LYNEX, LP_LYNEX_SYMBOL, USD_PLUS_SYMBOL, USD_PLUS_LINEA, USDT_PLUS_LINEA, USDT_PLUS_SYMBOL } from "./config";
 import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
 import { ethers } from "ethers";
 import { ERC20_ABI } from "./abi";
+import { CSVRow } from "..";
 
 export interface BlockData {
     blockNumber: number;
@@ -275,14 +276,11 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 
     return listNetRebase;
 }
-    
+
 // OVN pools
 // 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
 // 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
-export const getUserTVLByBlock = async ({
-    blockNumber,
-    blockTimestamp,
-  }: BlockData): Promise<Position[]> => {
+const getPoolsData = async (blockNumber: number, blockTimestamp: number): Promise<CSVRow[]> => {
     let whereQuery = blockNumber ? `where: { blockNumber_lt: ${blockNumber} }` : "";
     const poolsData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN]
 
@@ -333,7 +331,83 @@ export const getUserTVLByBlock = async ({
         return result
     }))
 
-    return allPoolsRes.flat(1);
+    const positions = allPoolsRes.flat(1);
+    
+    console.log("Positions: ", positions.length);
+    let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
+    const csvRows: CSVRow[] = [];
+
+    lpValueByUsers.forEach((value, key) => {
+      value.forEach((lpValue) => {
+          const lpValueStr = lpValue.toString();
+          // Accumulate CSV row data
+          csvRows.push({
+            user_address: key,
+            token_address: LP_LYNEX,
+            token_symbol: LP_LYNEX_SYMBOL,
+            token_balance: BigInt(lpValueStr),
+            block_number: blockNumber,
+            timestamp: blockTimestamp,
+            usd_price: 0
+        });
+      })
+    });
+
+    return csvRows;
+}
+
+// counting rebase by blocks range
+// [0, 100, 200] -> gonna be counted like [0, 100] + [100, 200]
+const getRebaseData = async (block: number, blockTimestamp: number): Promise<CSVRow[]> => {
+    console.log(`Blocks: 0 -> ${block}`);
+    const csvRows: CSVRow[] = [];
+
+    const positionsRebaseUsd = await getRebaseForUsersByPoolAtBlock({
+      blockNumber: block,
+      token: OVN_CONTRACTS.USDPLUS
+    });
+
+    const positionsRebaseUsdt = await getRebaseForUsersByPoolAtBlock({
+      blockNumber: block,
+      token: OVN_CONTRACTS.USDTPLUS
+    });
+
+    console.log("positionsRebase: ", positionsRebaseUsd.size);
+
+    positionsRebaseUsd.forEach((value, key) => {
+      csvRows.push({
+        user_address: key,
+        token_symbol: USD_PLUS_SYMBOL,
+        token_balance: BigInt(value),
+        token_address: USD_PLUS_LINEA,
+        block_number: block,
+        timestamp: blockTimestamp,
+        usd_price: 0
+      });
+    });
+    positionsRebaseUsdt.forEach((value, key) => {
+      csvRows.push({
+        user_address: key,
+        token_symbol: USDT_PLUS_SYMBOL,
+        token_balance: BigInt(value),
+        token_address: USDT_PLUS_LINEA,
+        block_number: block,
+        timestamp: blockTimestamp,
+        usd_price: 0
+      });
+    });
+
+    return csvRows;
+}
+
+export const getUserTVLByBlock = async ({
+    blockNumber,
+    blockTimestamp,
+  }: BlockData): Promise<CSVRow[]> => {
+    const poolsCsv = await getPoolsData(blockNumber, blockTimestamp);
+    const rebaseCsv = await getRebaseData(blockNumber, blockTimestamp);
+
+    return poolsCsv.concat(rebaseCsv);
 }
 
 export const getLPValueByUserAndPoolFromPositions = (
