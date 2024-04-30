@@ -14,8 +14,9 @@ interface CSVRow {
   timestamp: string;
   user_address: string;
   token_address: string;
-  token_balance: string;
+  token_balance: bigint;
   token_symbol: string;
+  usd_price?: number;
 }
 
 const getData = async () => {
@@ -39,7 +40,7 @@ const getData = async () => {
             user_address: key,
             token_address: LP_LYNEX,
             token_symbol: LP_LYNEX_SYMBOL,
-            token_balance: lpValueStr,
+            token_balance: BigInt(lpValueStr),
             block_number: block.toString(),
             timestamp
         });
@@ -73,7 +74,7 @@ const getData = async () => {
       csvRows.push({
         user_address: key,
         token_symbol: USD_PLUS_SYMBOL,
-        token_balance: value,
+        token_balance: BigInt(value),
         token_address: USD_PLUS_LINEA,
         block_number: block.toString(),
         timestamp
@@ -83,7 +84,7 @@ const getData = async () => {
       csvRows.push({
         user_address: key,
         token_symbol: USDT_PLUS_SYMBOL,
-        token_balance: value,
+        token_balance: BigInt(value),
         token_address: USDT_PLUS_LINEA,
         block_number: block.toString(),
         timestamp
