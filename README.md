@@ -58,6 +58,7 @@ Goal: **Hourly snapshot of TVL by User by Asset**
 For each protocol, we are looking for the following: 
 1.  Query that fetches all relevant events required to calculate User TVL in the Protocol at hourly level.
 2.  Code that uses the above query, fetches all the data and converts it to csv file in below given format.
+3.  Token amount should be raw token amount. Please do not divide by decimals.
 
 Teams can refer to the example we have in there to write the code required.
 
