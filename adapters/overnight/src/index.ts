@@ -35,7 +35,7 @@ const getData = async () => {
       blockTimestamp: timestamp,
     });
 
-    csvRows.concat(list)
+    csvRows = csvRows.concat(list)
   }
 
   // Write the CSV output to a file
