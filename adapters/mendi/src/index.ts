@@ -63,7 +63,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
       // Accumulate CSV row data
       csvRows.push({
-        block_number: blocks.blockTimestamp,
+        block_number: blocks.blockNumber,
         timestamp: blocks.blockTimestamp,
         user_address: owner,
         token_address: marketInfo?.underlyingAddress ?? "",
