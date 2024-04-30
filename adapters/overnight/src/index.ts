@@ -10,8 +10,8 @@ import { write } from 'fast-csv';
 import csv from 'csv-parser';
 
 interface CSVRow {
-  block_number: string;
-  timestamp: string;
+  block_number: number;
+  timestamp: number;
   user_address: string;
   token_address: string;
   token_balance: bigint;
@@ -41,8 +41,8 @@ const getData = async () => {
             token_address: LP_LYNEX,
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: BigInt(lpValueStr),
-            block_number: block.toString(),
-            timestamp
+            block_number: block,
+            timestamp: Number(timestamp)
         });
       })
     });
@@ -76,8 +76,8 @@ const getData = async () => {
         token_symbol: USD_PLUS_SYMBOL,
         token_balance: BigInt(value),
         token_address: USD_PLUS_LINEA,
-        block_number: block.toString(),
-        timestamp
+        block_number: block,
+        timestamp: Number(timestamp)
       });
     });
     positionsRebaseUsdt.forEach((value, key) => {
@@ -86,8 +86,8 @@ const getData = async () => {
         token_symbol: USDT_PLUS_SYMBOL,
         token_balance: BigInt(value),
         token_address: USDT_PLUS_LINEA,
-        block_number: block.toString(),
-        timestamp
+        block_number: block,
+        timestamp: Number(timestamp)
       });
     });
   }
