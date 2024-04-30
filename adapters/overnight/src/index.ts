@@ -42,7 +42,8 @@ const getData = async () => {
             token_symbol: LP_LYNEX_SYMBOL,
             token_balance: BigInt(lpValueStr),
             block_number: block,
-            timestamp: Number(timestamp)
+            timestamp: Number(timestamp),
+            usd_price: 0
         });
       })
     });
@@ -77,7 +78,8 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USD_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp)
+        timestamp: Number(timestamp),
+        usd_price: 0
       });
     });
     positionsRebaseUsdt.forEach((value, key) => {
@@ -87,7 +89,8 @@ const getData = async () => {
         token_balance: BigInt(value),
         token_address: USDT_PLUS_LINEA,
         block_number: block,
-        timestamp: Number(timestamp)
+        timestamp: Number(timestamp),
+        usd_price: 0
       });
     });
   }
