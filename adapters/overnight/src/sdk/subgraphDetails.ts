@@ -95,10 +95,11 @@ const countNetRebase = async (
                 console.log("Loading", index, " -> ", usersMinted.size)
             }
     
-            const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
-            const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
+            // rebase counting
+            // const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
+            // const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
 
-            usersRebaseProfit.set(key, valToSave);
+            usersRebaseProfit.set(key, balanceTo);
         } catch(e) {
             console.log(e)
             console.log("ERROR FOR:", {
