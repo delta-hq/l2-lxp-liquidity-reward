@@ -95,10 +95,11 @@ const countNetRebase = async (
                 console.log("Loading", index, " -> ", usersMinted.size)
             }
     
-            const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
-            const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
+            // rebase counting
+            // const rebased = balanceDiff.minus(val).plus(userRedeem).plus(balanceTo);
+            // const valToSave = rebased.gt(0) ? rebased.toFixed() : "0";
 
-            usersRebaseProfit.set(key, valToSave);
+            usersRebaseProfit.set(key, balanceTo);
         } catch(e) {
             console.log(e)
             console.log("ERROR FOR:", {
@@ -281,6 +282,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 // 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
 // 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
 const getPoolsData = async (blockNumber: number, blockTimestamp: number): Promise<CSVRow[]> => {
+    if (new BN(blockNumber).eq(0)) return [];
     let whereQuery = blockNumber ? `where: { blockNumber_lt: ${blockNumber} }` : "";
     const poolsData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN]
 
@@ -342,12 +344,12 @@ const getPoolsData = async (blockNumber: number, blockTimestamp: number): Promis
           const lpValueStr = lpValue.toString();
           // Accumulate CSV row data
           csvRows.push({
-            user_address: key,
-            token_address: LP_LYNEX,
-            token_symbol: LP_LYNEX_SYMBOL,
-            token_balance: BigInt(lpValueStr),
             block_number: blockNumber,
             timestamp: blockTimestamp,
+            user_address: key.toLowerCase(),
+            token_address: LP_LYNEX,
+            token_balance: BigInt(lpValueStr),
+            token_symbol: LP_LYNEX_SYMBOL,
             usd_price: 0
         });
       })
@@ -376,23 +378,23 @@ const getRebaseData = async (block: number, blockTimestamp: number): Promise<CSV
 
     positionsRebaseUsd.forEach((value, key) => {
       csvRows.push({
-        user_address: key,
-        token_symbol: USD_PLUS_SYMBOL,
-        token_balance: BigInt(value),
-        token_address: USD_PLUS_LINEA,
         block_number: block,
         timestamp: blockTimestamp,
+        user_address: key.toLowerCase(),
+        token_address: USD_PLUS_LINEA,
+        token_balance: BigInt(value),
+        token_symbol: USD_PLUS_SYMBOL,
         usd_price: 0
       });
     });
     positionsRebaseUsdt.forEach((value, key) => {
       csvRows.push({
-        user_address: key,
-        token_symbol: USDT_PLUS_SYMBOL,
-        token_balance: BigInt(value),
-        token_address: USDT_PLUS_LINEA,
         block_number: block,
         timestamp: blockTimestamp,
+        user_address: key.toLowerCase(),
+        token_address: USDT_PLUS_LINEA,
+        token_balance: BigInt(value),
+        token_symbol: USDT_PLUS_SYMBOL,
         usd_price: 0
       });
     });
