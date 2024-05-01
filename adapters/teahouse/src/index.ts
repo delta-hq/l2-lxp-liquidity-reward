@@ -214,7 +214,9 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   for (const block of blocks) {
       try {
           const result = await getUserTVLByBlock(block);
-          allCsvRows.push(...result);
+          for(let i = 0; i < result.length; i++){
+            allCsvRows.push(result[i])
+          }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }
