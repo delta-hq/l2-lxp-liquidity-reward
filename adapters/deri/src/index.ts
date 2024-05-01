@@ -20,7 +20,7 @@ type Position = {
   b0Amount: bigint;
 };
 
-const LINEA_RPC = "https://rpc.linea.build";
+// const LINEA_RPC = "https://rpc.linea.build";
 
 const DERI_SUBGRAPH_QUERY_URL = "https://v4dh.deri.io/graphql";
 
@@ -275,25 +275,17 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
 
   for (const block of blocks) {
       try {
           const result = await getUserTVLByBlock(block);
           // Accumulate CSV rows for all blocks
           allCsvRows.push(...result);
-          // console.log(`Processed block ${i}`);
-          // Write to file when batch size is reached or at the end of loop
-          // if (i % batchSize === 0 || i === blocks.length) {
-          // }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }
   }
   await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
     write(allCsvRows, { headers: true })
         .pipe(ws)
@@ -302,9 +294,6 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
         resolve;
         });
   });
-
-    // Clear the accumulated CSV rows
-  // allCsvRows.length = 0;
 
 }).catch((err) => {
   console.error('Error reading CSV file:', err);
