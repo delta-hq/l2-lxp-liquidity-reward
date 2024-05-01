@@ -27,15 +27,15 @@ interface BlockData {
 
 // returns all user balances at the input block by looking at the latest
 // balance for each user and token on the subgraph, capped at given block.
-getUserTVLByBlock(input).then((data) => {
-    if (data.length === 0) {
-        console.log("no data to write to file");
-        return;
-    }
-    writeCsv(data, fileName).then(() => {
-        console.log('CSV written to file:', fileName);
-    })
-});
+// getUserTVLByBlock(input).then((data) => {
+//     if (data.length === 0) {
+//         console.log("no data to write to file");
+//         return;
+//     }
+//     writeCsv(data, fileName).then(() => {
+//         console.log('CSV written to file:', fileName);
+//     })
+// });
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     const blocks: BlockData[] = [];
