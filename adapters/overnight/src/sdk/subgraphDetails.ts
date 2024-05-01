@@ -282,6 +282,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
 // 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
 // 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
 const getPoolsData = async (blockNumber: number, blockTimestamp: number): Promise<CSVRow[]> => {
+    if (new BN(blockNumber).eq(0)) return [];
     let whereQuery = blockNumber ? `where: { blockNumber_lt: ${blockNumber} }` : "";
     const poolsData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN]
 
