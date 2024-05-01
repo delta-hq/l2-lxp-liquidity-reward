@@ -67,7 +67,7 @@ Teams can refer to the example we have in there to write the code required.
 | Data Field                | Notes                                                                                  |
 |---------------------------|----------------------------------------------------------------------------------------|
 | block_number              |                                                                                        |
-| timestamp                 |                                                                                        |
+| timestamp                 | Block timestamp                                                                        |
 | user_address              |                                                                                        |
 | token_address             |                                                                                        |
 | token_symbol (optional)   | Symbol of token                                                                        |
