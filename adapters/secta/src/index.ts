@@ -58,11 +58,11 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
     await new Promise<void>((resolve, reject) => {
         fs.createReadStream(filePath)
-            .pipe(csv({ separator: "\t" })) // Specify the separator as '\t' for TSV files
+            .pipe(csv({ separator: "," })) // Specify the separator as '\t' for TSV files
             .on("data", (row) => {
                 //console.log(row);
                 const blockNumber = parseInt(row.number, 10);
-                const blockTimestamp = parseInt(row.block_timestamp, 10);
+                const blockTimestamp = parseInt(row.timestamp, 10);
                 //console.log(`Maybe Data ${blockNumber} ${blockTimestamp}`);
                 if (!isNaN(blockNumber) && blockTimestamp) {
                     //console.log(`Valid Data`);
@@ -152,12 +152,10 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     return csvRows;
 };
 
-readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
+readBlocksFromCSV(path.resolve(__dirname, "../hourly_blocks.csv"))
     .then(async (blocks) => {
         console.log(blocks);
         const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-        const batchSize = 10; // Size of batch to trigger writing to the file
-        let i = 0;
 
         for (const block of blocks) {
             try {
@@ -165,9 +163,6 @@ readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
 
                 // Accumulate CSV rows for all blocks
                 allCsvRows.push(...result);
-
-                i++;
-                console.log(`Processed block ${i}`);
             } catch (error) {
                 console.error(`An error occurred for block ${block}:`, error);
             }
