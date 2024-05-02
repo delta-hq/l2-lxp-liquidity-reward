@@ -152,7 +152,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     return csvRows;
 };
 
-/*readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
+readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
     .then(async (blocks) => {
         console.log(blocks);
         const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
@@ -168,31 +168,21 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
                 i++;
                 console.log(`Processed block ${i}`);
-
-                // Write to file when batch size is reached or at the end of loop
-                if (i % batchSize === 0 || i === blocks.length) {
-                    const ws = fs.createWriteStream(`outputData.csv`, {
-                        flags: i === batchSize ? "w" : "a",
-                    });
-                    write(allCsvRows, {
-                        headers: i === batchSize ? true : false,
-                    })
-                        .pipe(ws)
-                        .on("finish", () => {
-                            console.log(`CSV file has been written.`);
-                        });
-
-                    // Clear the accumulated CSV rows
-                    allCsvRows.length = 0;
-                }
             } catch (error) {
                 console.error(`An error occurred for block ${block}:`, error);
             }
         }
+        const ws = fs.createWriteStream(`outputData.csv`, {
+            flags: "w",
+        });
+        write(allCsvRows, {headers: true})
+            .pipe(ws).on("finish", () => {
+                console.log(`CSV file has been written.`);
+            });
     })
     .catch((err) => {
         console.error("Error reading CSV file:", err);
-    });*/
+    });
 
 // main().then(() => {
 //   console.log("Done");
