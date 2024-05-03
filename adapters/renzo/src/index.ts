@@ -152,20 +152,21 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     return blocks;
   };
   
-  readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-    const batchSize = 1000; // Size of batch to trigger writing to the file
-    let i = 0;
-  
+
     for (const block of blocks) {
         try {
             const result = await getUserTVLByBlock(block);
-            allCsvRows.push(...result);
+            for(let i = 0; i < result.length; i++){
+                allCsvRows.push(result[i])
+            }
         } catch (error) {
             console.error(`An error occurred for block ${block}:`, error);
         }
     }
+    
     await new Promise((resolve, reject) => {
       const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
       write(allCsvRows, { headers: true })
