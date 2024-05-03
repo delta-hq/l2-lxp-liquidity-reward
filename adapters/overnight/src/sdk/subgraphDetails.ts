@@ -36,15 +36,6 @@ export interface PositionRebaseNet{
     value: bigint;
 };
 
-export interface PositionWithUSDValue extends Position{
-    token0USDValue: string;
-    token1USDValue: string;
-    token0AmountsInWei: bigint;
-    token1AmountsInWei: bigint;
-    token0DecimalValue: number;
-    token1DecimalValue: number;
-}
-
 const countNetRebase = async (
     usersMinted: Map<string, string>,
     usersRedeemed: Map<string, string>,
@@ -149,7 +140,7 @@ export const getRebaseForUsersByPoolAtBlock = async ({
     const blockNumberFrom = 0;
     const blockNumberTo = blockNumber;
 
-    const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN_REBASE];
+    const urlData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN];
 
     const blockStep = BLOCK_STEP;
     const step = (blockNumberTo - blockNumberFrom) / blockStep;
@@ -278,86 +269,6 @@ export const getRebaseForUsersByPoolAtBlock = async ({
     return listNetRebase;
 }
 
-// OVN pools
-// 0x58aacbccaec30938cb2bb11653cad726e5c4194a usdc/usd+
-// 0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91 usdt+/usd+
-const getPoolsData = async (blockNumber: number, blockTimestamp: number): Promise<CSVRow[]> => {
-    if (new BN(blockNumber).eq(0)) return [];
-    let whereQuery = blockNumber ? `where: { blockNumber_lt: ${blockNumber} }` : "";
-    const poolsData = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.OVN]
-
-    let skip = 0;
-    let fetchNext = true;
-
-    const allPoolsRes = await Promise.all(Object.values(poolsData).map(async (_) => {
-        const url = _.url
-        const poolId = _.address
-        let result: Position[] = [];
-
-        while(fetchNext){
-            let query = `{
-                deposits(${whereQuery} orderBy: amount, first: 1000,skip: ${skip}) {
-                    id
-                    amount
-                    user
-                    blockNumber
-                }
-            }`;
-
-            let response = await fetch(url, {
-                method: "POST",
-                body: JSON.stringify({ query }),
-                headers: { "Content-Type": "application/json" },
-            });
-            let data = await response.json();
-
-            let positions = data.data.deposits;
-            for (let i = 0; i < positions.length; i++) {
-                let position = positions[i];
-                let transformedPosition: Position = {
-                    id: position.id,
-                    liquidity: BigInt(position.amount),
-                    owner: position.user,
-                    address: poolId,
-                };
-                result.push(transformedPosition);
-                
-            }
-            if(positions.length < 1000){
-                fetchNext = false;
-            }else{
-                skip += 1000;
-            }
-        }
-
-        return result
-    }))
-
-    const positions = allPoolsRes.flat(1);
-    
-    console.log("Positions: ", positions.length);
-    let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
-    const csvRows: CSVRow[] = [];
-
-    lpValueByUsers.forEach((value, key) => {
-      value.forEach((lpValue) => {
-          const lpValueStr = lpValue.toString();
-          // Accumulate CSV row data
-          csvRows.push({
-            block_number: blockNumber,
-            timestamp: blockTimestamp,
-            user_address: key.toLowerCase(),
-            token_address: LP_LYNEX,
-            token_balance: BigInt(lpValueStr),
-            token_symbol: LP_LYNEX_SYMBOL,
-            usd_price: 0
-        });
-      })
-    });
-
-    return csvRows;
-}
-
 // counting rebase by blocks range
 // [0, 100, 200] -> gonna be counted like [0, 100] + [100, 200]
 const getRebaseData = async (block: number, blockTimestamp: number): Promise<CSVRow[]> => {
@@ -406,34 +317,7 @@ export const getUserTVLByBlock = async ({
     blockNumber,
     blockTimestamp,
   }: BlockData): Promise<CSVRow[]> => {
-    const poolsCsv = await getPoolsData(blockNumber, blockTimestamp);
-    const rebaseCsv = await getRebaseData(blockNumber, blockTimestamp);
-
-    return poolsCsv.concat(rebaseCsv);
-}
-
-export const getLPValueByUserAndPoolFromPositions = (
-    positions: Position[]
-): Map<string, Map<string, BN>> => {
-    let result = new Map<string, Map<string, BN>>();
-    for (let i = 0; i < positions.length; i++) {
-        let position = positions[i];
-        let poolId = position.id;
-        let owner = position.owner;
-        let userPositions = result.get(owner);
-        if (userPositions === undefined) {
-            userPositions = new Map<string, BN>();
-            result.set(owner, userPositions);
-        }
-        let poolPositions = userPositions.get(poolId);
-        if (poolPositions === undefined) {
-            poolPositions = BN(0);
-        }
-
-        poolPositions = poolPositions.plus(position.liquidity.toString());
-        userPositions.set(poolId, poolPositions);
-    }
-    return result;
+    return await getRebaseData(blockNumber, blockTimestamp);
 }
 
 export const getTimestampAtBlock = async (blockNumber: number) => {
