@@ -37,17 +37,33 @@ interface BlockData {
 }
 
 const queryURL =
-  "https://api.studio.thegraph.com/query/65585/zerolend-linea-market/version/latest";
+  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
 
-export const main = async (
-  blockNumber: number,
-  blockTimestamp: number
-): Promise<OutputDataSchemaRow[]> => {
-  const timestamp = new Date();
+const getBlockNumber = async () => {
+  const data = {
+    jsonrpc: "2.0",
+    method: "eth_blockNumber",
+    params: [],
+    id: 83,
+  };
+
+  const res = await fetch("https://rpc.linea.build", {
+    method: "POST",
+    body: JSON.stringify(data),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  const json = await res.json();
+  return Number(json.result);
+};
+
+export const main = async (): Promise<OutputDataSchemaRow[]> => {
+  const timestamp = Date.now();
   const first = 1000;
+  const rows: OutputDataSchemaRow[] = [];
+  const blockNumber = await getBlockNumber();
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
-  const rows: OutputDataSchemaRow[] = [];
 
   do {
     const query = `{
@@ -76,7 +92,7 @@ export const main = async (
     });
     const batch: IResponse = await response.json();
 
-    if (batch.data.userReserves.length <= 1) break;
+    if (batch.data.userReserves.length <= 2) break;
 
     batch.data.userReserves.forEach((data: IData) => {
       const balance =
@@ -85,7 +101,7 @@ export const main = async (
       if (balance !== 0n)
         rows.push({
           block_number: blockNumber,
-          timestamp: blockTimestamp,
+          timestamp,
           user_address: data.user.id,
           token_address: data.reserve.underlyingAsset,
           token_balance: Number(balance),
@@ -141,12 +157,9 @@ export const writeCSV = async (data: OutputDataSchemaRow[]) => {
   });
 };
 
-export const getUserTVLByBlock = async (blocks: BlockData) => {
-  const { blockNumber, blockTimestamp } = blocks;
-  return await main(blockNumber, blockTimestamp);
-};
+export const getUserTVLByBlock = async (_blocks: BlockData) => await main();
 
-main(0, 0).then(async (data) => {
+main().then(async (data) => {
   console.log("Done", data);
   await writeCSV(data);
 });

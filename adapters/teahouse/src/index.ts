@@ -39,14 +39,13 @@ const pipeline = promisify(stream.pipeline);
 
 const getData = async () => {
   const blocks = [
-    3851417 
+    4174101
   ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
   const csvRows: OutputDataSchemaRow[] = [];
 
   for (const block of blocks) {
       const timestamp = await getTimestampAtBlock(block)
-
       csvRows.push(...await getUserTVLByBlock({ blockNumber: block, blockTimestamp: timestamp }))
   }
 
@@ -76,7 +75,7 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
       const poolInfo = await getPoolInfoByBlock(contract, blockNumber);
       // Step 3: Filter positions within the pool tick range
       const inRangePositions = positionsByBlock.filter(
-        position => position.tickLower <= poolInfo.tick && position.tickUpper >= poolInfo.tick
+        position => position.tickLower <= poolInfo.tick && position.tickUpper > poolInfo.tick
       );
       
       if (inRangePositions.length === 0) {
@@ -118,7 +117,7 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
       const totalSupplyByBlock = await contract.totalSupply({ blockTag: blockNumber });
       // console.log('Total supply by block:', totalSupplyByBlock);
       
-      // Step 6: Iterate over user share token balances and calculate token amounts
+      // Step 7: Iterate over user share token balances and calculate token amounts
       if (usersShareTokenBalances) {
         for (const userBalance of usersShareTokenBalances) {
           if (userBalance.contractId.toLowerCase() === vaultAddress.toLowerCase() && userBalance.balance > 0n) {
@@ -215,7 +214,9 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
   for (const block of blocks) {
       try {
           const result = await getUserTVLByBlock(block);
-          allCsvRows.push(...result);
+          for(let i = 0; i < result.length; i++){
+            allCsvRows.push(result[i])
+          }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }
