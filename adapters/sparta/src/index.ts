@@ -302,7 +302,6 @@ async function main() {
         blockNumber: block,
         blockTimestamp: 0,
       });
-      // userData.push(...blockData);
       console.log("Processed block", block);
       await saveToCSV(blockData);
     }
