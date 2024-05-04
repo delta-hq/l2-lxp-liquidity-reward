@@ -15,7 +15,7 @@ export const client = new ApolloClient({
 export const SNAPSHOT_PERIOD_BLOCKS = 311;
 export const PROTOCOL_DEPLOY_BLOCK = 3811977;
 
-export const FIRST_TIME = true;
+export const FIRST_TIME = false;
 
 export const POOL_TOKENS: PoolTokens = {
   "0x0460c78bd496ca8e9483e4f0655a28be1e90a89b": {

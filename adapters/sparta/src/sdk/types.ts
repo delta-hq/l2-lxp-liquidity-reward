@@ -44,13 +44,6 @@ export type UserPosition = {
   balance: bigint;
 };
 
-export interface Sync {
-  contractId_: string;
-  reserve0: number;
-  reserve1: number;
-  timestamp_: string;
-}
-
 export interface Transaction {
   from: string;
   to: string;
