@@ -9,7 +9,7 @@ export const enum PROTOCOLS {
 export const SUBGRAPH_URLS = {
   [CHAINS.LINEA]: {
     [PROTOCOLS.MENDI]: {
-      url: "https://api.goldsky.com/api/public/project_cltshpix6kkj301x1b4ilh6pm/subgraphs/mendi-linea/1.4/gn",
+      url: "https://api.goldsky.com/api/public/project_cltshpix6kkj301x1b4ilh6pm/subgraphs/mendi-subgraph/1.0/gn",
     },
   },
 };
