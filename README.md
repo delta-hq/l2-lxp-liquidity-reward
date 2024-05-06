@@ -175,9 +175,13 @@ And output a CSV file named `outputData.csv` with headers with the following col
 - `token_symbol` - token symbol
 - `token_balance` - token balance
 - `usd_price` - USD price
-
-
 e.g. `adapters/renzo/src/index.ts`
+
+For testing the adapter code for a single hourly block, use the following `hourly_blocks.csv` file:
+```
+number,timestamp
+4243360,1714773599
+```
 
 ### Contract Security
 Please submit your Contract Addresses and Pool Addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6).
