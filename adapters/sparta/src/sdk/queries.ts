@@ -13,11 +13,15 @@ export const TRANSFERS_QUERY = gql`
 `;
 
 export const SYNCS_QUERY = gql`
-  query GetSyncs($blockNumber: Int!) {
+  query GetSyncs($blockNumber: Int!, $contractId: String!) {
     syncs(
-      where: { block_number_lte: $blockNumber }
+      where: {
+        block_number_lte: $blockNumber
+        contractId__contains: $contractId
+      }
       orderBy: timestamp_
       orderDirection: desc
+      first: 1
     ) {
       contractId_
       reserve0

@@ -21,12 +21,19 @@ export const getV2LpValue = async (rpc: string, pairs: V2Pair[], mintedAddresses
 
     const liquidityInfo: LiquidityInfo = {};
 
+    const WAD = new BigNumber("1000000000000000000");
+
     for (const pair of pairs) {
         const userAddresses = mintedAddresses[pair.id] || new Set<string>();
 
         for (const userAddress of userAddresses) {
             // Get the user's balance of the LP token as a BigNumber
-            const userLpBalanceBigInt = await getERC20TokenBalanceAtBlock(rpc, pair.id, userAddress, blockNumber);
+            const userLpBalanceBigInt = await getERC20TokenBalanceAtBlock(
+                rpc,
+                pair.id,
+                userAddress,
+                blockNumber
+            );
             const userLpBalance = new BigNumber(userLpBalanceBigInt.toString());
 
             const totalSupply = new BigNumber(pair.totalSupply);
@@ -34,8 +41,12 @@ export const getV2LpValue = async (rpc: string, pairs: V2Pair[], mintedAddresses
             const userShare = userLpBalance.dividedBy(totalSupply);
 
             // Calculate user's share of token0 and token1
-            const token0Amount = userShare.multipliedBy(new BigNumber(pair.reserve0));
-            const token1Amount = userShare.multipliedBy(new BigNumber(pair.reserve1));
+            const token0Amount = userShare
+                .multipliedBy(new BigNumber(pair.reserve0))
+                .dividedBy(WAD);
+            const token1Amount = userShare
+                .multipliedBy(new BigNumber(pair.reserve1))
+                .dividedBy(WAD);
 
             // Ensure user's entry exists in the liquidity info
             if (!liquidityInfo[userAddress]) {
