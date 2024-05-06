@@ -152,7 +152,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     return csvRows;
 };
 
-readBlocksFromCSV(path.resolve(__dirname, "../block_numbers_secta.tsv"))
+readBlocksFromCSV(path.resolve(__dirname, "../hourly_blocks.csv"))
     .then(async (blocks) => {
         console.log(blocks);
         const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
