@@ -14,8 +14,8 @@ export const getUserTVLByBlock = async (blocks: BlockData): Promise<OutputDataSc
   composite.forEach(({ block, modified, account, underlyingBalances, underlyingTokens }) => {
     results.push(...underlyingBalances.map((b, i) => {
       const formatted: OutputDataSchemaRow = {
-        timestamp: +modified,
-        block_number: +block,
+        timestamp: +modified, // last modified, modified on transfer events
+        block_number: blockNumber,
         user_address: account.id,
         token_address: underlyingTokens[i],
         token_balance: BigInt(b),
