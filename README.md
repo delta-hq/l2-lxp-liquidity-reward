@@ -162,6 +162,22 @@ Below is the query being used in the example we have in the repo link. For query
    }
  }
 ```
+### index.ts
+On this scope, the code must read a CSV file with headers named `hourly_blocks.csv` that contains the following columns:
+- `number` - block number
+- `timestamp` - block timestamp
+
+And output a CSV file named `outputData.csv` with headers with the following columns:
+- `block_number` - block number
+- `timestamp` - block timestamp
+- `user_address` - user address
+- `token_address` - token address
+- `token_symbol` - token symbol
+- `token_balance` - token balance
+- `usd_price` - USD price
+
+
+e.g. `adapters/renzo/src/index.ts`
 
 ### Contract Security
 Please submit your Contract Addresses and Pool Addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6).
