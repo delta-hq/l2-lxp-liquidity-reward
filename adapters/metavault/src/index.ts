@@ -51,7 +51,6 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
         getV3UserPositionsAtBlock(blockNumber),
         getTradeLiquidityForAddressByPoolAtBlock(blockNumber)
     ])
-    console.log(tradeLiquidities);
 
     // combine v2 & v3 
     const combinedPositions = [...v2Positions, ...v3Positions]

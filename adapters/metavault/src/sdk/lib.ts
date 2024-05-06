@@ -108,18 +108,18 @@ export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: numb
     let skip = 0;
     let fetchNext = true;
     let result: any[] = [];
+    let _stores: any[] = [];
     while (fetchNext) {
         let query = `{
-            liquidities(where: {period: "user" amount_gt: 1} ${blockQuery} orderBy: createTimestamp, first:1000,skip:${skip}) {
+            liquidities(where: {period: "user" lpBalance_gt: 1 } ${blockQuery} orderBy: createTimestamp, first:1000,skip:${skip}) {
                 user
                 asset
-                amountUsd
-                amount
+                lpBalance
             },
-            _meta{
-                    block{
-                    number
-                }
+            stores(${blockQuery}){
+                asset:id
+                lpSupply
+                poolBalance
             }
         }`;
 
@@ -130,8 +130,8 @@ export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: numb
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         });
-        const { data: { liquidities } } = await response.json();
-
+        const { data: { liquidities, stores } } = await response.json();
+        _stores = stores
         result = result.concat(liquidities)
 
         if (liquidities.length < 1000) {
@@ -141,14 +141,12 @@ export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: numb
         }
     }
     return result.map(r => {
-        let decimals = 18
-        if (r.asset === "0x176211869ca2b568f2a7d4ee941e073a821ee1ff") {
-            decimals = 6 // usdt
-        }
+        let store = _stores.find(s => s.asset === r.asset);
         return {
             user: r.user,
             asset: r.asset,
-            amount: BigInt(BigNumber(r.amount).times(new BigNumber(10).pow(decimals)).toString()),
+            // user pool share is equal to user pool balance divided by the total balance. 
+            amount: BigInt(r.lpBalance) * BigInt(store.poolBalance) / BigInt(store.lpSupply),
         }
     });
 }
