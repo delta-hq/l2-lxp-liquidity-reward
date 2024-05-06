@@ -40,6 +40,7 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
 };
 
 export function readLastProcessedBlock(): number | null {
+  console.log(LAST_BLOCK_FILE);
   try {
     if (fs.existsSync(LAST_BLOCK_FILE)) {
       const content = fs.readFileSync(LAST_BLOCK_FILE, "utf8");

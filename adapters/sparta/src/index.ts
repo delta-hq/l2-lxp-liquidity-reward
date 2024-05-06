@@ -12,7 +12,6 @@ import {
   OutputDataSchemaRow,
   BlockData,
   UserPositions,
-  Sync,
   Transaction,
   CumulativePositions,
   Reserves,
@@ -32,11 +31,12 @@ import fs from "fs";
 async function processBlockData(block: number): Promise<UserPosition[]> {
   // fetch lp transfers up to block
   const liquidityData = await fetchTransfers(block);
+
   const { userPositions, cumulativePositions } =
     processTransactions(liquidityData);
 
   // get reserves at block
-  const reservesSnapshotAtBlock = await fetchReserves(block);
+  const reservesSnapshotAtBlock = await fetchReservesForPools(block);
 
   // calculate tokens based on reserves
   const userReserves = calculateUserReservePortion(
@@ -207,32 +207,23 @@ async function fetchTransfers(blockNumber: number) {
   return data.transfers;
 }
 
-async function fetchReserves(blockNumber: number): Promise<Reserves> {
-  const { data } = await client.query({
-    query: SYNCS_QUERY,
-    variables: { blockNumber },
-    fetchPolicy: "no-cache",
-  });
-
-  const latestPerContractId: Record<string, Sync> = {};
+async function fetchReservesForPools(blockNumber: number): Promise<Reserves> {
   const reserves: Reserves = {};
 
-  data.syncs.forEach((sync: Sync) => {
-    const existingEntry = latestPerContractId[sync.contractId_];
-    if (
-      !existingEntry ||
-      new Date(sync.timestamp_) > new Date(existingEntry.timestamp_)
-    ) {
-      latestPerContractId[sync.contractId_] = sync;
-    }
-  });
+  await Promise.all(
+    Object.keys(POOL_TOKENS).map(async (pool) => {
+      const { data } = await client.query({
+        query: SYNCS_QUERY,
+        variables: { blockNumber, contractId: pool },
+        fetchPolicy: "no-cache",
+      });
 
-  Object.values(latestPerContractId).forEach((sync) => {
-    reserves[sync.contractId_] = {
-      reserve0: sync.reserve0,
-      reserve1: sync.reserve1,
-    };
-  });
+      reserves[pool] = {
+        reserve0: data.syncs[0].reserve0,
+        reserve1: data.syncs[0].reserve1,
+      };
+    })
+  );
 
   return reserves;
 }
@@ -308,14 +299,13 @@ async function main() {
   let lastblock = 0;
   try {
     for (const block of blocks) {
+      lastblock = block;
       const blockData = await getUserTVLByBlock({
         blockNumber: block,
         blockTimestamp: 0,
       });
-      // userData.push(...blockData);
       console.log("Processed block", block);
       await saveToCSV(blockData);
-      lastblock = block;
     }
   } catch (error: any) {
     console.error("Error processing block", lastblock, error.message);
