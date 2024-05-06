@@ -65,13 +65,15 @@ const getV3PositionReserves = (position: V3Position) => {
     reserve1,
   };
 };
+const masterChefAddress =
+  '0x22e2f236065b780fa33ec8c4e58b99ebc8b55c57';
 
 export const getV3UserPositionsAtBlock = async (
   blockNumber: number,
 ): Promise<UserPosition[]> => {
-  const result: UserPosition[] = [];
+  const resultMap = new Map<string, UserPosition>();
 
-  let skip = 0;
+  let skip = '0';
   let fetchNext = true;
   while (fetchNext) {
     const query = `query {
@@ -115,29 +117,24 @@ export const getV3UserPositionsAtBlock = async (
 
     const { data } = await response.json();
 
-    const { positions } = data;
+    const { positions } = data as { positions: V3Position[] };
 
-    result.push(
-      ...positions.map((position: V3Position) => {
-        const { reserve0, reserve1 } =
-          getV3PositionReserves(position);
-        return {
-          user: position.owner,
-          token0: {
-            address: position.pool.token0.id,
-            balance: reserve0,
-            symbol: position.pool.token0.symbol,
-            usdPrice: +position.pool.token0Price,
-          },
-          token1: {
-            address: position.pool.token1.id,
-            balance: reserve1,
-            symbol: position.pool.token1.symbol,
-            usdPrice: +position.pool.token1Price,
-          },
-        };
-      }),
-    );
+    for (const position of positions) {
+      const { reserve0, reserve1 } = getV3PositionReserves(position);
+
+      resultMap.set(position.id, {
+        user: position.owner,
+        positionId: position.id,
+        token0: {
+          address: position.pool.token0.id,
+          balance: reserve0,
+        },
+        token1: {
+          address: position.pool.token1.id,
+          balance: reserve1,
+        },
+      });
+    }
 
     if (positions.length < 1000) {
       fetchNext = false;
@@ -146,7 +143,86 @@ export const getV3UserPositionsAtBlock = async (
     }
   }
 
-  return result;
+  const ownedByMasterChef = [...resultMap.values()].filter(
+    (p) => p.user === masterChefAddress,
+  );
+
+  const owners = await getOwnerFromMasterChef(
+    ownedByMasterChef.map((p) => p.positionId),
+    BigInt(blockNumber),
+  );
+
+  for (const [index, owner] of owners.entries()) {
+    const pid = ownedByMasterChef[index].positionId;
+
+    resultMap.set(pid, {
+      ...ownedByMasterChef[index],
+      user: owner.toLowerCase(),
+    });
+  }
+
+  return [...resultMap.values()];
+};
+
+const getOwnerFromMasterChef = async (
+  pids: string[],
+  blockNumber: bigint,
+) => {
+  const abi = [
+    {
+      inputs: [
+        { internalType: 'uint256', name: '', type: 'uint256' },
+      ],
+      name: 'userPositionInfos',
+      outputs: [
+        {
+          internalType: 'uint128',
+          name: 'liquidity',
+          type: 'uint128',
+        },
+        {
+          internalType: 'uint128',
+          name: 'boostLiquidity',
+          type: 'uint128',
+        },
+        { internalType: 'int24', name: 'tickLower', type: 'int24' },
+        { internalType: 'int24', name: 'tickUpper', type: 'int24' },
+        {
+          internalType: 'uint256',
+          name: 'rewardGrowthInside',
+          type: 'uint256',
+        },
+        { internalType: 'uint256', name: 'reward', type: 'uint256' },
+        { internalType: 'address', name: 'user', type: 'address' },
+        { internalType: 'uint256', name: 'pid', type: 'uint256' },
+        {
+          internalType: 'uint256',
+          name: 'boostMultiplier',
+          type: 'uint256',
+        },
+      ],
+      stateMutability: 'view',
+      type: 'function',
+    },
+  ] as const;
+
+  const results = await client.multicall({
+    allowFailure: false,
+    blockNumber,
+    contracts: pids.map(
+      (pid) =>
+        ({
+          abi,
+          address: masterChefAddress,
+          functionName: 'userPositionInfos',
+          args: [BigInt(pid)],
+        } as const),
+    ),
+  });
+
+  return results.map((r) => {
+    return r[6];
+  });
 };
 
 export const getTimestampAtBlock = async (blockNumber: number) => {

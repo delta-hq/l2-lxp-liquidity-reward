@@ -1,8 +1,10 @@
 import fs from "fs";
 import { write } from "fast-csv";
+import csv from 'csv-parser';
 import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
   VE_LYNX_ADDRESS,
+  LYNX_ADDRESS,
   fetchUserPools,
   fetchUserVotes,
 } from "./sdk/lensDetails";
@@ -128,7 +130,7 @@ export const getUserStakedTVLByBlock = async ({
   for (const userFecthedVotes of userVotesResult) {
     for (const userVote of userFecthedVotes) {
       const user_address = userVote.result.userAddress.toLowerCase();
-      const token0Address = VE_LYNX_ADDRESS.toLowerCase();
+      const token0Address = LYNX_ADDRESS.toLowerCase();
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0
@@ -196,6 +198,58 @@ export const getUserLiquidityTVLByBlock = async ({
   return result;
 };
 
-getData().then(() => {
-  console.log("Done");
+// getData().then(() => {
+//   console.log("Done");
+// });
+
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on('data', (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
+  console.log(blocks);
+  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+
+  for (const block of blocks) {
+      try {
+          const result = await getUserTVLByBlock(block);
+          for(let i = 0; i < result.length; i++){
+            allCsvRows.push(result[i])
+          }
+      } catch (error) {
+          console.error(`An error occurred for block ${block}:`, error);
+      }
+  }
+  await new Promise((resolve, reject) => {
+    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+    write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+        console.log(`CSV file has been written.`);
+        resolve;
+        });
+  });
+}).catch((err) => {
+  console.error('Error reading CSV file:', err);
 });

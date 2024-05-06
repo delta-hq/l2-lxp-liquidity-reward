@@ -1,6 +1,6 @@
 import BigNumber from "bignumber.js";
 import { CHAINS, PROTOCOLS, AMM_TYPES } from "./config/config";
-import { getLPValueByUserAndPoolFromPositions, getPositionAtBlock, getPositionDetailsFromPosition, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./utils/subgraphDetails";
+import { getLPValueByUserAndPoolFromPositions, getPositionDetailsFromPosition, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./utils/subgraphDetails";
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -37,7 +37,7 @@ interface CSVRow {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: string;
+  token_balance: bigint;
   token_symbol: string;
   usd_price: number;
 }
@@ -90,7 +90,7 @@ const getData = async () => {
           user_address: key,
           token_address: tokenKey,
           token_symbol: tokenBalance.tokenSymbol,
-          token_balance: tokenBalance.tokenBalance.toString(),
+          token_balance: tokenBalance.tokenBalance,
           usd_price: tokenBalance.usdPrice,
         });
       });
@@ -122,7 +122,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         user_address: key,
         token_address: tokenKey,
         token_symbol: tokenBalance.tokenSymbol,
-        token_balance: tokenBalance.tokenBalance.toString(),
+        token_balance: tokenBalance.tokenBalance,
         usd_price: tokenBalance.usdPrice,
       });
     });
@@ -160,40 +160,28 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 };
 
 
-readBlocksFromCSV('src/hourly_blocks.csv').then(async (blocks) => {
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
 
-  allCsvRows.push({ block_number: 'block_number', timestamp: 'timestamp', user_address: 'user_address', token_address: 'token_address', token_balance: 'token_balance', token_symbol: 'token_symbol', usd_price: 'usd_price' });
   for (const block of blocks) {
       try {
           const result = await getUserTVLByBlock(block);
-
           // Accumulate CSV rows for all blocks
           allCsvRows.push(...result);
-
-          i++;
-          // console.log(`Processed block ${i}`);
-
-          // Write to file when batch size is reached or at the end of loop
-          if (i % batchSize === 0 || i === blocks.length) {
-              const ws = fs.createWriteStream(`outputData.csv`, { flags: i === batchSize ? 'w' : 'a' });
-              write(allCsvRows, { headers: i === batchSize ? true : false })
-                  .pipe(ws)
-                  .on("finish", () => {
-                  console.log(`CSV file has been written.`);
-                  });
-
-              // Clear the accumulated CSV rows
-              allCsvRows.length = 0;
-          }
       } catch (error) {
           console.error(`An error occurred for block ${block}:`, error);
       }
-
   }
-  }).catch((err) => {
+  await new Promise((resolve, reject) => {
+    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+    write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+        console.log(`CSV file has been written.`);
+        resolve;
+        });
+  });
+}).catch((err) => {
   console.error('Error reading CSV file:', err);
 });
