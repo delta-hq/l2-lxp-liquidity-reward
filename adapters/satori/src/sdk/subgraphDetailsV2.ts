@@ -33,10 +33,6 @@ export const getUserTVLByBlock = async (
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         });
-        if (response.ok === false) {
-            console.log("Response status:", response.statusText);
-            throw new Error("Error fetching data from subgraph \nStatus code: " + response.status + "\nStatus Text: " + response.statusText);
-        }
         let data = await response.json();
         let accounts = data.data.accounts
         for (const account of accounts) {
