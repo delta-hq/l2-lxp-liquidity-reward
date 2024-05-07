@@ -116,8 +116,12 @@ export const updateBorrowBalances = async (
 
   states = states.filter((x) => x.borrowAmount > 0);
 
+  console.log(`Will update all borrow balances for ${states.length} states`);
   for (var i = 0; i < states.length; i += 500) {
-    var subStates = states.slice(i, 500);
+    const start = i;
+    const end = i + 500;
+    var subStates = states.slice(start, end);
+    console.log(`Updating borrow balances for ${start} - ${end}`);
 
     const borrowBalanceResults = await publicClient.multicall({
       contracts: subStates

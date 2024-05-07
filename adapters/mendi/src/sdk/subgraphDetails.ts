@@ -89,6 +89,7 @@ export const getAccountStatesForAddressByPoolAtBlock = async (
         (mi) => mi.underlyingAddress == state.token.toLowerCase()
       );
       if (!marketInfo) {
+        console.log(`${state.token} not found`);
         return undefined;
       }
 
