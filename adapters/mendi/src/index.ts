@@ -13,6 +13,7 @@ import csv from "csv-parser";
 import { write } from "fast-csv";
 import { getMarketInfos, updateBorrowBalances } from "./sdk/marketDetails";
 import { bigMath } from "./sdk/abi/helpers";
+import { exit } from "process";
 
 interface BlockData {
   blockNumber: number;
@@ -37,12 +38,15 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const csvRows: OutputDataSchemaRow[] = [];
   const block = blocks.blockNumber;
 
-  const states = await getAccountStatesForAddressByPoolAtBlock(
+  let states = await getAccountStatesForAddressByPoolAtBlock(
     block,
     "",
     "",
     CHAINS.LINEA,
     PROTOCOLS.MENDI
+  );
+  states = states.filter(
+    (s) => marketInfos.findIndex((mi) => mi.address == s.account) == -1
   );
 
   console.log(`Block: ${block}`);
