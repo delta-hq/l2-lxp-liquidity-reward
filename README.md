@@ -58,6 +58,7 @@ Goal: **Hourly snapshot of TVL by User by Asset**
 For each protocol, we are looking for the following: 
 1.  Query that fetches all relevant events required to calculate User TVL in the Protocol at hourly level.
 2.  Code that uses the above query, fetches all the data and converts it to csv file in below given format.
+3.  Token amount should be raw token amount. Please do not divide by decimals.
 
 Teams can refer to the example we have in there to write the code required.
 
@@ -66,7 +67,7 @@ Teams can refer to the example we have in there to write the code required.
 | Data Field                | Notes                                                                                  |
 |---------------------------|----------------------------------------------------------------------------------------|
 | block_number              |                                                                                        |
-| timestamp                 |                                                                                        |
+| timestamp                 | Block timestamp                                                                        |
 | user_address              |                                                                                        |
 | token_address             |                                                                                        |
 | token_symbol (optional)   | Symbol of token                                                                        |
@@ -161,6 +162,26 @@ Below is the query being used in the example we have in the repo link. For query
    }
  }
 ```
+### index.ts
+On this scope, the code must read a CSV file with headers named `hourly_blocks.csv` that contains the following columns:
+- `number` - block number
+- `timestamp` - block timestamp
+
+And output a CSV file named `outputData.csv` with headers with the following columns:
+- `block_number` - block number
+- `timestamp` - block timestamp
+- `user_address` - user address
+- `token_address` - token address
+- `token_symbol` - token symbol
+- `token_balance` - token balance
+- `usd_price` - USD price
+e.g. `adapters/renzo/src/index.ts`
+
+For testing the adapter code for a single hourly block, use the following `hourly_blocks.csv` file:
+```
+number,timestamp
+4243360,1714773599
+```
 
 ### Contract Security
 Please submit your Contract Addresses and Pool Addresses through this [Form](https://forms.gle/DJ2975hZwhz32t5r6).
@@ -172,8 +193,7 @@ The main scripts is generating a output as CSV file.
 [Adapter Example](adapters/example/dex/src/index.ts)
 
 ## Notes
-1. Please don't fork the repo. Just clone it and raise a PR in to the main branch.
-2. Please make sure to have a "compile" script in package.json file. So, we are able to compile the typescript files into `dist/index.js` file.
+1. Please make sure to have a "compile" script in package.json file. So, we are able to compile the typescript files into `dist/index.js` file.
 
 ## How to execute this project?
 

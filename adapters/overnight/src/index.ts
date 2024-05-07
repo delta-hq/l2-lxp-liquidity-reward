@@ -1,5 +1,5 @@
-import { CHAINS, LP_LYNEX_SYMBOL, LP_LYNEX, PROTOCOLS, SNAPSHOTS_BLOCKS } from "./sdk/config";
-import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
+import { SNAPSHOTS_BLOCKS } from "./sdk/config";
+import { getUserTVLByBlock, getTimestampAtBlock } from "./sdk/subgraphDetails";
 
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
@@ -7,45 +7,35 @@ import { getLPValueByUserAndPoolFromPositions, getPositionsForAddressByPoolAtBlo
 
 import fs from 'fs';
 import { write } from 'fast-csv';
+import csv from 'csv-parser';
 
-interface CSVRow {
-  block_number: string;
-  timestamp: string;
+export interface CSVRow {
+  block_number: number;
+  timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: string;
+  token_balance: bigint;
   token_symbol: string;
+  usd_price?: number;
+}
+
+export interface BlockData {
+  blockTimestamp: number;
+  blockNumber: number
 }
 
 const getData = async () => {
-  const csvRows: CSVRow[] = [];
-
+  let csvRows: CSVRow[] = [];
+  
   for (let block of SNAPSHOTS_BLOCKS) {
-    const positions = await getPositionsForAddressByPoolAtBlock(
-      block, "", "", CHAINS.LINEA, PROTOCOLS.OVN
-    );
-    
-    console.log(`Block: ${block}`);
-    console.log("Positions: ", positions.length);
+    const timestamp = await getTimestampAtBlock(block);
 
-    let lpValueByUsers = getLPValueByUserAndPoolFromPositions(positions);
-
-    const timestamp = new Date(await getTimestampAtBlock(block)).toISOString();
-
-    lpValueByUsers.forEach((value, key) => {
-      value.forEach((lpValue) => {
-        const lpValueStr = lpValue.toString();
-        // Accumulate CSV row data
-        csvRows.push({
-          user_address: key,
-          token_address: LP_LYNEX,
-          token_symbol: LP_LYNEX_SYMBOL,
-          token_balance: lpValueStr,
-          block_number: block.toString(),
-          timestamp
-        });
-      });
+    const list = await getUserTVLByBlock({
+      blockNumber: block,
+      blockTimestamp: timestamp,
     });
+
+    csvRows = csvRows.concat(list)
   }
 
   // Write the CSV output to a file
@@ -55,7 +45,56 @@ const getData = async () => {
   });
 };
 
-getData().then(() => {
-  console.log("Done");
-});
+// getData().then(() => {
+//   console.log("Done");
+// });
 
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on('data', (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+  console.log(blocks);
+  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+  let i = 0;
+
+  for (const block of blocks) {
+      try {
+          const result = await getUserTVLByBlock(block);
+          allCsvRows.push(...result);
+      } catch (error) {
+          console.error(`An error occurred for block ${block}:`, error);
+      }
+  }
+  await new Promise((resolve, reject) => {
+    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+    write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+        console.log(`CSV file has been written.`);
+        resolve;
+        });
+  });
+}).catch((err) => {
+  console.error('Error reading CSV file:', err);
+});
