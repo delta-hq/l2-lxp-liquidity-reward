@@ -193,8 +193,7 @@ The main scripts is generating a output as CSV file.
 [Adapter Example](adapters/example/dex/src/index.ts)
 
 ## Notes
-1. Please don't fork the repo. Just clone it and raise a PR in to the main branch.
-2. Please make sure to have a "compile" script in package.json file. So, we are able to compile the typescript files into `dist/index.js` file.
+1. Please make sure to have a "compile" script in package.json file. So, we are able to compile the typescript files into `dist/index.js` file.
 
 ## How to execute this project?
 
