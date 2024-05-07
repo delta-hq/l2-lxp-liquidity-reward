@@ -51,7 +51,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     return blocks;
 };
 
-readBlocksFromCSV('../hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
   
