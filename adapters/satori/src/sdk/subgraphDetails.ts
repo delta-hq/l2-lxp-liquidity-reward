@@ -1,6 +1,6 @@
 import { ASSET, SYMBOL, SUBGRAPH_URL } from "./config";
 
-export interface UserLpSnapshot {
+export interface OutputDataSchemaRow {
     block_number:number
     timestamp:number
     user_address:string
@@ -9,10 +9,11 @@ export interface UserLpSnapshot {
     token_balance:number
 }
 
-export const getSnapshotsForAddressAtBlock = async (
+
+export const getUserTVLByBlock = async (
     blockNumber: number,
     address: string,
-):Promise<UserLpSnapshot[]> =>  {
+):Promise<OutputDataSchemaRow[]> =>  {
     let subgraphUrl = SUBGRAPH_URL;
     let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
     let ownerQuery = address !== "" ? `owner: "${address.toLowerCase()}"` : ``;
@@ -20,7 +21,7 @@ export const getSnapshotsForAddressAtBlock = async (
     let whereQuery = ownerQuery !== "" ?`where: {${ownerQuery}}`:  ``;
     let skip = 0;
     let fetchNext = true;
-    let result: UserLpSnapshot[] = [];
+    let result: OutputDataSchemaRow[] = [];
     while(fetchNext){
         let query = `{
             userLpSnapshots(${whereQuery} ${blockQuery} orderBy: timestamp, first:1000,skip:${skip}){
@@ -29,8 +30,7 @@ export const getSnapshotsForAddressAtBlock = async (
               block
               timestamp
               lpAmount
-            }
-            
+            }    
           }
           `;
         
@@ -42,10 +42,11 @@ export const getSnapshotsForAddressAtBlock = async (
         let data = await response.json();
         let snapshots = data.data.userLpSnapshots
         for (const snapshot of snapshots) {
-            let userLpSnapshot:UserLpSnapshot = {
-                user_address:snapshot.user,
+            let userLpSnapshot:OutputDataSchemaRow = {
+ 
                 block_number:snapshot.block,
                 timestamp:snapshot.timestamp,
+                user_address:snapshot.user,
                 token_address:ASSET,
                 token_symbol:SYMBOL,
                 token_balance:snapshot.lpAmount
@@ -60,3 +61,4 @@ export const getSnapshotsForAddressAtBlock = async (
     }
     return result
 }
+// getSnapshotsForAddressAtBlock(0,'')
