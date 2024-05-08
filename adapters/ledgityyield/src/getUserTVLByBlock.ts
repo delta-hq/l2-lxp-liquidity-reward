@@ -54,8 +54,8 @@ export const getUserTVLByBlock = async (
       csvRows.push({
         block_number: blockNumber,
         timestamp: blockTimestamp,
-        user_address: Array.from(holders)[i],
-        token_address: tokenAddress,
+        user_address: Array.from(holders)[i].toLowerCase(),
+        token_address: tokenAddress.toLowerCase(),
         token_symbol: tokenSymbol,
         token_balance: balances[i].result! as bigint,
         usd_price: 1,
