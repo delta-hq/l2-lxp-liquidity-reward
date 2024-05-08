@@ -5,7 +5,7 @@ interface BlockData {
 }
 
 const testBlocks: BlockData[] = [
-    { blockNumber: 19824214, blockTimestamp: 1715158745 },
+    { blockNumber: 4372798, blockTimestamp: 1715162083 },
 ];
 async function testGetUserTVLByBlock() {
     try {
