@@ -84,6 +84,9 @@ export const fetchUserPools = async (
     blockNumber
   )) as any;
   return res.map((r: any) => {
+    if (r.status !== 'success') {
+      throw new Error("RPC call error. Status: " + r.status);
+  }
     return { result: { ...r.result, userAddress } };
   }) as LensResponseWithBlock[];
 };

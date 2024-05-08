@@ -1,7 +1,7 @@
 import { PoolInformation, getPoolInformationFromLpToken } from "./cartographer";
 import { LpAccountBalanceHourly, SubgraphResult } from "./types";
 import { linea } from "viem/chains";
-import { createPublicClient, formatUnits, http, parseUnits } from "viem";
+import { createPublicClient, http, parseUnits } from "viem";
 
 export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/amarok-stableswap-analytics/1.0/gn";
 export const LINEA_CHAIN_ID = 59144;
@@ -209,3 +209,8 @@ const appendSubgraphData = (data: LpAccountBalanceHourly[], existing: Map<string
     })
 }
 
+export const getBlock = async (blockNumber: number) => {
+    const client = createPublicClient({ chain: linea, transport: http() });
+    const block = await client.getBlock({ blockNumber: BigInt(blockNumber) });
+    return block;
+}

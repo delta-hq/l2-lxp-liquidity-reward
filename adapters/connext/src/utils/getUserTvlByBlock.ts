@@ -1,4 +1,4 @@
-import { getCompositeBalances, getLpAccountBalanceAtBlock } from "./subgraph";
+import { getBlock, getCompositeBalances, getLpAccountBalanceAtBlock } from "./subgraph";
 import { BlockData, OutputDataSchemaRow } from "./types";
 
 export const getUserTVLByBlock = async (blocks: BlockData): Promise<OutputDataSchemaRow[]> => {
@@ -9,13 +9,16 @@ export const getUserTVLByBlock = async (blocks: BlockData): Promise<OutputDataSc
   // get the composite balances
   const composite = await getCompositeBalances(data);
 
+  // get block info
+  const { timestamp } = await getBlock(blockNumber);
+
   // format into output
   const results: OutputDataSchemaRow[] = [];
-  composite.forEach(({ block, modified, account, underlyingBalances, underlyingTokens }) => {
+  composite.forEach(({ account, underlyingBalances, underlyingTokens }) => {
     results.push(...underlyingBalances.map((b, i) => {
       const formatted: OutputDataSchemaRow = {
-        timestamp: +modified,
-        block_number: +block,
+        timestamp: +timestamp.toString(),
+        block_number: blockNumber,
         user_address: account.id,
         token_address: underlyingTokens[i],
         token_balance: BigInt(b),
