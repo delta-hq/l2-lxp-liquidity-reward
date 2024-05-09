@@ -73,7 +73,7 @@ export const getUserTVLByBlock = async (
     });
     const batch: IResponse = await response.json();
 
-    if (batch.data.userReserves.length == 0) break;
+    if (!batch.data || batch.data.userReserves.length == 0) break;
 
     batch.data.userReserves.forEach((data: IData) => {
       const balance =

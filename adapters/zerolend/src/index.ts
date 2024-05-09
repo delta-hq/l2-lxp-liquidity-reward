@@ -61,3 +61,7 @@ readBlocksFromCSV("block_numbers.tsv")
   .catch((err) => {
     console.error("Error reading CSV file:", err);
   });
+
+module.exports = {
+  getUserTVLByBlock,
+};
