@@ -1,165 +1,67 @@
 import { write } from "fast-csv";
 import fs from "fs";
+import csv from "csv-parser";
+import { BlockData, getUserTVLByBlock } from "./sdk";
 
-interface IResponse {
-  data: {
-    userReserves: IData[];
-  };
-}
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
 
-interface IData {
-  user: {
-    id: string;
-  };
-  currentTotalDebt: string;
-  currentATokenBalance: string;
-  reserve: {
-    underlyingAsset: string;
-    symbol: string;
-    name: string;
-  };
-  liquidityRate: "0";
-}
-
-type OutputDataSchemaRow = {
-  block_number: number;
-  timestamp: number;
-  user_address: string;
-  token_address: string;
-  token_balance: number;
-  token_symbol: string;
-  usd_price: number;
-};
-
-interface BlockData {
-  blockNumber: number;
-  blockTimestamp: number;
-}
-
-const queryURL =
-  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
-
-const getBlockNumber = async () => {
-  const data = {
-    jsonrpc: "2.0",
-    method: "eth_blockNumber",
-    params: [],
-    id: 83,
-  };
-
-  const res = await fetch("https://rpc.linea.build", {
-    method: "POST",
-    body: JSON.stringify(data),
-    headers: { "Content-Type": "application/json" },
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv({ separator: "\t" })) // Specify the separator as '\t' for TSV files
+      .on("data", (row: any) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.block_timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on("end", resolve)
+      .on("error", reject);
   });
 
-  const json = await res.json();
-  return Number(json.result);
+  return blocks;
 };
 
-export const main = async (): Promise<OutputDataSchemaRow[]> => {
-  const timestamp = Date.now();
-  const first = 1000;
-  const rows: OutputDataSchemaRow[] = [];
-  const blockNumber = await getBlockNumber();
+readBlocksFromCSV("block_numbers.tsv")
+  .then(async (blocks) => {
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 10; // Size of batch to trigger writing to the file
+    let i = 0;
 
-  let lastAddress = "0x0000000000000000000000000000000000000000";
+    for (const block of blocks) {
+      try {
+        const result = await getUserTVLByBlock(block);
 
-  do {
-    const query = `{
-      userReserves(
-        where: {and: [{or: [{currentTotalDebt_gt: 0}, {currentATokenBalance_gt: 0}]}, {user_gt: "${lastAddress}"}]}
-        first: ${first}
-      ) {
-        user {
-          id
+        // Accumulate CSV rows for all blocks
+        allCsvRows.push(...result);
+
+        i++;
+        console.log(`Processed block ${i}`);
+
+        // Write to file when batch size is reached or at the end of loop
+        if (i % batchSize === 0 || i === blocks.length) {
+          const ws = fs.createWriteStream(`outputData.csv`, {
+            flags: i === batchSize ? "w" : "a",
+          });
+          write(allCsvRows, { headers: i === batchSize ? true : false })
+            .pipe(ws)
+            .on("finish", () => {
+              console.log(`CSV file has been written.`);
+            });
+
+          // Clear the accumulated CSV rows
+          allCsvRows.length = 0;
         }
-        currentTotalDebt
-        currentATokenBalance
-        reserve {
-          underlyingAsset
-          symbol
-          name
-        }
-        liquidityRate
+      } catch (error) {
+        console.error(`An error occurred for block ${block}:`, error);
       }
-    }`;
-
-    const response = await fetch(queryURL, {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const batch: IResponse = await response.json();
-
-    if (batch.data.userReserves.length <= 2) break;
-
-    batch.data.userReserves.forEach((data: IData) => {
-      const balance =
-        BigInt(data.currentATokenBalance) - BigInt(data.currentTotalDebt);
-
-      if (balance !== 0n)
-        rows.push({
-          block_number: blockNumber,
-          timestamp,
-          user_address: data.user.id,
-          token_address: data.reserve.underlyingAsset,
-          token_balance: Number(balance),
-          token_symbol: data.reserve.symbol,
-          usd_price: 0,
-        });
-
-      lastAddress = data.user.id;
-    });
-
-    console.log(
-      `Processed ${rows.length} rows. Last address is ${lastAddress}`
-    );
-  } while (true);
-
-  return rows;
-};
-
-export const writeCSV = async (data: OutputDataSchemaRow[]) => {
-  // File path where the CSV will be saved
-  const filePath = "outputData.csv";
-  const headers = [
-    "block_number",
-    "timestamp",
-    "user_address",
-    "token_address",
-    "token_balance",
-    "token_symbol",
-  ];
-
-  // Create a write stream
-  const fileStream = fs.createWriteStream(filePath);
-
-  // Create a CSV writer
-  const csvStream = write([]);
-
-  csvStream.pipe(fileStream);
-  csvStream.write(headers);
-  data.forEach((row) => {
-    csvStream.write([
-      row.block_number,
-      row.timestamp,
-      row.user_address,
-      row.token_address,
-      row.token_balance,
-      row.token_symbol,
-    ]);
+    }
+  })
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
   });
 
-  csvStream.on("finish", () => {
-    console.log("CSV file has been written successfully.");
-    csvStream.end();
-  });
+module.exports = {
+  getUserTVLByBlock,
 };
-
-export const getUserTVLByBlock = async (_blocks: BlockData) => await main();
-
-main().then(async (data) => {
-  console.log("Done", data);
-  await writeCSV(data);
-});
