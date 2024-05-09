@@ -29,6 +29,8 @@ const getData = async () => {
     });
 };
 
+const WHITELISTED_TOKEN_ADDRESS = '0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee'
+
 export const getUserTVLByBlock = async ({
   blockNumber,
   blockTimestamp,
@@ -39,7 +41,7 @@ export const getUserTVLByBlock = async ({
     block_number: blockNumber,
     timestamp: blockTimestamp,
     user_address: position.user,
-    token_address: position.lpToken,
+    token_address: WHITELISTED_TOKEN_ADDRESS,
     token_balance: BigInt(position.balance),
     token_symbol: "",
     usd_price: 0,

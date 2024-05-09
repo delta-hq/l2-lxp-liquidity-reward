@@ -30,6 +30,8 @@ const GRAI_ADDRESS = "0x894134a25a5faC1c2C26F1d8fBf05111a3CB9487";
 const GRAVITA_SUBGRAPH_QUERY_URL =
   "https://api.studio.thegraph.com/query/54829/gravita-sp-lp-linea-v1/version/latest";
 
+const PAGE_SIZE = 1_000
+
 const post = async (url: string, data: any): Promise<any> => {
   const response = await fetch(url, {
     method: "POST",
@@ -44,15 +46,17 @@ const post = async (url: string, data: any): Promise<any> => {
 
 const getStabilityPoolData = async (
   blockNumber: number,
-  blockTimestamp: number
+  blockTimestamp: number,
+  lastId = ''
 ): Promise<OutputDataSchemaRow[]> => {
   const GRAVITA_STABILITY_POOL_QUERY = `
     query StabilityPoolQuery {
         poolDeposits(
-            first: 1000, 
-            where: { poolName: "Gravita StabilityPool", withdrawTxHash: null },
+            first: ${PAGE_SIZE}, 
+            where: { poolName: "Gravita StabilityPool", withdrawTxHash: null, id_gt: "${lastId}" },
             block: { number: ${blockNumber} }
         ) {
+            id
             user {
                 id
             }
@@ -75,20 +79,26 @@ const getStabilityPoolData = async (
       usd_price: 0,
     });
   }
+  if (responseJson.data.poolDeposits.length == PAGE_SIZE) {
+    const lastRecord = responseJson.data.poolDeposits[responseJson.data.poolDeposits.length - 1] as any
+    csvRows.push(...await getStabilityPoolData(blockNumber, blockTimestamp, lastRecord.id))
+  }
   return csvRows;
 };
 
 const getVesselDepositsData = async (
   blockNumber: number,
-  blockTimestamp: number
+  blockTimestamp: number,
+  lastId = ''
 ): Promise<OutputDataSchemaRow[]> => {
   const GRAVITA_VESSELS_QUERY = `
     query VesselsQuery {
         vessels(
-            first: 1000, 
-            where: { closeTimestamp: null },
+            first: ${PAGE_SIZE}, 
+            where: { closeTimestamp: null, id_gt: "${lastId}" },
             block: { number: ${blockNumber} }
         ) {
+            id
             asset
             user {
                 id
@@ -118,6 +128,10 @@ const getVesselDepositsData = async (
       token_symbol: "",
       usd_price: 0,
     });
+  }
+  if (responseJson.data.vessels.length == PAGE_SIZE) {
+    const lastRecord = responseJson.data.vessels[responseJson.data.vessels.length - 1] as any
+    csvRows.push(...await getVesselDepositsData(blockNumber, blockTimestamp, lastRecord.id))
   }
   return csvRows;
 };
