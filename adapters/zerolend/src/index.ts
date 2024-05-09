@@ -57,7 +57,9 @@ const getBlockNumber = async () => {
   return Number(json.result);
 };
 
-export const main = async (): Promise<OutputDataSchemaRow[]> => {
+export const main = async (
+  blocks: BlockData
+): Promise<OutputDataSchemaRow[]> => {
   const timestamp = Date.now();
   const first = 1000;
   const rows: OutputDataSchemaRow[] = [];
@@ -68,6 +70,7 @@ export const main = async (): Promise<OutputDataSchemaRow[]> => {
   do {
     const query = `{
       userReserves(
+        block: {number: ${blocks.blockNumber}}
         where: {and: [{or: [{currentTotalDebt_gt: 0}, {currentATokenBalance_gt: 0}]}, {user_gt: "${lastAddress}"}]}
         first: ${first}
       ) {
@@ -92,7 +95,7 @@ export const main = async (): Promise<OutputDataSchemaRow[]> => {
     });
     const batch: IResponse = await response.json();
 
-    if (batch.data.userReserves.length <= 2) break;
+    if (batch.data.userReserves.length == 0) break;
 
     batch.data.userReserves.forEach((data: IData) => {
       const balance =
@@ -157,9 +160,10 @@ export const writeCSV = async (data: OutputDataSchemaRow[]) => {
   });
 };
 
-export const getUserTVLByBlock = async (_blocks: BlockData) => await main();
+export const getUserTVLByBlock = async (blocks: BlockData) =>
+  await main(blocks);
 
-main().then(async (data) => {
+main({ blockNumber: 2886975, blockTimestamp: 0 }).then(async (data) => {
   console.log("Done", data);
   await writeCSV(data);
 });
