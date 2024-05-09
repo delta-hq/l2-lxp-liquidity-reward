@@ -39,7 +39,7 @@ const queryURL =
 export const getUserTVLByBlock = async (
   blocks: BlockData
 ): Promise<OutputDataSchemaRow[]> => {
-  const timestamp = Date.now();
+  const timestamp = blocks.blockTimestamp;
   const first = 1000;
   const rows: OutputDataSchemaRow[] = [];
 
