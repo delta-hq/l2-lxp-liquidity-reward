@@ -15,6 +15,7 @@ export type OutputSchemaRow = {
 
 export type UserPosition = {
     user: string;
+    positionId: string;
     token0: {
         address: string,
         balance: bigint,

@@ -13,6 +13,7 @@ import veLYNXAbi from "./abis/veLYNX.json";
 
 export const LENS_ADDRESS = "0x6c84329CC8c37376eb32db50a17F3bFc917c3665"; // PairAPI
 export const VE_LYNX_ADDRESS = "0x8d95f56b0bac46e8ac1d3a3f12fb1e5bc39b4c0c"; // veLYNX
+export const LYNX_ADDRESS = "0x1a51b19ce03dbe0cb44c1528e34a7edd7771e9af"; // LYNX
 
 export interface LensResponse {
   pair_address: string;
@@ -83,6 +84,9 @@ export const fetchUserPools = async (
     blockNumber
   )) as any;
   return res.map((r: any) => {
+    if (r.status !== 'success') {
+      throw new Error("RPC call error. Status: " + r.status);
+  }
     return { result: { ...r.result, userAddress } };
   }) as LensResponseWithBlock[];
 };
