@@ -23,7 +23,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("hourly_blocks.csv")
+readBlocksFromCSV("block_numbers.tsv")
   .then(async (blocks) => {
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
     const batchSize = 10; // Size of batch to trigger writing to the file
