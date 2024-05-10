@@ -42,6 +42,11 @@ const post = async (url: string, data: any) => {
         },
         body: JSON.stringify(data),
     });
+    if (!response.ok) {
+        console.error(`Request error! status text: ${response.statusText} for url: ${url}\n request body: ${JSON.stringify(data)}`)
+        console.error(`Response body: ${await response.text()}`)
+        throw new Error(`HTTP error! status: ${response.status}`);
+    }
     return await response.json();
 };
 

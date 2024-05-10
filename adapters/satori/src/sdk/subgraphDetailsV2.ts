@@ -34,7 +34,8 @@ export const getUserTVLByBlock = async (
             headers: { "Content-Type": "application/json","Authorization":KEY},
         });
         if (response.ok === false) {
-            console.log("Response status:", response.statusText);
+            console.error("Response status:", response.statusText);
+            console.error("Skip value: ", skip);
             throw new Error("Error fetching data from subgraph \nStatus code: " + response.status + "\nStatus Text: " + response.statusText);
         }
         let data = await response.json();
