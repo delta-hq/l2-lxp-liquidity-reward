@@ -1,5 +1,6 @@
 import fs from "fs";
 import { write } from "fast-csv";
+import csv from 'csv-parser';
 
 type OutputDataSchemaRow = {
   block_number: number;
@@ -19,33 +20,33 @@ type Position = {
   b0Amount: bigint;
 };
 
-const LINEA_RPC = "https://rpc.linea.build";
+// const LINEA_RPC = "https://rpc.linea.build";
 
 const DERI_SUBGRAPH_QUERY_URL = "https://v4dh.deri.io/graphql";
 
-const post = async (url: string, data: any): Promise<any> => {
-  const response = await fetch(url, {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: JSON.stringify(data),
-  });
-  return await response.json();
-};
+// const post = async (url: string, data: any): Promise<any> => {
+//   const response = await fetch(url, {
+//     method: "POST",
+//     headers: {
+//       "Content-Type": "application/json",
+//       Accept: "application/json",
+//     },
+//     body: JSON.stringify(data),
+//   });
+//   return await response.json();
+// };
 
-const getLatestBlockNumberAndTimestamp = async () => {
-  const data = await post(LINEA_RPC, {
-    jsonrpc: "2.0",
-    method: "eth_getBlockByNumber",
-    params: ["latest", false],
-    id: 1,
-  });
-  const blockNumber = parseInt(data.result.number);
-  const blockTimestamp = parseInt(data.result.timestamp);
-  return { blockNumber, blockTimestamp };
-};
+// const getLatestBlockNumberAndTimestamp = async () => {
+//   const data = await post(LINEA_RPC, {
+//     jsonrpc: "2.0",
+//     method: "eth_getBlockByNumber",
+//     params: ["latest", false],
+//     id: 1,
+//   });
+//   const blockNumber = parseInt(data.result.number);
+//   const blockTimestamp = parseInt(data.result.timestamp);
+//   return { blockNumber, blockTimestamp };
+// };
 
 const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let skip = 0;
@@ -53,7 +54,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            lTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+            adjustedLTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
               user
               bToken
               tokenB0
@@ -68,7 +69,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
       headers: { "Content-Type": "application/json" },
     });
     let data = await response.json();
-    let positions = data.data.lTokenPositions;
+    let positions = data.data.adjustedLTokenPositions;
     for (let i = 0; i < positions.length; i++) {
       let position = positions[i];
       result.push(position);
@@ -88,7 +89,7 @@ const getPTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            pTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+            adjustedPTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
               user
               bToken
               tokenB0
@@ -103,7 +104,7 @@ const getPTokenPositions = async (blockNumber: number): Promise<Position[]> => {
       headers: { "Content-Type": "application/json" },
     });
     let data = await response.json();
-    let positions = data.data.pTokenPositions;
+    let positions = data.data.adjustedPTokenPositions;
     for (let i = 0; i < positions.length; i++) {
       let position = positions[i];
       result.push(position);
@@ -245,3 +246,55 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 // main([input]).then(() => {
 //   console.log("Done");
 // });
+
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on('data', (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
+  console.log(blocks);
+  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+
+  for (const block of blocks) {
+      try {
+          const result = await getUserTVLByBlock(block);
+          // Accumulate CSV rows for all blocks
+          allCsvRows.push(...result);
+      } catch (error) {
+          console.error(`An error occurred for block ${block}:`, error);
+      }
+  }
+  await new Promise((resolve, reject) => {
+    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+    write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+        console.log(`CSV file has been written.`);
+        resolve;
+        });
+  });
+
+}).catch((err) => {
+  console.error('Error reading CSV file:', err);
+});
