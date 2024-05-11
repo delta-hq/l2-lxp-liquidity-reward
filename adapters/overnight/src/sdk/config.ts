@@ -3,7 +3,6 @@ export const enum CHAINS{
 }
 export const enum PROTOCOLS{
   OVN = 1,
-  OVN_REBASE = 2
 }
 
 export const enum AMM_TYPES{
@@ -11,15 +10,13 @@ export const enum AMM_TYPES{
 }
 
 export const enum OVN_CONTRACTS{
-  FIRST = 0,
-  SECOND = 1,
-  USDPLUS = 2,
-  USDTPLUS = 3,
+  USDPLUS = 0,
+  USDTPLUS = 1,
 }
 
 export const SUBGRAPH_URLS = {
   [CHAINS.LINEA]: {
-      [PROTOCOLS.OVN_REBASE]: {
+      [PROTOCOLS.OVN]: {
         [OVN_CONTRACTS.USDPLUS]: {
             url:  "https://api.studio.thegraph.com/query/68020/ovn_linea_points/version/latest",
             address: "0xB79DD08EA68A908A97220C76d19A6aA9cBDE4376"
@@ -29,21 +26,11 @@ export const SUBGRAPH_URLS = {
             address: "0x1E1F509963A6D33e169D9497b11c7DbFe73B7F13"
         },
       },
-      [PROTOCOLS.OVN]: {
-        [OVN_CONTRACTS.FIRST]: {
-            url:  "https://api.studio.thegraph.com/query/68020/linea_ovn/version/latest",
-            address: "0xc5f4c5c2077bbbac5a8381cf30ecdf18fde42a91"
-        },
-        [OVN_CONTRACTS.SECOND]: {
-            url:  "https://api.studio.thegraph.com/query/68020/ovn_linea_2/version/latest",
-            address: "0x58aacbccaec30938cb2bb11653cad726e5c4194a"
-        },
-      }
   }
 }
 
 export const RPC_URLS = {
-  [CHAINS.LINEA]: "https://rpc.linea.build",
+  [CHAINS.LINEA]: "https://linea.drpc.org",
 };
 
 
@@ -55,10 +42,11 @@ export const RPC_URLS = {
 
 
 export const SNAPSHOTS_BLOCKS = [
-  3461808, 3885185
+  0, 4169748
 ];
 
-export const CHUNKS_SPLIT = 10;
+export const CHUNKS_SPLIT = 20;
+export const BLOCK_STEP = 5000;
 export const LINEA_RPC = "https://lb.drpc.org/ogrpc?network=linea&dkey=AsCWb9aYukugqNphr9pEGw5L893HadYR7ooVbrjxQOzW"
 export const LP_LYNEX_SYMBOL = "oLYNX";
 export const LP_LYNEX = "0x63349BA5E1F71252eCD56E8F950D1A518B400b60"

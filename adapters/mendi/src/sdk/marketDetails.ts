@@ -3,7 +3,7 @@ import { CHAINS, RPC_URLS } from "./config";
 import { linea } from "viem/chains";
 import comptrollerAbi from "./abi/comptroller.abi";
 import ctokenAbi from "./abi/ctoken.abi";
-import { MarketActivity } from "./subgraphDetails";
+import { AccountState } from "./subgraphDetails";
 
 export interface MarketInfo {
   address: string;
@@ -78,52 +78,69 @@ export const getMarketInfos = async (
     blockNumber,
   });
 
-  const marketInfos = new Map<string, MarketInfo>();
+  const marketInfos: MarketInfo[] = [];
   for (let i = 0; i < markets.length; i++) {
     const marketAddress = markets[i].address.toLowerCase();
 
-    var marketInfo = marketInfos.get(marketAddress);
-    if (marketInfo === undefined) {
-      marketInfo = {} as MarketInfo;
-      marketInfos.set(marketAddress, marketInfo);
-    }
-
-    marketInfo.underlyingAddress = underlyingResults[i].result as any;
-    marketInfo.exchangeRateStored = BigInt(
-      exchangeRateResults[i].status == "success"
-        ? (exchangeRateResults[i].result as any)
-        : 0
-    );
-
-    marketInfo.underlyingSymbol = underlyingSymbolResults[i].result as any;
+    marketInfos.push({
+      address: marketAddress,
+      underlyingAddress: (underlyingResults[i].result as any)?.toLowerCase(),
+      underlyingSymbol: underlyingSymbolResults[i].result as any,
+      exchangeRateStored: BigInt(
+        exchangeRateResults[i].status == "success"
+          ? (exchangeRateResults[i].result as any)
+          : 0
+      ),
+    });
   }
 
   return marketInfos;
 };
 
-export const getBorrowBalanceStoredByAccounts = async (
-  activities: MarketActivity[],
+export const updateBorrowBalances = async (
+  states: AccountState[],
   blockNumber?: bigint
 ) => {
+  const marketInfos = await getMarketInfos(
+    "0x1b4d3b0421ddc1eb216d230bc01527422fb93103"
+  );
+  const marketsByUnderlying: any = {};
+  for (let marketInfo of marketInfos) {
+    marketsByUnderlying[marketInfo.underlyingAddress] = marketInfo.address;
+  }
+
   const publicClient = createPublicClient({
     chain: extractChain({ chains: [linea], id: CHAINS.LINEA }),
     transport: http(RPC_URLS[CHAINS.LINEA]),
   });
 
-  const borrowBalanceResults = await publicClient.multicall({
-    contracts: activities
-      .map((m) => [
-        {
-          address: m.market,
-          abi: ctokenAbi,
-          functionName: "borrowBalanceStored",
-          args: [m.owner],
-        },
-      ])
-      .flat() as any,
-    blockNumber,
-  });
-  const borrowBalances = borrowBalanceResults.map((v) => v.result as bigint);
+  states = states.filter((x) => x.borrowAmount > 0);
 
-  return borrowBalances;
+  console.log(`Will update all borrow balances for ${states.length} states`);
+  for (var i = 0; i < states.length; i += 500) {
+    const start = i;
+    const end = i + 500;
+    var subStates = states.slice(start, end);
+    console.log(`Updating borrow balances for ${start} - ${end}`);
+
+    const borrowBalanceResults = await publicClient.multicall({
+      contracts: subStates
+        .map((m) => [
+          {
+            address: marketsByUnderlying[m.token],
+            abi: ctokenAbi,
+            functionName: "borrowBalanceStored",
+            args: [m.account],
+          },
+        ])
+        .flat() as any,
+      blockNumber,
+    });
+
+    for (var j = 0; j < subStates.length; j++) {
+      subStates[j].borrowAmount = BigInt(
+        borrowBalanceResults[j].result?.toString() ?? 0
+      );
+    }
+  }
 };

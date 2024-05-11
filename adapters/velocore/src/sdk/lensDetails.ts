@@ -34,6 +34,7 @@ export const getGaugesAtBlock = async (blockNumber: number) => {
 export const LENS_ADDRESS = "0xaA18cDb16a4DD88a59f4c2f45b5c91d009549e06";
 export const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 export const VE_VC_ADDRESS = "0xAeC06345b26451bdA999d83b361BEaaD6eA93F87";
+export const VC_ADDRESS = "0xcc22F6AA610D1b2a0e89EF228079cB3e1831b1D1";
 export type PoolType = "cpmm" | "wombat" | "converter" | "veVC";
 
 export interface PoolRawData {
