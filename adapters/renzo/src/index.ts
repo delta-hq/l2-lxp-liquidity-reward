@@ -1,5 +1,7 @@
 import * as fs from "fs";
 import { format, write } from "fast-csv";
+require("dotenv").config();
+
 
 const excludedAddresses = new Set([
   "0x8a90d208666deec08123444f67bf5b1836074a67", // Mendi
@@ -35,7 +37,7 @@ const EZ_ETH_ADDRESS = "0x2416092f143378750bb29b79eD961ab195CcEea5";
 const TOKEN_SYMBOL = "EZETH";
 const RENZO_INDEXER_INTERFACE =
   "https://app.sentio.xyz/api/v1/analytics/renzo/ezeth-points-linea/sql/execute";
-const API_KEY = "XUoNvQW3FCl1MxgdQEyXZhZQZr9bbtm3s";
+const API_KEY = process.env.RENZO_API_KEY || "";
 
 export const getUserTVLByBlock = async (
   blocks: BlockData
