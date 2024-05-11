@@ -1,0 +1,29 @@
+{
+  "name": "teahouse",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist"
+  },
+
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "ethers": "^6.11.1",
+    "fs": "^0.0.1-security",
+    "viem": "^2.9.20",
+    "csv-parser": "^3.0.0",
+    "fast-csv": "^5.0.1"
+  }
+}

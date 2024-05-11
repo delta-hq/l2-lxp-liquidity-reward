@@ -17,6 +17,7 @@ const excludedAddresses = new Set([
   "0x62cE247f34dc316f93D3830e4Bf10959FCe630f8", // ZkLink
 ]);
 
+
 type OutputDataSchemaRow = {
   block_number: number;
   timestamp: number;
