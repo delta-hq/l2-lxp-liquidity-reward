@@ -17,7 +17,6 @@ const excludedAddresses = new Set([
   "0x62cE247f34dc316f93D3830e4Bf10959FCe630f8", // ZkLink
 ]);
 
-
 type OutputDataSchemaRow = {
   block_number: number;
   timestamp: number;
@@ -77,8 +76,8 @@ export const getUserTVLByBlock = async (
       .map((row: any) => ({
         block_number: blockNumber,
         timestamp: blockTimestamp,
-        user_address: row.account,
-        token_address: row.address,
+        user_address: row.account.toLowerCase(),
+        token_address: row.address.toLowerCase(),
         token_balance: BigInt(row.newEzETHBalance),
         token_symbol: TOKEN_SYMBOL,
         usd_price: 0, // 0 as default
