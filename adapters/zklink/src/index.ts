@@ -9,7 +9,7 @@ import {
 
 
 const getData = async () => {
-  const block = 1262060; 
+  const block = 1262060;
   const timestamp = await getTimestampAtBlock(block);
   const csvRows = await getUserTVLByBlock({
     blockNumber: block,
@@ -34,6 +34,6 @@ export const getUserTVLByBlock = async ({
 
 };
 
-getData().then(() => {
-  console.log('Done');
-});
+// getData().then(() => {
+//   console.log('Done');
+// });

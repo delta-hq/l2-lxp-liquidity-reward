@@ -172,6 +172,7 @@ export async function getAllLiquidities(blockNumber) {
     ["0x39abf030516e346f6c6779d03b260a4449705ce0", 166457], // USDC.op/ETH 166457
     ["0xbc2a3ff0ce7413c184086b532bc121318117cacb", 322503], //rsETH.Arbitrum/ETH 322503
     ["0x802e9743d3421ce5786bc24aac90bbba404f82dd", 435556], //USDC/ETH 435556
+    ["0xf30830372d919a129dafaaf51c4c80b7c9167cd7", 1448754],
   ]
     .filter((config) => config[1] < blockNumber)
     .map((config) => config[0]);
