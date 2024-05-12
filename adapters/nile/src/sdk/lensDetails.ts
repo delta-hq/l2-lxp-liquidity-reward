@@ -79,7 +79,6 @@ function multicall(
   blockNumber: bigint,
 ) {
   const call: MulticallParameters = {
-    allowFailure: false,
     contracts: calls.map((call) => {
       return {
         address: call.address as Address,
