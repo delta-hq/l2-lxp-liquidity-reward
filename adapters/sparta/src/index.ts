@@ -1,6 +1,6 @@
 import { createObjectCsvWriter } from "csv-writer";
 import { write } from "fast-csv";
-import csv from 'csv-parser';
+import csv from "csv-parser";
 import {
   client,
   PROTOCOL_DEPLOY_BLOCK,
@@ -38,12 +38,15 @@ async function processBlockData(block: number): Promise<UserPosition[]> {
   // get reserves at block
   const reservesSnapshotAtBlock = await fetchReservesForPools(block);
 
+  console.log("reservesSnapshotAtBlock");
   // calculate tokens based on reserves
   const userReserves = calculateUserReservePortion(
     userPositions,
     cumulativePositions,
     reservesSnapshotAtBlock
   );
+
+  console.log("ok");
 
   const timestamp = await getTimestampAtBlock(block);
 
@@ -56,6 +59,8 @@ function convertToUserPositions(
   block_number: number,
   timestamp: number
 ): UserPosition[] {
+  console.log(`userData`, userData);
+
   const tempResults: Record<string, UserPosition> = {};
 
   Object.keys(userData).forEach((user) => {
@@ -118,8 +123,8 @@ function calculateUserReservePortion(
       const total = totalSupply[contractId];
 
       const share = userPosition / total;
-      const reserve0 = parseInt(reserves[contractId].reserve0.toString());
-      const reserve1 = parseInt(reserves[contractId].reserve1.toString());
+      const reserve0 = reserves[contractId].reserve0;
+      const reserve1 = reserves[contractId].reserve1;
       const token0 = POOL_TOKENS[contractId].token0;
       const token1 = POOL_TOKENS[contractId].token1;
 
@@ -128,8 +133,8 @@ function calculateUserReservePortion(
       }
 
       userReserves[user][contractId] = {
-        amount0: BigInt(share * reserve0),
-        amount1: BigInt(share * reserve1),
+        amount0: BigInt(Math.floor(share * reserve0)),
+        amount1: BigInt(Math.floor(share * reserve1)),
         token0: token0,
         token1: token1,
       };
@@ -217,14 +222,12 @@ async function fetchReservesForPools(blockNumber: number): Promise<Reserves> {
         variables: { blockNumber, contractId: pool },
         fetchPolicy: "no-cache",
       });
-
       reserves[pool] = {
         reserve0: data.syncs[0].reserve0,
         reserve1: data.syncs[0].reserve1,
       };
     })
   );
-
   return reserves;
 }
 
@@ -318,24 +321,23 @@ async function main() {
 // after inital fetch set it to false
 // main().catch(console.error);
 
-
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
 
   await new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv()) // Specify the separator as '\t' for TSV files
-      .on('data', (row) => {
+      .on("data", (row) => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
-      .on('end', () => {
+      .on("end", () => {
         resolve();
       })
-      .on('error', (err) => {
+      .on("error", (err) => {
         reject(err);
       });
   });
@@ -343,33 +345,34 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
+readBlocksFromCSV("hourly_blocks.csv")
+  .then(async (blocks: any[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 1000; // Size of batch to trigger writing to the file
+    let i = 0;
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
-  console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
-
-  for (const block of blocks) {
+    for (const block of blocks) {
       try {
-          const result = await getUserTVLByBlock(block);
-          // Accumulate CSV rows for all blocks
-          allCsvRows.push(...result);
+        const result = await getUserTVLByBlock(block);
+        // Accumulate CSV rows for all blocks
+        allCsvRows.push(...result);
       } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
+        console.error(`An error occurred for block ${block}:`, error);
       }
-  }
-  await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
+    }
+    await new Promise((resolve, reject) => {
+      // const randomTime = Math.random() * 1000;
+      // setTimeout(resolve, randomTime);
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
+          console.log(`CSV file has been written.`);
+          resolve;
         });
+    });
+  })
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
   });
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
-});
