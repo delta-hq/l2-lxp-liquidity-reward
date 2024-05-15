@@ -84,7 +84,11 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         })
-        const { data: { liquidityPositions } } = await response.json();
+        const jsonData = await response.json();
+        const liquidityPositions: V2Position[] = [];
+        if(jsonData.data.hasOwnProperty('liquidityPositions')) {
+            liquidityPositions.push(...jsonData.data.liquidityPositions)
+        }
         result.push(...liquidityPositions.map((position: V2Position) => {
             const { reserve0, reserve1 } = getV2PositionReserves(position)
             return {
