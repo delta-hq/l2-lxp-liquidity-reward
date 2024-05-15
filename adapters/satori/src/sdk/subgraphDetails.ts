@@ -9,22 +9,18 @@ export interface OutputDataSchemaRow {
     token_balance:number
 }
 
-
 export const getUserTVLByBlock = async (
     blockNumber: number,
-    address: string,
+    timestamp: number,
 ):Promise<OutputDataSchemaRow[]> =>  {
     let subgraphUrl = SUBGRAPH_URL;
     let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
-    let ownerQuery = address !== "" ? `owner: "${address.toLowerCase()}"` : ``;
-
-    let whereQuery = ownerQuery !== "" ?`where: {${ownerQuery}}`:  ``;
     let skip = 0;
     let fetchNext = true;
     let result: OutputDataSchemaRow[] = [];
     while(fetchNext){
         let query = `{
-            userLpSnapshots(${whereQuery} ${blockQuery} orderBy: timestamp, first:1000,skip:${skip}){
+            userLpSnapshots(${blockQuery} orderBy: timestamp, first:1000,skip:${skip}){
               id
               user
               block
@@ -43,7 +39,6 @@ export const getUserTVLByBlock = async (
         let snapshots = data.data.userLpSnapshots
         for (const snapshot of snapshots) {
             let userLpSnapshot:OutputDataSchemaRow = {
- 
                 block_number:snapshot.block,
                 timestamp:snapshot.timestamp,
                 user_address:snapshot.user,
