@@ -8,22 +8,26 @@ import {
 } from './sdk/lib';
 
 
-const getData = async () => {
-  const block = 1262060;
-  const timestamp = await getTimestampAtBlock(block);
-  const csvRows = await getUserTVLByBlock({
-    blockNumber: block,
-    blockTimestamp: timestamp,
-  })
+// const getData = async () => {
+//   const block = 1262060;
+//   const timestamp = await getTimestampAtBlock(block);
+//   const csvRows = await getUserTVLByBlock({
+//     blockNumber: block,
+//     blockTimestamp: timestamp,
+//   })
 
-  // Write the CSV output to a file
-  const ws = fs.createWriteStream('outputData.csv');
-  write(csvRows, { headers: true })
-    .pipe(ws)
-    .on('finish', () => {
-      console.log('CSV file has been written.');
-    });
-};
+//   // Write the CSV output to a file
+//   const ws = fs.createWriteStream('outputData.csv');
+//   write(csvRows, { headers: true })
+//     .pipe(ws)
+//     .on('finish', () => {
+//       console.log('CSV file has been written.');
+//     });
+// };
+
+// getData().then(() => {
+//   console.log('Done');
+// });
 
 export const getUserTVLByBlock = async ({
   blockNumber,
@@ -34,6 +38,4 @@ export const getUserTVLByBlock = async ({
 
 };
 
-// getData().then(() => {
-//   console.log('Done');
-// });
+

@@ -3,6 +3,9 @@ import { getAddress, JsonRpcProvider } from 'ethers'
 import { getAllLiquidities } from './izumi.js'
 
 type UserBalance = Pick<OutputSchemaRow, 'user_address' | 'token_balance' | 'token_address' | 'token_symbol'>
+const ezETHAddress = getAddress('0x8fee71ab3ffd6f8aec8cd2707da20f4da2bf583d')
+const ethAddress = getAddress('0x0000000000000000000000000000000000000000')
+const wETHAddress = getAddress('0x8280a4e7D5B3B658ec4580d3Bc30f5e50454F169')
 
 const getAllPools = async () => {
   const query = `
@@ -77,28 +80,50 @@ export const getUserPositionsAtBlock = async (
     const res = userPositions.map(data => {
       const userAddress = data.id
       const ethBalance = data.balances.reduce((prev, cur) => {
-        if ([getAddress('0x0000000000000000000000000000000000000000'), getAddress('0x8280a4e7D5B3B658ec4580d3Bc30f5e50454F169')].includes(getAddress(cur.token))) {
+        if ([ethAddress, wETHAddress].includes(getAddress(cur.token))) {
           return prev + BigInt(cur.balance)
         }
         return prev
       }, BigInt(0))
+
       const poolEthBalance = data.positions.reduce((prev, cur) => {
-        if ([getAddress('0x0000000000000000000000000000000000000000'), getAddress('0x8280a4e7D5B3B658ec4580d3Bc30f5e50454F169')].includes(getAddress(cur.token))) {
-          const pool = pools.find(p => p.id === cur.pool)
+        if ([ethAddress, wETHAddress].includes(getAddress(cur.token))) {
+          const pool = pools.find(pool => pool.id === cur.pool)
           if (!pool) return prev
           return prev + BigInt(cur.supplied) * BigInt(pool.balance) / BigInt(pool.totalSupplied)
         }
         return prev
       }, BigInt(0))
-      return {
+
+      const ezEthBalance = BigInt((data.balances.find((balance) => ezETHAddress === getAddress(balance.token)))?.balance ?? '0')
+
+      const poolEzEthBalance = data.positions.reduce((prev, cur) => {
+        if (ezETHAddress === getAddress(cur.token)) {
+          const pool = pools.find(pool => pool.id === cur.pool)
+          if (!pool) return prev
+          return prev + BigInt(cur.supplied) * BigInt(pool.balance) / BigInt(pool.totalSupplied)
+        }
+        return prev
+      }, BigInt(0))
+
+      return [{
         user_address: userAddress,
-        token_address: '0x0000000000000000000000000000000000000000',
-        token_balance: (poolEthBalance + ethBalance).toString(),
+        token_address: ethAddress,
+        token_balance: (poolEthBalance + ethBalance),
         token_symbol: "ETH"
-      }
+      },
+      {
+        user_address: userAddress,
+        token_address: ezETHAddress,
+        token_balance: (ezEthBalance + poolEzEthBalance),
+        token_symbol: "ezETH"
+      }].filter(i => i.token_balance > BigInt(0)).map((data) => ({
+        ...data,
+        token_balance: data.token_balance.toString()
+      }))
     })
 
-    result.push(...res)
+    result.push(...res.flat())
 
     if (userPositions.length < pageSize) {
       console.log(`The last data from ${skip} to ${skip + pageSize}`)
@@ -114,9 +139,9 @@ export const getUserPositionsAtBlock = async (
     if (!izumi) return item
     return { ...item, token_balance: (BigInt((item.token_balance)) + BigInt(izumi.amount)).toString() }
   }).sort((a, b) => Number(a.token_balance) - Number(b.token_balance))
-  const totalETH = result.reduce((prev, cur) => prev + (Number(cur.token_balance) / 1e18), (0))
-
-  console.log('Total ETH', totalETH);
+  const totalETH = result.filter(i => i.token_address === ethAddress).reduce((prev, cur) => prev + (Number(cur.token_balance) / 1e18), (0))
+  const totalEzETH = result.filter(i => i.token_address === ezETHAddress).reduce((prev, cur) => prev + (Number(cur.token_balance) / 1e18), (0))
+  console.log('Total ETH:', totalETH, ' Total ezETH:', totalEzETH);
 
   return result;
 };
