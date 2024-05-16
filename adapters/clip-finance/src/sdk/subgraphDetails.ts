@@ -35,6 +35,10 @@ interface UserSharesSnapshot {
   shares1: Big;
 }
 
+function delay(ms: number) {
+  return new Promise( resolve => setTimeout(resolve, ms) );
+}
+
 export const getUserBalanceSnapshotAtBlock = async (
   blockNumber: number,
   address: string
@@ -69,20 +73,28 @@ export const getUserBalanceSnapshotAtBlock = async (
             }
           }
           `;
-        
-    let response = await fetch(subgraphUrl, {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    });
-    if (response.status != 200) {
-      subgraphUrl = RESERVE_SUBGRAPH_URLS[CHAINS.LINEA];
+    let count = 0;
+    let response;
+    do {    
       response = await fetch(subgraphUrl, {
         method: "POST",
         body: JSON.stringify({ query }),
         headers: { "Content-Type": "application/json" },
       });
-    }
+      if (response.status != 200) {
+        subgraphUrl = RESERVE_SUBGRAPH_URLS[CHAINS.LINEA];
+        response = await fetch(subgraphUrl, {
+          method: "POST",
+          body: JSON.stringify({ query }),
+          headers: { "Content-Type": "application/json" },
+        });
+      }
+      if (response.status != 200) {
+          console.log("sharePrices fetching failed. Try again in 15 sec");
+          await delay(15000);
+      }
+      ++count
+    } while ((response.status != 200) && (count < 10))
     
     let data = await response.json();
     let snapshots = data.data.sharePrices;
@@ -142,12 +154,22 @@ export const getUserBalanceSnapshotAtBlock = async (
             }
           }
           `;
-        
-    const response = await fetch(subgraphUrl, {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    });
+    let count = 0;
+    let response;
+    do {    
+      response = await fetch(subgraphUrl, {
+        method: "POST",
+        body: JSON.stringify({ query }),
+        headers: { "Content-Type": "application/json" },
+      });
+      if (response.status != 200) {
+        await delay(15000);
+        console.log("userShares fetching failed. Try again in 15 sec");
+      }
+      ++count;
+    } while ((count < 10) && (response.status != 200)) {
+
+    }
     let data = await response.json();
     let snapshots = data.data.userShares;
     for (const snapshot of snapshots) {
@@ -223,12 +245,21 @@ export const getUserBalanceSnapshotAtBlock = async (
     }
   }
   `;
-  
-  const response = await fetch(subgraphUrl, {
-  method: "POST",
-  body: JSON.stringify({ query }),
-  headers: { "Content-Type": "application/json" },
-  });
+
+  let count = 0;
+  let response;
+  do {
+    response = await fetch(subgraphUrl, {
+      method: "POST",
+      body: JSON.stringify({ query }),
+      headers: { "Content-Type": "application/json" },
+      });
+    if (response.status != 200) {
+      console.log("sharesTokenSharesCounts fetching failed. Try again in 15 sec");
+      await delay(15000)
+    }
+    ++count;
+  } while ((count < 10) && (response.status != 200));
   let data = await response.json();
   let snapshots = data.data.sharesTokenSharesCounts;
   let strategyRouterTotalShares: Big = Big(0);
