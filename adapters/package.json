@@ -13,6 +13,7 @@
   "license": "UNLICENSED",
   "dependencies": {
     "csv-parser": "^3.0.0",
-    "fast-csv": "^5.0.1"
+    "fast-csv": "^5.0.1",
+    "viem": "^2.9.20"
   }
 }
