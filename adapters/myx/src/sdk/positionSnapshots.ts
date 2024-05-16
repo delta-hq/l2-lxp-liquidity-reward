@@ -9,8 +9,20 @@ interface LiquidityPositionSnapshot {
         address: string
         symbol: string
     }
+    token0: {
+        id: string
+        address: string
+        symbol: string
+    }
+    token1: {
+        id: string
+        address: string
+        symbol: string
+    }
     pairIndex: number
     lpAmount: bigint
+    token0Amount: string
+    token1Amount: string
     block: number
     timestamp: number
 }
@@ -58,9 +70,19 @@ export const getPositionsForAddressByPoolAtBlock = async (
                           address
                           symbol
                         }
+                        token0 {
+                          address
+                          symbol
+                        }
+                        token1 {
+                          address
+                          symbol
+                        }
                         pairIndex
                         recipient
                         lpAmount
+                        token0Amount
+                        token1Amount
                         timestamp
                       }
                 }
@@ -99,6 +121,24 @@ export const getPositionsForAddressByPoolAtBlock = async (
                 block_number: snapshotBlockNumber,
                 token_symbol: positionSnapshot.lPToken.symbol,
                 token_balance: new Decimal(positionSnapshot.lpAmount.toString()).div(1e18).toString(),
+                usd_price: "0"
+            })
+            userPositionSnapshotsAtBlockData.push({
+                user_address: positionSnapshot.recipient,
+                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                token_address: positionSnapshot.token0.address,
+                block_number: snapshotBlockNumber,
+                token_symbol: positionSnapshot.token0.symbol,
+                token_balance: new Decimal(positionSnapshot.token0Amount).toFixed(0),
+                usd_price: "0"
+            })
+            userPositionSnapshotsAtBlockData.push({
+                user_address: positionSnapshot.recipient,
+                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                token_address: positionSnapshot.token1.address,
+                block_number: snapshotBlockNumber,
+                token_symbol: positionSnapshot.token1.symbol,
+                token_balance: new Decimal(positionSnapshot.token1Amount).toFixed(0),
                 usd_price: "0"
             })
         })
