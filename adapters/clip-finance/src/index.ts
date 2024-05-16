@@ -8,8 +8,8 @@ interface CSVRow {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_symbol: string;
   token_balance: bigint;
+  token_symbol: string;
   usd_price: number
 }
 
