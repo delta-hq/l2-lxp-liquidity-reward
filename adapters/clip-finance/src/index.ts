@@ -10,7 +10,6 @@ interface CSVRow {
   token_address: string;
   token_symbol: string;
   token_balance: bigint;
- // contract     : string;
   usd_price: number
 }
 
@@ -28,9 +27,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   for (const block of snapshotBlocks) {
     let snapshots = await getUserBalanceSnapshotAtBlock(block, "");
 
-    console.log(`Block: ${block}`);
-    console.log("Snapshots length:", snapshots.length);
-
     const timestamp = await getTimestampAtBlock(block);
 
     for (const snapshot of snapshots) {
@@ -41,7 +37,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         token_address: snapshot.token,
         token_symbol: snapshot.tokenSymbol,
         token_balance: BigInt(snapshot.balance.toString()),
-       // contract     : snapshot.contract,
         usd_price: 0
       };
       csvRows.push(csvRow);
@@ -60,14 +55,9 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     fs.createReadStream(filePath)
       .pipe(csv({ separator: ',' })) // Specify the separator as ',' for csv files
       .on('data', (row) => {
-        console.log(row);
-        console.log("row.timestamp: ", row.timestamp);
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
-        console.log("blockNumber: ", blockNumber);
-        console.log("blockTimeStamp: ", blockTimestamp);
         if (!isNaN(blockNumber) && blockTimestamp) {
-
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
@@ -84,9 +74,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
 readBlocksFromCSV('hourly_blocks.csv')
   .then(async (blocks) => {
-    console.log("start");
-    console.log(blocks);
-    console.log("finish blocks");
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
     const batchSize = 10; // Size of batch to trigger writing to the file
     let i = 0;

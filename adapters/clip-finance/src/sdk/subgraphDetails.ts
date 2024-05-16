@@ -1,8 +1,7 @@
 import { createPublicClient, extractChain, http } from "viem";
 import { linea } from "viem/chains";
-import { SUBGRAPH_URLS, CHAINS, RPC_URLS } from "./config";
+import { SUBGRAPH_URLS, CHAINS, RPC_URLS, RESERVE_SUBGRAPH_URLS } from "./config";
 import Big from "big.js";
-import { snapshot } from "viem/_types/actions/test/snapshot";
 
 export interface UserBalanceSnapshot {
   id: string;
@@ -71,11 +70,20 @@ export const getUserBalanceSnapshotAtBlock = async (
           }
           `;
         
-    const response = await fetch(subgraphUrl, {
+    let response = await fetch(subgraphUrl, {
       method: "POST",
       body: JSON.stringify({ query }),
       headers: { "Content-Type": "application/json" },
     });
+    if (response.status != 200) {
+      subgraphUrl = RESERVE_SUBGRAPH_URLS[CHAINS.LINEA];
+      response = await fetch(subgraphUrl, {
+        method: "POST",
+        body: JSON.stringify({ query }),
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+    
     let data = await response.json();
     let snapshots = data.data.sharePrices;
     for (const snapshot of snapshots) {
@@ -109,7 +117,6 @@ export const getUserBalanceSnapshotAtBlock = async (
     const user       = share.id.substring(0, 42);
     const key = user.concat(balance.token);
     if (user == "0xa663f143055254a503467ff8b18aa9e70b9455b6") {
-      console.log("ourUserBalance: ", balance.balance.toNumber());
       strategyRouterBalance.set(key.concat(balance.token), balance);
     } else if (balance.balance.gt(0)) {
       if (!balanceMap.has(key)) {
@@ -236,7 +243,6 @@ export const getUserBalanceSnapshotAtBlock = async (
       const user = "0x".concat(share.id.substring(0, 42));      
       for (const srbKey of strategyRouterBalance.keys()) {
         const balance = strategyRouterBalance.get(srbKey);
-       // console.log("balance: ", balance?.balance.toNumber(), "; shares: ", Big(share.shares0).toNumber(), "; totalShares: ", strategyRouterTotalShares.toNumber());
         if (balance) {
           countedTotalShares = countedTotalShares.plus(Big(share.shares0));
           const userBalance : UserBalanceSnapshot = {
@@ -245,7 +251,6 @@ export const getUserBalanceSnapshotAtBlock = async (
             token  : balance.token,
             tokenSymbol: balance.tokenSymbol
           }
-         // console.log("balance: %s, token: %s", userBalance.balance, userBalance.tokenSymbol);
          
           checkBalance = checkBalance.plus(userBalance.balance);
           const key = user.concat(balance.token);
@@ -261,8 +266,6 @@ export const getUserBalanceSnapshotAtBlock = async (
         }
       }
     });
-    console.log("final balance: ", checkBalance.toNumber());
-    console.log("calculated shares: ", countedTotalShares.toNumber());
   }
   
   return Array.from(balanceMap.values());
