@@ -107,7 +107,7 @@ export const getUserBalanceSnapshotAtBlock = async (
   const addBalance = (balance: UserBalanceSnapshot, share: UserBalanceSnapshot) => {
     const contract = "0x".concat(share.id.substring(42));  
     const user       = share.id.substring(0, 42);
-    const key = user.concat(contract);
+    const key = user.concat(balance.token);
     if (user == "0xa663f143055254a503467ff8b18aa9e70b9455b6") {
       console.log("ourUserBalance: ", balance.balance.toNumber());
       strategyRouterBalance.set(key.concat(balance.token), balance);
@@ -233,7 +233,7 @@ export const getUserBalanceSnapshotAtBlock = async (
   if (strategyRouterTotalShares.gt(0)) {
     let checkBalance = Big(0);
     strategyRouterSharesMap.forEach((share: UserSharesSnapshot, id: string)=> {
-      const user = share.id.substring(42);      
+      const user = "0x".concat(share.id.substring(0, 42));      
       for (const srbKey of strategyRouterBalance.keys()) {
         const balance = strategyRouterBalance.get(srbKey);
        // console.log("balance: ", balance?.balance.toNumber(), "; shares: ", Big(share.shares0).toNumber(), "; totalShares: ", strategyRouterTotalShares.toNumber());
@@ -246,8 +246,18 @@ export const getUserBalanceSnapshotAtBlock = async (
             tokenSymbol: balance.tokenSymbol
           }
          // console.log("balance: %s, token: %s", userBalance.balance, userBalance.tokenSymbol);
+         
           checkBalance = checkBalance.plus(userBalance.balance);
-          balanceMap.set(share.id, userBalance);
+          const key = user.concat(balance.token);
+          if (!balanceMap.has(key)) {
+            balanceMap.set(key, userBalance);
+          } else {
+            const oldUserBalance = balanceMap.get(key);
+            if (oldUserBalance) {
+              oldUserBalance.balance = oldUserBalance.balance.plus(userBalance.balance);
+              balanceMap.set(key, userBalance);
+            }
+          }
         }
       }
     });
