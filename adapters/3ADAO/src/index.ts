@@ -109,7 +109,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("./adapters/3ADAO/hourly_blocks.csv")
+readBlocksFromCSV("./hourly_blocks.csv")
   .then(async (blocks: any[]) => {
     console.log(blocks);
     const allCsvRows: any[] = [];
