@@ -113,8 +113,7 @@ export const getUserBalanceSnapshotAtBlock = async (
   const strategyRouterSharesMap = new Map<string, UserSharesSnapshot>();
   let strategyRouterBalance = new Map<string, UserBalanceSnapshot>();
   const addBalance = (balance: UserBalanceSnapshot, share: UserBalanceSnapshot) => {
-    const contract = "0x".concat(share.id.substring(42));  
-    const user       = share.id.substring(0, 42);
+    const user= share.id.substring(0, 42);
     const key = user.concat(balance.token);
     if (user == "0xa663f143055254a503467ff8b18aa9e70b9455b6") {
       strategyRouterBalance.set(key.concat(balance.token), balance);
@@ -165,9 +164,9 @@ export const getUserBalanceSnapshotAtBlock = async (
         };
         if (sharePrice.price0.gt(0)) {
           userBalanceSnapshot = {
-            id: user,
+            id: user.toLowerCase(),
             balance: Big(Math.round(Big(snapshot.shares0).mul(sharePrice.price0).div(1e18).toNumber())),
-            token  : sharePrice.token0,
+            token  : sharePrice.token0.toLowerCase(),
             tokenSymbol: sharePrice.token0Symbol,
             
           }
@@ -175,9 +174,9 @@ export const getUserBalanceSnapshotAtBlock = async (
         }
         if (sharePrice.price01.gt(0))  {
           userBalanceSnapshot = {
-            id: user,
+            id: user.toLowerCase(),
             balance: Big(Math.round(Big(snapshot.shares0).mul(sharePrice.price01).div(1e18).toNumber())),
-            token  : sharePrice.token1,
+            token  : sharePrice.token1.toLowerCase(),
             tokenSymbol: sharePrice.token1Symbol,
             
           }
@@ -185,18 +184,18 @@ export const getUserBalanceSnapshotAtBlock = async (
         }
         if (sharePrice.price1.gt(0))  {
           userBalanceSnapshot = {
-            id: user,
+            id: user.toLowerCase(),
             balance: Big(Math.round(Big(snapshot.shares1).mul(sharePrice.price1).div(1e18).toNumber())),
-            token  : sharePrice.token1,
+            token  : sharePrice.token1.toLowerCase(),
             tokenSymbol: sharePrice.token1Symbol,    
           }
           addBalance(userBalanceSnapshot, snapshot);
         }
         if (sharePrice.price10.gt(0))  {
           userBalanceSnapshot = {
-            id: user,
+            id: user.toLowerCase(),
             balance: Big(Math.round(Big(snapshot.shares1).mul(sharePrice.price10).div(1e18).toNumber())),
-            token  : sharePrice.token0,
+            token  : sharePrice.token0.toLowerCase(),
             tokenSymbol: sharePrice.token0Symbol,
             
           }
@@ -240,15 +239,15 @@ export const getUserBalanceSnapshotAtBlock = async (
   if (strategyRouterTotalShares.gt(0)) {
     let checkBalance = Big(0);
     strategyRouterSharesMap.forEach((share: UserSharesSnapshot, id: string)=> {
-      const user = "0x".concat(share.id.substring(0, 42));      
+      const user = share.id.substring(0, 42);      
       for (const srbKey of strategyRouterBalance.keys()) {
         const balance = strategyRouterBalance.get(srbKey);
         if (balance) {
           countedTotalShares = countedTotalShares.plus(Big(share.shares0));
           const userBalance : UserBalanceSnapshot = {
-            id: user,
+            id: user.toLowerCase(),
             balance: Big(Math.round(Big(share.shares0).mul(balance.balance).div(strategyRouterTotalShares).toNumber())),
-            token  : balance.token,
+            token  : balance.token.toLowerCase(),
             tokenSymbol: balance.tokenSymbol
           }
          
