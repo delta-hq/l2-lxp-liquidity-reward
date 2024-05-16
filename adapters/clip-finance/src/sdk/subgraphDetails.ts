@@ -89,11 +89,12 @@ export const getUserBalanceSnapshotAtBlock = async (
           headers: { "Content-Type": "application/json" },
         });
       }
-      if (response.status == 429) {
+      if (response.status != 200) {
+          console.log("sharePrices fetching failed. Try again in 15 sec");
           await delay(15000);
       }
       ++count
-    } while ((response.status != 200) && (count < 5))
+    } while ((response.status != 200) && (count < 10))
     
     let data = await response.json();
     let snapshots = data.data.sharePrices;
@@ -161,11 +162,12 @@ export const getUserBalanceSnapshotAtBlock = async (
         body: JSON.stringify({ query }),
         headers: { "Content-Type": "application/json" },
       });
-      if (response.status == 429) {
+      if (response.status != 200) {
         await delay(15000);
+        console.log("userShares fetching failed. Try again in 15 sec");
       }
       ++count;
-    } while ((count < 5) && (response.status != 200)) {
+    } while ((count < 10) && (response.status != 200)) {
 
     }
     let data = await response.json();
@@ -252,11 +254,12 @@ export const getUserBalanceSnapshotAtBlock = async (
       body: JSON.stringify({ query }),
       headers: { "Content-Type": "application/json" },
       });
-    if (response.status == 429) {
+    if (response.status != 200) {
+      console.log("sharesTokenSharesCounts fetching failed. Try again in 15 sec");
       await delay(15000)
     }
     ++count;
-  } while ((count < 5) && (response.status != 200));
+  } while ((count < 10) && (response.status != 200));
   let data = await response.json();
   let snapshots = data.data.sharesTokenSharesCounts;
   let strategyRouterTotalShares: Big = Big(0);
