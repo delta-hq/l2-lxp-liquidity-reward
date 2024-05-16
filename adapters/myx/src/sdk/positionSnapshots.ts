@@ -1,5 +1,6 @@
 import {CHAINS, SUBGRAPH_URLS} from "./config";
 import Decimal from "decimal.js";
+import {OutputDataSchemaRow} from "../index";
 
 
 interface LiquidityPositionSnapshot {
@@ -33,20 +34,10 @@ interface SubgraphResponse {
     }
 }
 
-interface UserPositionSnapshotsAtBlockData {
-    block_number: number
-    timestamp: string
-    user_address: string
-    token_address: string
-    token_symbol: string
-    token_balance: string
-    usd_price: string
-}
-
 export const getPositionsForAddressByPoolAtBlock = async (
     snapshotBlockNumber: number
-): Promise<UserPositionSnapshotsAtBlockData[]> => {
-    const userPositionSnapshotsAtBlockData: UserPositionSnapshotsAtBlockData[] = []
+): Promise<OutputDataSchemaRow[]> => {
+    const userPositionSnapshotsAtBlockData: OutputDataSchemaRow[] = []
     let snapshotsArrays: LiquidityPositionSnapshot[] = []
     const snapshotsMap = new Map<string, Map<string, LiquidityPositionSnapshot>>() // user => pool => snapshot
     let skip = 0
@@ -115,28 +106,28 @@ export const getPositionsForAddressByPoolAtBlock = async (
         userPositionSnapshotMap.forEach((positionSnapshot) => {
             userPositionSnapshotsAtBlockData.push({
                 user_address: positionSnapshot.recipient,
-                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                timestamp: Number(new Date(positionSnapshot.timestamp * 1000).toISOString()),
                 token_address: positionSnapshot.token0.address,
                 block_number: snapshotBlockNumber,
                 token_symbol: positionSnapshot.token0.symbol,
-                token_balance: new Decimal(positionSnapshot.token0Amount).toFixed(0),
-                usd_price: "0"
+                token_balance: BigInt(new Decimal(positionSnapshot.token0Amount).toFixed(0)),
+                usd_price: 0
             })
 
             const exists = userPositionSnapshotsAtBlockData.find((value) => {
                 return value.user_address == positionSnapshot.recipient && value.token_address == positionSnapshot.token1.address;
             })
             if (exists) {
-                exists.token_balance = new Decimal(positionSnapshot.token1Amount).add(exists.token_balance).toFixed(0);
+                exists.token_balance = BigInt(new Decimal(positionSnapshot.token1Amount).add(exists.token_balance.toString()).toFixed(0));
             } else {
                 userPositionSnapshotsAtBlockData.push({
                     user_address: positionSnapshot.recipient,
-                    timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                    timestamp: Number(new Date(positionSnapshot.timestamp * 1000).toISOString()),
                     token_address: positionSnapshot.token1.address,
                     block_number: snapshotBlockNumber,
                     token_symbol: positionSnapshot.token1.symbol,
-                    token_balance: new Decimal(positionSnapshot.token1Amount).toFixed(0),
-                    usd_price: "0"
+                    token_balance: BigInt(new Decimal(positionSnapshot.token1Amount).toFixed(0)),
+                    usd_price: 0
                 })
             }
         })
