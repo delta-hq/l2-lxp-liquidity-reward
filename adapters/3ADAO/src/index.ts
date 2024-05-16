@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import { write } from "fast-csv";
+import csv from "csv-parser";
 import { OutputDataSchemaRow } from "./sdk/types";
 import { getTvlByVaultAtBlock } from "./sdk/helpers";
 import { addresses } from "./sdk/config";
@@ -39,11 +40,12 @@ export const getUserTVLByBlock = async (
   blocks: BlockData[],
   logOutput?: boolean
 ) => {
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+  const allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
   const batchSize = 10; // Size of batch to trigger writing to the file
   let i = 0;
 
-  for (const { blockNumber, blockTimestamp } of blocks) {
+  for (let i = 0; i < blocks.length; i++) {
+    const { blockNumber, blockTimestamp } = blocks[i];
     try {
       // Retrieve data using block number and timestamp
       const csvRowsTvl = await getTVLByVault(
@@ -70,14 +72,66 @@ export const getUserTVLByBlock = async (
           });
 
         // Clear the accumulated CSV rows
-        allCsvRows.length = 0;
+        // allCsvRows.length = 0;
       }
     } catch (error) {
       console.error(`An error occurred for block ${blockNumber}:`, error);
     }
   }
+  return allCsvRows;
 };
 
 // * Test
 // const when = { blockNumber: 3394331, blockTimestamp: 0 };
 // getUserTVLByBlock ([when], true);
+
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on("data", (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .on("error", (err) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+readBlocksFromCSV("./adapters/3ADAO/hourly_blocks.csv")
+  .then(async (blocks: any[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = [];
+
+    for (const block of blocks) {
+      try {
+        const result = await getUserTVLByBlock(block);
+        allCsvRows.push(...result);
+      } catch (error) {
+        console.error(`An error occurred for block ${block}:`, error);
+      }
+    }
+    await new Promise((resolve, reject) => {
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+          console.log(`CSV file has been written.`);
+          resolve;
+        });
+    });
+  })
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
+  });
