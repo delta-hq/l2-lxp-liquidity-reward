@@ -108,21 +108,11 @@ export const getPositionsForAddressByPoolAtBlock = async (
         if (!userPositionSnapshotMap) {
             userPositionSnapshotMap = new Map<string, LiquidityPositionSnapshot>()
         }
-        userPositionSnapshotMap.set(snapshot.lPToken.id, snapshot)
+        userPositionSnapshotMap.set(snapshot.lPToken.address, snapshot)
         snapshotsMap.set(snapshot.recipient, userPositionSnapshotMap)
     }
     snapshotsMap.forEach((userPositionSnapshotMap => {
         userPositionSnapshotMap.forEach((positionSnapshot) => {
-            console.log(positionSnapshot.timestamp)
-            userPositionSnapshotsAtBlockData.push({
-                user_address: positionSnapshot.recipient,
-                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
-                token_address: positionSnapshot.lPToken.address,
-                block_number: snapshotBlockNumber,
-                token_symbol: positionSnapshot.lPToken.symbol,
-                token_balance: new Decimal(positionSnapshot.lpAmount.toString()).div(1e18).toString(),
-                usd_price: "0"
-            })
             userPositionSnapshotsAtBlockData.push({
                 user_address: positionSnapshot.recipient,
                 timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
@@ -132,15 +122,23 @@ export const getPositionsForAddressByPoolAtBlock = async (
                 token_balance: new Decimal(positionSnapshot.token0Amount).toFixed(0),
                 usd_price: "0"
             })
-            userPositionSnapshotsAtBlockData.push({
-                user_address: positionSnapshot.recipient,
-                timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
-                token_address: positionSnapshot.token1.address,
-                block_number: snapshotBlockNumber,
-                token_symbol: positionSnapshot.token1.symbol,
-                token_balance: new Decimal(positionSnapshot.token1Amount).toFixed(0),
-                usd_price: "0"
+
+            const exists = userPositionSnapshotsAtBlockData.find((value) => {
+                return value.user_address == positionSnapshot.recipient && value.token_address == positionSnapshot.token1.address;
             })
+            if (exists) {
+                exists.token_balance = new Decimal(positionSnapshot.token1Amount).add(exists.token_balance).toFixed(0);
+            } else {
+                userPositionSnapshotsAtBlockData.push({
+                    user_address: positionSnapshot.recipient,
+                    timestamp: new Date(positionSnapshot.timestamp * 1000).toISOString(),
+                    token_address: positionSnapshot.token1.address,
+                    block_number: snapshotBlockNumber,
+                    token_symbol: positionSnapshot.token1.symbol,
+                    token_balance: new Decimal(positionSnapshot.token1Amount).toFixed(0),
+                    usd_price: "0"
+                })
+            }
         })
     }))
     return userPositionSnapshotsAtBlockData

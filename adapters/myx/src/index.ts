@@ -41,7 +41,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
 
 const getData = async () => {
     const snapshotBlocks = [
-        3509191
+        4605383
         // Add more blocks as needed
     ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
