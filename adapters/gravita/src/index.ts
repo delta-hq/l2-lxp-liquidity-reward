@@ -5,7 +5,7 @@ import { write } from "fast-csv";
 /**
  * The objective is to quantify:
  *     - TVL on Linea (size of collateral minting GRAI on Linea)
- *     - GRAI stability pool deposits on Linea
+ *     - GRAI stability pool deposits on Linea 
  *
  * For that, we'll be querying an existing Gravita Subgraph deployed on TheGraph.
  */
