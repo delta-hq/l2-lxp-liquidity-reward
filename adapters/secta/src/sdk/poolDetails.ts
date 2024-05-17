@@ -36,6 +36,8 @@ export const getV2LpValue = async (rpc: string, pairs: V2Pair[], mintedAddresses
             );
             const userLpBalance = new BigNumber(userLpBalanceBigInt.toString());
 
+            if (pair.totalSupply == 0) continue;
+
             const totalSupply = new BigNumber(pair.totalSupply);
 
             const userShare = userLpBalance.dividedBy(totalSupply);
