@@ -13,7 +13,7 @@ import BigNumber from "bignumber.js";
 const NILE_ADDRESS = "0xAAAac83751090C6ea42379626435f805DDF54DC8".toLowerCase();
 
 const getData = async () => {
-  const snapshotBlocks = [3753501];
+  const snapshotBlocks = [4469972];
 
   const csvRows: OutputSchemaRow[] = [];
 

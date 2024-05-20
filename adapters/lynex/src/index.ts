@@ -1,9 +1,8 @@
 import fs from "fs";
 import { write } from "fast-csv";
-import csv from 'csv-parser';
+import csv from "csv-parser";
 import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
-  VE_LYNX_ADDRESS,
   LYNX_ADDRESS,
   fetchUserPools,
   fetchUserVotes,
@@ -16,7 +15,7 @@ import {
 } from "./sdk/pools";
 
 const getData = async () => {
-  const snapshotBlocks = [3460121];
+  const snapshotBlocks = [4328548];
 
   const csvRows: OutputSchemaRow[] = [];
 
@@ -89,18 +88,40 @@ export const getUserStakedTVLByBlock = async ({
     [userAddress: string]: { [tokenAddress: string]: BigNumber };
   };
 
-  const userPoolFetch = [];
-  const userVotesFetch = [];
+  let userPoolFetch = [];
+  let userVotesFetch = [];
+
+  const batchSize = 400;
+  let position = 0;
+  let userFetchResult: any = [];
+  let userVotesResult: any = [];
 
   for (const user of userAddresses) {
     userPoolFetch.push(
       fetchUserPools(BigInt(blockNumber), user.id, user.pools)
     );
     userVotesFetch.push(fetchUserVotes(BigInt(blockNumber), user.id));
+    if (position % batchSize === 0) {
+      userFetchResult = [
+        ...userFetchResult,
+        ...(await Promise.all(userPoolFetch)),
+      ];
+      userPoolFetch = [];
+      userVotesResult = [
+        ...userVotesResult,
+        ...(await Promise.all(userVotesFetch)),
+      ];
+      userVotesFetch = [];
+    }
+    position++;
   }
 
-  const userFetchResult = await Promise.all(userPoolFetch);
-  const userVotesResult = await Promise.all(userVotesFetch);
+  userVotesResult = [
+    ...userVotesResult,
+    ...(await Promise.all(userVotesFetch)),
+  ];
+
+  userFetchResult = [...userFetchResult, ...(await Promise.all(userPoolFetch))];
 
   for (const userFetchedPools of userFetchResult) {
     for (const userPool of userFetchedPools) {
@@ -208,24 +229,23 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   await new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv()) // Specify the separator as '\t' for TSV files
-      .on('data', (row) => {
+      .on("data", (row) => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
-      .on('end', () => {
+      .on("end", () => {
         resolve();
       })
-      .on('error', (err) => {
+      .on("error", (err) => {
         reject(err);
       });
   });
 
   return blocks;
 };
-
 
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);

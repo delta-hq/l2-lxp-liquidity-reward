@@ -1,8 +1,12 @@
 import { gql } from "@apollo/client";
 
 export const TRANSFERS_QUERY = gql`
-  query GetLiquidityTransfers($blockNumber: Int!) {
-    transfers(where: { block_number_lte: $blockNumber }) {
+  query GetLiquidityTransfers($blockNumber: Int!, $first: Int!, $skip: Int!) {
+    transfers(
+      first: $first
+      skip: $skip
+      where: { block_number_lte: $blockNumber }
+    ) {
       from
       to
       value

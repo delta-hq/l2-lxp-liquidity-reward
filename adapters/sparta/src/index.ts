@@ -1,6 +1,6 @@
 import { createObjectCsvWriter } from "csv-writer";
 import { write } from "fast-csv";
-import csv from 'csv-parser';
+import csv from "csv-parser";
 import {
   client,
   PROTOCOL_DEPLOY_BLOCK,
@@ -118,8 +118,8 @@ function calculateUserReservePortion(
       const total = totalSupply[contractId];
 
       const share = userPosition / total;
-      const reserve0 = parseInt(reserves[contractId].reserve0.toString());
-      const reserve1 = parseInt(reserves[contractId].reserve1.toString());
+      const reserve0 = reserves[contractId].reserve0;
+      const reserve1 = reserves[contractId].reserve1;
       const token0 = POOL_TOKENS[contractId].token0;
       const token1 = POOL_TOKENS[contractId].token1;
 
@@ -128,8 +128,8 @@ function calculateUserReservePortion(
       }
 
       userReserves[user][contractId] = {
-        amount0: BigInt(share * reserve0),
-        amount1: BigInt(share * reserve1),
+        amount0: BigInt(Math.floor(share * reserve0)),
+        amount1: BigInt(Math.floor(share * reserve1)),
         token0: token0,
         token1: token1,
       };
@@ -152,46 +152,48 @@ function processTransactions(transactions: Transaction[]): {
     const toAddress = transaction.to.toLowerCase();
     const contractId = transaction.contractId_.toLowerCase();
 
-    // Skip transactions where 'from' or 'to' match the contract ID, or both 'from' and 'to' are zero addresses
+    // Skip internal lp txs
     if (
-      fromAddress === contractId ||
-      toAddress === contractId ||
-      (fromAddress === "0x0000000000000000000000000000000000000000" &&
-        toAddress === "0x0000000000000000000000000000000000000000")
+      (fromAddress === contractId &&
+        toAddress === "0x0000000000000000000000000000000000000000") ||
+      (toAddress === contractId &&
+        fromAddress === "0x0000000000000000000000000000000000000000")
     ) {
       return;
     }
 
-    // Initialize cumulativePositions if not already set
+    // Initialize userPositions and cumulativePositions if not already set
+    if (!userPositions[contractId]) {
+      userPositions[contractId] = {};
+    }
     if (!cumulativePositions[contractId]) {
       cumulativePositions[contractId] = 0;
     }
 
     // Convert the transaction value from string to integer.
-    let value = parseInt(transaction.value.toString());
+    const value = parseInt(transaction.value.toString(), 10);
 
-    // Process transactions that increase liquidity (to address isn't zero)
-    if (toAddress !== "0x0000000000000000000000000000000000000000") {
-      if (!userPositions[contractId]) {
-        userPositions[contractId] = {};
-      }
-      if (!userPositions[contractId][toAddress]) {
-        userPositions[contractId][toAddress] = 0;
-      }
-      userPositions[contractId][toAddress] += value;
-      cumulativePositions[contractId] += value;
-    }
-
-    // Process transactions that decrease liquidity (from address isn't zero)
+    // Decrease liquidity from the sender if the from address is not zero
     if (fromAddress !== "0x0000000000000000000000000000000000000000") {
-      if (!userPositions[contractId]) {
-        userPositions[contractId] = {};
-      }
       if (!userPositions[contractId][fromAddress]) {
         userPositions[contractId][fromAddress] = 0;
       }
       userPositions[contractId][fromAddress] -= value;
       cumulativePositions[contractId] -= value;
+
+      // Remove the sender from userPositions if their balance is zero
+      if (userPositions[contractId][fromAddress] === 0) {
+        delete userPositions[contractId][fromAddress];
+      }
+    }
+
+    // Increase liquidity for the receiver if the to address is not zero
+    if (toAddress !== "0x0000000000000000000000000000000000000000") {
+      if (!userPositions[contractId][toAddress]) {
+        userPositions[contractId][toAddress] = 0;
+      }
+      userPositions[contractId][toAddress] += value;
+      cumulativePositions[contractId] += value;
     }
   });
 
@@ -199,12 +201,34 @@ function processTransactions(transactions: Transaction[]): {
 }
 
 async function fetchTransfers(blockNumber: number) {
-  const { data } = await client.query({
-    query: TRANSFERS_QUERY,
-    variables: { blockNumber },
-    fetchPolicy: "no-cache",
-  });
-  return data.transfers;
+  const allTransfers = [];
+  const pageSize = 1000;
+  let skip = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const { data } = await client.query({
+        query: TRANSFERS_QUERY,
+        variables: { blockNumber, first: pageSize, skip },
+        fetchPolicy: "no-cache",
+      });
+
+      const transfers = data.transfers;
+      allTransfers.push(...transfers);
+
+      if (transfers.length < pageSize) {
+        hasMore = false;
+      } else {
+        skip += pageSize;
+      }
+    } catch (error) {
+      console.error("Error fetching transfers:", error);
+      break;
+    }
+  }
+
+  return allTransfers;
 }
 
 async function fetchReservesForPools(blockNumber: number): Promise<Reserves> {
@@ -217,14 +241,12 @@ async function fetchReservesForPools(blockNumber: number): Promise<Reserves> {
         variables: { blockNumber, contractId: pool },
         fetchPolicy: "no-cache",
       });
-
       reserves[pool] = {
         reserve0: data.syncs[0].reserve0,
         reserve1: data.syncs[0].reserve1,
       };
     })
   );
-
   return reserves;
 }
 
@@ -235,8 +257,8 @@ function convertToOutputDataSchema(
     return {
       block_number: userPosition.block_number,
       timestamp: userPosition.timestamp,
-      user_address: userPosition.user,
-      token_address: userPosition.token,
+      user_address: userPosition.user.toLowerCase(),
+      token_address: userPosition.token.toLowerCase(),
       token_balance: BigInt(userPosition.balance), // Ensure balance is treated as bigint
       token_symbol: "", // You may want to fill this based on additional token info you might have
       usd_price: 0, // Adjust if you need to calculate this value or pull from another source
@@ -292,32 +314,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   return convertToOutputDataSchema(data);
 };
 
-async function main() {
-  console.log(`Starting data fetching process mode: ${FIRST_TIME}`);
-  const blocks = await getBlockRangesToFetch();
-
-  let lastblock = 0;
-  try {
-    for (const block of blocks) {
-      lastblock = block;
-      const blockData = await getUserTVLByBlock({
-        blockNumber: block,
-        blockTimestamp: 0,
-      });
-      console.log("Processed block", block);
-      await saveToCSV(blockData);
-    }
-  } catch (error: any) {
-    console.error("Error processing block", lastblock, error.message);
-  } finally {
-    saveLastProcessedBlock(lastblock);
-  }
-}
-
 // IMPORTANT: config::FIRST_TIME is set to true be default
 // after inital fetch set it to false
-// main().catch(console.error);
-
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -325,17 +323,17 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   await new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv()) // Specify the separator as '\t' for TSV files
-      .on('data', (row) => {
+      .on("data", (row) => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
-      .on('end', () => {
+      .on("end", () => {
         resolve();
       })
-      .on('error', (err) => {
+      .on("error", (err) => {
         reject(err);
       });
   });
@@ -343,33 +341,34 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
+readBlocksFromCSV("hourly_blocks.csv")
+  .then(async (blocks: any[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 1000; // Size of batch to trigger writing to the file
+    let i = 0;
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
-  console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  const batchSize = 1000; // Size of batch to trigger writing to the file
-  let i = 0;
-
-  for (const block of blocks) {
+    for (const block of blocks) {
       try {
-          const result = await getUserTVLByBlock(block);
-          // Accumulate CSV rows for all blocks
-          allCsvRows.push(...result);
+        const result = await getUserTVLByBlock(block);
+        // Accumulate CSV rows for all blocks
+        allCsvRows.push(...result);
       } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
+        console.error(`An error occurred for block ${block}:`, error);
       }
-  }
-  await new Promise((resolve, reject) => {
-    // const randomTime = Math.random() * 1000;
-    // setTimeout(resolve, randomTime);
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
+    }
+    await new Promise((resolve, reject) => {
+      // const randomTime = Math.random() * 1000;
+      // setTimeout(resolve, randomTime);
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
+          console.log(`CSV file has been written.`);
+          resolve;
         });
+    });
+  })
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
   });
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
-});

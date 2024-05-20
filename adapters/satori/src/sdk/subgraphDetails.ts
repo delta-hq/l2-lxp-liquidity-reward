@@ -1,4 +1,4 @@
-import { ASSET, SYMBOL, SUBGRAPH_URL } from "./config";
+import { ASSET, SYMBOL, SUBGRAPH_URL,KEY } from "./config";
 
 export interface OutputDataSchemaRow {
     block_number:number
@@ -37,7 +37,7 @@ export const getUserTVLByBlock = async (
         let response = await fetch(subgraphUrl, {
             method: "POST",
             body: JSON.stringify({ query }),
-            headers: { "Content-Type": "application/json" },
+            headers: { "Content-Type": "application/json","Authorization":KEY},
         });
         let data = await response.json();
         let snapshots = data.data.userLpSnapshots
