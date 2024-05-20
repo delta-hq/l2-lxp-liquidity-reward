@@ -1,48 +1,60 @@
-import { promisify } from 'util';
-import stream from 'stream';
 import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
 
 import { BlockData, OutputSchemaRow } from './sdk/types';
-import { getTimestampAtBlock, getTradeLiquidityForAddressByPoolAtBlock, getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
+import { getTradeLiquidityForAddressByPoolAtBlock, getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
 
-const pipeline = promisify(stream.pipeline);
 
-const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
-    const blocks: number[] = [];
-    await pipeline(
-        fs.createReadStream(filePath),
-        csv(),
-        async function* (source) {
-            for await (const chunk of source) {
-                // Assuming each row in the CSV has a column 'block' with the block number
-                if (chunk.block) blocks.push(parseInt(chunk.block, 10));
-            }
-        }
-    );
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+    const blocks: BlockData[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+        fs.createReadStream(filePath)
+            .pipe(csv()) // Specify the separator as '\t' for TSV files
+            .on('data', (row) => {
+                const blockNumber = parseInt(row.number, 10);
+                const blockTimestamp = parseInt(row.timestamp, 10);
+                if (!isNaN(blockNumber) && blockTimestamp) {
+                    blocks.push({ blockNumber: blockNumber, blockTimestamp });
+                }
+            })
+            .on('end', () => {
+                resolve();
+            })
+            .on('error', (err) => {
+                reject(err);
+            });
+    });
+
     return blocks;
 };
-
-const getData = async () => {
-    const blocks = [
-        4314766
-    ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
-
-    const csvRows: OutputSchemaRow[] = [];
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 1000; // Size of batch to trigger writing to the file
+    let i = 0;
 
     for (const block of blocks) {
-        const timestamp = await getTimestampAtBlock(block)
-
-        csvRows.push(...await getUserTVLByBlock({ blockNumber: block, blockTimestamp: timestamp }))
+        try {
+            const result = await getUserTVLByBlock(block);
+            allCsvRows.push(...result);
+        } catch (error) {
+            console.error(`An error occurred for block ${block}:`, error);
+        }
     }
-    // Write the CSV output to a file
-    const ws = fs.createWriteStream('outputData.csv');
-    write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
-        console.log("CSV file has been written.");
+    await new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(`outputData.csv`, {flags: 'w'});
+        write(allCsvRows, {headers: true})
+            .pipe(ws)
+            .on("finish", () => {
+                console.log(`CSV file has been written.`);
+                resolve;
+            });
     });
-};
-
+}).catch((err) => {
+    console.error('Error reading CSV file:', err);
+});
 export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockData): Promise<OutputSchemaRow[]> => {
     const result: OutputSchemaRow[] = []
 
@@ -90,7 +102,3 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
 
     return result
 };
-
-getData().then(() => {
-    console.log("Done");
-});
