@@ -44,8 +44,8 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
         }
     }
     await new Promise((resolve, reject) => {
-        const ws = fs.createWriteStream(`outputData.csv`, {flags: 'w'});
-        write(allCsvRows, {headers: true})
+        const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+        write(allCsvRows, { headers: true })
             .pipe(ws)
             .on("finish", () => {
                 console.log(`CSV file has been written.`);
@@ -96,6 +96,8 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
                 user_address: user,
                 token_address: token,
                 token_balance: balance,
+                token_symbol: "",
+                usd_price: 0
             })
         }
     }
