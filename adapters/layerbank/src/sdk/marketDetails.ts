@@ -11,6 +11,7 @@ export interface MarketInfo {
   underlyingSymbol: string;
   exchangeRateStored: bigint;
 }
+
 export const getMarketInfos = async (
   coreAddress: `0x${string}`,
   blockNumber?: bigint
@@ -43,9 +44,9 @@ export const getMarketInfos = async (
     })) as any,
   });
 
-  const underlyingAddresses = underlyingResults.map(
-    (v) => v.result as `0x${string}`
-  );
+  const underlyingAddresses = underlyingResults
+    .map((v) => v.result as `0x${string}`)
+    .map((m) => m.toLowerCase());
 
   const underlyings = underlyingAddresses.map((m) => {
     if (m === "0x0000000000000000000000000000000000000000") {

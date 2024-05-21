@@ -76,12 +76,13 @@ export const getAccountStatesForAddressByPoolAtBlock = async (
     // Filter and map the account states
     const filteredAccountStates = data.data.accountStates
       .filter(
-        (m: any) => m.account !== zeroAddress && m.account !== deadAddress
+        (m: any) =>
+          m.account !== zeroAddress && m.account.toLowerCase() !== deadAddress
       )
       .map((m: any) => ({
-        id: m.id,
-        account: m.account,
-        token: marketsToUnderlying[m.token],
+        id: m.id.toLowerCase(),
+        account: m.account.toLowerCase(),
+        token: marketsToUnderlying[m.token].toLowerCase(),
         lentAmount: BigInt(m.supplied),
         borrowAmount: BigInt(m.borrowed),
       }));
