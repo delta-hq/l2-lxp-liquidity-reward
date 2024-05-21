@@ -3,6 +3,10 @@ import { linea } from "viem/chains";
 import { CHAINS, PROTOCOLS, RPC_URLS, SUBGRAPH_URLS } from "./config";
 import { getMarketInfos } from "./marketDetails";
 
+// Define the zero address and dead address constants
+const zeroAddress = "0x0000000000000000000000000000000000000000";
+const deadAddress = "0x000000000000000000000000000000000000dead";
+
 export interface AccountState {
   id: string;
   account: string;
@@ -23,6 +27,11 @@ export const getAccountStatesForAddressByPoolAtBlock = async (
     BigInt(blockNumber)
   );
   address = address?.toLowerCase();
+
+  const marketsToUnderlying: any = {};
+  for (let marketInfo of marketInfos) {
+    marketsToUnderlying[marketInfo.address] = marketInfo.underlyingAddress;
+  }
 
   let accountWhereQuery = address ? `account: "${address}" \n` : "";
   let amountWhereQuery = orWhere("supplied_gt: 0", "borrowed_gt: 0");
@@ -64,15 +73,21 @@ export const getAccountStatesForAddressByPoolAtBlock = async (
     });
     let data = await response.json();
 
-    states.push(
-      ...data.data.accountStates.map((m: any) => ({
+    // Filter and map the account states
+    const filteredAccountStates = data.data.accountStates
+      .filter(
+        (m: any) => m.account !== zeroAddress && m.account !== deadAddress
+      )
+      .map((m: any) => ({
         id: m.id,
         account: m.account,
-        token: m.token,
+        token: marketsToUnderlying[m.token],
         lentAmount: BigInt(m.supplied),
         borrowAmount: BigInt(m.borrowed),
-      }))
-    );
+      }));
+
+    // Push the filtered and mapped states into the states array
+    states.push(...filteredAccountStates);
 
     if (data.data.accountStates.length == 0) {
       fetchNext = false;
