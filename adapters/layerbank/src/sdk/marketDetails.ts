@@ -49,7 +49,11 @@ export const getMarketInfos = async (
 
   const underlyings = underlyingAddresses.map((m) => {
     if (m === "0x0000000000000000000000000000000000000000") {
-      return null;
+      return getContract({
+        address: "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
+        abi: ltokenAbi,
+        client: publicClient,
+      });
     } else {
       return getContract({
         address: m,
@@ -60,13 +64,11 @@ export const getMarketInfos = async (
   });
 
   const underlyingSymbolResults = await publicClient.multicall({
-    contracts: underlyings
-      .filter((m) => m !== null)
-      .map((m) => ({
-        address: (m as any).address,
-        abi: (m as any).abi,
-        functionName: "symbol",
-      })) as any,
+    contracts: underlyings.map((m) => ({
+      address: (m as any).address,
+      abi: (m as any).abi,
+      functionName: "symbol",
+    })) as any,
   });
 
   const exchangeRateResults = await publicClient.multicall({
@@ -79,36 +81,21 @@ export const getMarketInfos = async (
   });
 
   const marketInfos: MarketInfo[] = [];
-  let symbolIndex = 0;
 
   for (let i = 0; i < markets.length; i++) {
     const marketAddress = markets[i].address.toLowerCase();
     const underlyingAddress = underlyingResults[i].result?.toLowerCase();
 
-    if (underlyingAddress === "0x0000000000000000000000000000000000000000") {
-      marketInfos.push({
-        address: marketAddress,
-        underlyingAddress,
-        underlyingSymbol: "ETH",
-        exchangeRateStored: BigInt(
-          exchangeRateResults[i].status === "success"
-            ? (exchangeRateResults[i].result as any)
-            : 0
-        ),
-      });
-    } else {
-      marketInfos.push({
-        address: marketAddress,
-        underlyingAddress,
-        underlyingSymbol: underlyingSymbolResults[symbolIndex].result as any,
-        exchangeRateStored: BigInt(
-          exchangeRateResults[i].status === "success"
-            ? (exchangeRateResults[i].result as any)
-            : 0
-        ),
-      });
-      symbolIndex++;
-    }
+    marketInfos.push({
+      address: marketAddress,
+      underlyingAddress,
+      underlyingSymbol: underlyingSymbolResults[i].result as any,
+      exchangeRateStored: BigInt(
+        exchangeRateResults[i].status === "success"
+          ? (exchangeRateResults[i].result as any)
+          : 0
+      ),
+    });
   }
 
   return marketInfos;
