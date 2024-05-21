@@ -1,0 +1,29 @@
+{
+  "name": "3a-dao",
+  "version": "1.0.0",
+  "description": "3A DAO Adapter",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node dist/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist",
+    "test": "node "
+  },
+  "keywords": [],
+  "author": "0xCR6",
+  "license": "ISC",
+  "dependencies": {
+    "axios": "^1.6.8",
+    "csv-parser": "^3.0.0",
+    "ethers": "^6.11.1",
+    "fast-csv": "^5.0.1",
+    "write": "^2.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "@types/write": "^2.0.4",
+    "typescript": "^5.3.3"
+  }
+}
