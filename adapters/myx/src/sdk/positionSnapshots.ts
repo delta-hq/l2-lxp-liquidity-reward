@@ -105,12 +105,12 @@ export const getPositionsForAddressByPoolAtBlock = async (
     snapshotsMap.forEach((userPositionSnapshotMap => {
         userPositionSnapshotMap.forEach((positionSnapshot) => {
             userPositionSnapshotsAtBlockData.push({
-                user_address: positionSnapshot.recipient,
-                timestamp: Number(new Date(positionSnapshot.timestamp * 1000).toISOString()),
-                token_address: positionSnapshot.token0.address,
                 block_number: snapshotBlockNumber,
-                token_symbol: positionSnapshot.token0.symbol,
+                timestamp: positionSnapshot.timestamp,
+                user_address: positionSnapshot.recipient,
+                token_address: positionSnapshot.token0.address,
                 token_balance: BigInt(new Decimal(positionSnapshot.token0Amount).toFixed(0)),
+                token_symbol: positionSnapshot.token0.symbol,
                 usd_price: 0
             })
 
@@ -121,12 +121,12 @@ export const getPositionsForAddressByPoolAtBlock = async (
                 exists.token_balance = BigInt(new Decimal(positionSnapshot.token1Amount).add(exists.token_balance.toString()).toFixed(0));
             } else {
                 userPositionSnapshotsAtBlockData.push({
-                    user_address: positionSnapshot.recipient,
-                    timestamp: Number(new Date(positionSnapshot.timestamp * 1000).toISOString()),
-                    token_address: positionSnapshot.token1.address,
                     block_number: snapshotBlockNumber,
-                    token_symbol: positionSnapshot.token1.symbol,
+                    timestamp: positionSnapshot.timestamp,
+                    user_address: positionSnapshot.recipient,
+                    token_address: positionSnapshot.token1.address,
                     token_balance: BigInt(new Decimal(positionSnapshot.token1Amount).toFixed(0)),
+                    token_symbol: positionSnapshot.token1.symbol,
                     usd_price: 0
                 })
             }

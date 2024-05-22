@@ -8,7 +8,6 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import {write} from 'fast-csv';
 
-
 export interface OutputDataSchemaRow {
     block_number: number;  //block_number which was given as input
     timestamp: number;     // block timestamp which was given an input, epoch format
@@ -23,9 +22,6 @@ interface BlockData {
     blockNumber: number;
     blockTimestamp: number;
 }
-
-
-const pipeline = promisify(stream.pipeline);
 
 // Assuming you have the following functions and constants already defined
 // getPositionsForAddressByPoolAtBlock, CHAINS, PROTOCOLS, AMM_TYPES, getPositionDetailsFromPosition, getLPValueByUserAndPoolFromPositions, BigNumber
