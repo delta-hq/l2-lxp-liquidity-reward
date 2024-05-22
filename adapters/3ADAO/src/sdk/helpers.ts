@@ -138,7 +138,7 @@ export const getTvlByVaultAtBlock = async (
   };
 };
 
-// Usage example
-getTvlByVaultAtBlock(4243360)
-  .then((result) => console.log(result))
-  .catch((error) => console.error(error));
+// // Usage example
+// getTvlByVaultAtBlock(4243360)
+//   .then((result) => console.log(result))
+//   .catch((error) => console.error(error));
