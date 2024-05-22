@@ -1,4 +1,5 @@
 export const LINEA_RPC = "https://rpc.linea.build";
+// export const LINEA_RPC = "https://rpc-linea.3adao.org";
 
 export const addresses = {
   vaultFactory: "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
@@ -17,4 +18,11 @@ export const whitelistedCollaterals: string[] = [
   "0xB5beDd42000b71FddE22D3eE8a79Bd49A568fC8F",
   "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
   "0x3aAB2285ddcDdaD8edf438C1bAB47e1a9D05a9b4",
+  "0x65D97BdFD4c1076cD1F95Cbe3B56954277d0956F",
+  "0x2416092f143378750bb29b79eD961ab195CcEea5",
+  "0x333D8b480BDB25eA7Be4Dd87EEB359988CE1b30D",
+  "0xf669C3C03D9fdF4339e19214A749E52616300E89",
+  "0xad7f33984bed10518012013d4ab0458d37fee6f3",
+  "0xCeEd853798ff1c95cEB4dC48f68394eb7A86A782",
+  "0x9be5e24f05bbafc28da814bd59284878b388a40f",
 ];

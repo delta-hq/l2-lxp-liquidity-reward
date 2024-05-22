@@ -4,91 +4,141 @@ import { addresses, LINEA_RPC, whitelistedCollaterals } from "./config";
 import { balanceGetterABI } from "./ABIs/balanceGetter";
 import { vaultABI } from "./ABIs/vault";
 
-const Provider = new ethers.JsonRpcProvider(LINEA_RPC);
+// Define types for the ABIs
+interface VaultFactoryHelper {
+  getAllVaults(
+    factoryAddress: string,
+    options: { blockTag: number }
+  ): Promise<string[]>;
+  getVaultTvlByCollateral(
+    vaultAddress: string,
+    collateral: string,
+    options: { blockTag: number }
+  ): Promise<ethers.BigNumberish>;
+}
 
-const getVaultFactoryHelper = async () => {
-  const Contract = new ethers.Contract(
+interface Vault {
+  vaultOwner(options: { blockTag: number }): Promise<string>;
+}
+
+interface BalanceGetter {
+  getBalances(vaultAddress: string, collaterals: string[]): Promise<number[]>;
+}
+
+const provider = new ethers.JsonRpcProvider(LINEA_RPC);
+
+const getVaultFactoryHelper = (): VaultFactoryHelper => {
+  return new ethers.Contract(
     addresses.vaultFactoryHelper,
     vaultFactoryHelperABI,
-    Provider
-  );
-  return Contract;
+    provider
+  ) as unknown as VaultFactoryHelper;
 };
 
-const getVault = async (address: string) => {
-  const Contract = new ethers.Contract(address, vaultABI, Provider);
-  return Contract;
+const getVault = (address: string): Vault => {
+  return new ethers.Contract(address, vaultABI, provider) as unknown as Vault;
 };
 
-const getBalanceGetter = async () => {
-  const Contract = new ethers.Contract(
+const getBalanceGetter = (): BalanceGetter => {
+  return new ethers.Contract(
     addresses.balanceGetter,
     balanceGetterABI,
-    Provider
-  );
-  return Contract;
+    provider
+  ) as unknown as BalanceGetter;
 };
 
-export const getTvlByVaultAtBlock = async (blockNumber: number) => {
+interface TVLResult {
+  vaultsTvl: number[][];
+  owners: string[];
+  collateralsByVaults: string[][];
+  balancesByVault: number[][];
+}
+
+export const getTvlByVaultAtBlock = async (
+  blockNumber: number
+): Promise<TVLResult> => {
   const creationFactoryBlock = 3045954; // Check to avoid not finding the contract
 
-  const owners = [];
-  const vaultsTvl = [];
-  // const vaultAddresses = [];
-  const balancesByVault = [];
-  const collateralsByVaults = [];
+  if (blockNumber <= creationFactoryBlock) {
+    throw new Error(
+      "Block number is too early, before the creation factory block."
+    );
+  }
 
-  if (blockNumber > creationFactoryBlock) {
-    const Helper = await getVaultFactoryHelper();
-    const BalanceGetter = await getBalanceGetter();
+  const helper = getVaultFactoryHelper();
+  const balanceGetter = getBalanceGetter();
 
-    const vaults = await Helper.getAllVaults(addresses.vaultFactory, {
-      blockTag: blockNumber,
-    });
-    // vaultAddresses.push(vaults);
-    for (let i = 0; i < vaults.length; i++) {
-      const tvlByCollateral = [];
-      const vaultAddress = vaults[i];
-      const collateralsBySingleVault = [];
-      const vault = await getVault(vaultAddress);
+  // Fetch all vault addresses in parallel
+  const vaults = await helper.getAllVaults(addresses.vaultFactory, {
+    blockTag: blockNumber,
+  });
 
-      const vaultOwner = await vault.vaultOwner({ blockTag: blockNumber });
-      owners.push(vaultOwner);
-      for (let j = 0; j < whitelistedCollaterals.length; j++) {
-        const collateralTvl = await Helper.getVaultTvlByCollateral(
+  const owners: string[] = [];
+  const vaultsTvl: number[][] = [];
+  const balancesByVault: number[][] = [];
+  const collateralsByVaults: string[][] = [];
+
+  // Process each vault concurrently
+  const vaultPromises = vaults.map(async (vaultAddress: string) => {
+    const vault = getVault(vaultAddress);
+
+    const vaultOwnerPromise = vault.vaultOwner({ blockTag: blockNumber });
+
+    const tvlByCollateralPromises = whitelistedCollaterals.map(
+      async (collateral: string) => {
+        const collateralTvl = await helper.getVaultTvlByCollateral(
           vaultAddress,
-          whitelistedCollaterals[j],
+          collateral,
           {
             blockTag: blockNumber,
           }
         );
-
-        if (Number(collateralTvl) > 0) {
-          const collateralTvlFormated = Number(
-            ethers.formatEther(collateralTvl)
-          );
-          tvlByCollateral.push(collateralTvlFormated);
-
-          collateralsBySingleVault.push(whitelistedCollaterals[j]);
-        }
+        return {
+          collateral,
+          tvl:
+            Number(collateralTvl) > 0
+              ? Number(ethers.formatEther(collateralTvl))
+              : 0,
+        };
       }
-      collateralsByVaults.push(collateralsBySingleVault);
-      if (collateralsBySingleVault.length != 0) {
-        balancesByVault.push(
-          await BalanceGetter.getBalances(vaults[i], collateralsBySingleVault)
-        );
-      } else {
-        balancesByVault.push([]);
+    );
+
+    const [vaultOwner, tvlByCollateralResults] = await Promise.all([
+      vaultOwnerPromise,
+      Promise.all(tvlByCollateralPromises),
+    ]);
+
+    const tvlByCollateral: number[] = [];
+    const usedCollaterals: string[] = [];
+    tvlByCollateralResults.forEach(({ collateral, tvl }) => {
+      if (tvl > 0) {
+        tvlByCollateral.push(tvl);
+        usedCollaterals.push(collateral);
       }
-      vaultsTvl.push(tvlByCollateral);
-    }
-  }
+    });
+
+    const balances =
+      usedCollaterals.length > 0
+        ? await balanceGetter.getBalances(vaultAddress, usedCollaterals)
+        : [];
+
+    owners.push(vaultOwner);
+    vaultsTvl.push(tvlByCollateral);
+    collateralsByVaults.push(usedCollaterals);
+    balancesByVault.push(balances);
+  });
+
+  await Promise.all(vaultPromises);
 
   return {
     vaultsTvl,
     owners,
     collateralsByVaults,
-    // vaultAddresses,
     balancesByVault,
   };
 };
+
+// Usage example
+getTvlByVaultAtBlock(4243360)
+  .then((result) => console.log(result))
+  .catch((error) => console.error(error));

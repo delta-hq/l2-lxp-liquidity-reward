@@ -19,6 +19,7 @@
     "csv-parser": "^3.0.0",
     "ethers": "^6.11.1",
     "fast-csv": "^5.0.1",
+    "ts-node": "^10.9.2",
     "write": "^2.0.0"
   },
   "devDependencies": {

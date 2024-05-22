@@ -3,7 +3,6 @@ import { write } from "fast-csv";
 import csv from "csv-parser";
 import { OutputDataSchemaRow } from "./sdk/types";
 import { getTvlByVaultAtBlock } from "./sdk/helpers";
-import { addresses } from "./sdk/config";
 import { euro3Price } from "./sdk/euro3Price";
 import { BlockData } from "./sdk/interfaces";
 
@@ -42,8 +41,9 @@ export const getUserTVLByBlock = async (
 ) => {
   const allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
   const batchSize = 10; // Size of batch to trigger writing to the file
-  let i = 0;
+  // let i = 0;
 
+  console.log("length:", blocks.length);
   for (let i = 0; i < blocks.length; i++) {
     const { blockNumber, blockTimestamp } = blocks[i];
     try {
@@ -61,19 +61,19 @@ export const getUserTVLByBlock = async (
       console.log(`Processed block ${i}`);
 
       // Write to file when batch size is reached or at the end of loop
-      if (i % batchSize === 0 || i === blocks.length) {
-        const ws = fs.createWriteStream(`outputData.csv`, {
-          flags: i === batchSize ? "w" : "a",
-        });
-        write(allCsvRows, { headers: i === batchSize ? true : false })
-          .pipe(ws)
-          .on("finish", () => {
-            console.log(`CSV file has been written.`);
-          });
+      // if (i % batchSize === 0 || i === blocks.length) {
+      //   const ws = fs.createWriteStream(`test/outputData.csv`, {
+      //     flags: i === batchSize ? "w" : "a",
+      //   });
+      //   write(allCsvRows, { headers: i === batchSize ? true : false })
+      //     .pipe(ws)
+      //     .on("finish", () => {
+      //       console.log(`CSV file has been written.`);
+      //     });
 
-        // Clear the accumulated CSV rows
-        // allCsvRows.length = 0;
-      }
+      //   // Clear the accumulated CSV rows
+      //   // allCsvRows.length = 0;
+      // }
     } catch (error) {
       console.error(`An error occurred for block ${blockNumber}:`, error);
     }
@@ -95,7 +95,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
-          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+          blocks.push({ blockNumber, blockTimestamp });
         }
       })
       .on("end", () => {
@@ -109,21 +109,20 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("./hourly_blocks.csv")
+readBlocksFromCSV("test/hourly_blocks.csv")
   .then(async (blocks: any[]) => {
-    console.log(blocks);
     const allCsvRows: any[] = [];
-
     for (const block of blocks) {
       try {
-        const result = await getUserTVLByBlock(block);
+        console.log({ block });
+        const result = await getUserTVLByBlock([block]);
         allCsvRows.push(...result);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
     }
     await new Promise((resolve, reject) => {
-      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      const ws = fs.createWriteStream(`test/outputData.csv`, { flags: "w" });
       write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
