@@ -109,7 +109,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("test/hourly_blocks.csv")
+readBlocksFromCSV("test/test_hourly_blocks.csv")
   .then(async (blocks: any[]) => {
     const allCsvRows: any[] = [];
     for (const block of blocks) {
@@ -122,7 +122,9 @@ readBlocksFromCSV("test/hourly_blocks.csv")
       }
     }
     await new Promise((resolve, reject) => {
-      const ws = fs.createWriteStream(`test/outputData.csv`, { flags: "w" });
+      const ws = fs.createWriteStream(`test/test_outputData.csv`, {
+        flags: "w",
+      });
       write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
