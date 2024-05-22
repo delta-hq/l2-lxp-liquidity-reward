@@ -28,6 +28,7 @@ export const getMarketInfos = async (
   });
 
   const marketAddresses = await core.read.allMarkets();
+
   const markets = marketAddresses.map((m) =>
     getContract({
       address: m,
@@ -54,13 +55,13 @@ export const getMarketInfos = async (
       }
     });
 
-  const underlyings = underlyingAddresses.map((m) => {
+  const underlyings = underlyingAddresses.map((m) =>
     getContract({
       address: m as `0x${string}`,
       abi: ltokenAbi,
       client: publicClient,
-    });
-  });
+    })
+  );
 
   const underlyingSymbolResults = await publicClient.multicall({
     contracts: underlyings.map((m) => ({
