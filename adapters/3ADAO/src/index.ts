@@ -22,8 +22,8 @@ export const getTVLByVault = async (blocks: BlockData, logOutput?: boolean) => {
       csvRowsTvl.push({
         block_number: blockNumber,
         timestamp: blockTimestamp,
-        user_address: owners[i],
-        token_address: collateralsByVaults[i][j],
+        user_address: owners[i].toLocaleLowerCase(),
+        token_address: collateralsByVaults[i][j].toLocaleLowerCase(),
         token_balance: balancesByVault[i][j],
         token_symbol: "",
         usd_price: Number((vaultsTvl[i][j] * euro3Prices.USD).toFixed(2)),
