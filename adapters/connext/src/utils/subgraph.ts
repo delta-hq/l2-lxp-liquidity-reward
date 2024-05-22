@@ -3,7 +3,7 @@ import { LpAccountBalanceHourly, SubgraphResult } from "./types";
 import { linea } from "viem/chains";
 import { createPublicClient, http, parseUnits } from "viem";
 
-export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/amarok-stableswap-analytics/1.0/gn";
+export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/connext/stableswap-analytics-linea-0.0.1/gn";
 export const LINEA_CHAIN_ID = 59144;
 export const CONNEXT_LINEA_ADDRESS = "0xa05eF29e9aC8C75c530c2795Fa6A800e188dE0a9";
 
@@ -37,10 +37,17 @@ const CONNEXT_ABI = [
 const LP_HOURLY_QUERY_BY_BLOCK = (
     first: number,
     offset: number,
-    blockNumber: number
+    blockNumber: number,
+    account?: string
 ): string => `
     query LpAccountBalanceHourly { 
-        lpAccountBalanceHourlies(first: ${first}, offset: ${offset}, where: { block_lte: ${blockNumber} }) {
+        lpAccountBalanceHourlies(
+            first: ${first}, 
+            skip: ${offset}, 
+            orderBy: modified,
+            orderDirection: asc,
+            where: { block_lte: ${blockNumber}${account ? `, account: "${account.toLowerCase()}"` : ''} }
+        ) {
             amount
             account {
                 id
@@ -61,7 +68,13 @@ const LP_HOURLY_QUERY_BY_TIMESTAMP = (
     timestamp: number
 ): string => `
     query LpAccountBalanceHourly { 
-        lpAccountBalanceHourlies(first: ${first}, offset: ${offset}, where: { modified_lte: ${timestamp} }) {
+        lpAccountBalanceHourlies(
+            first: ${first}, 
+            offset: ${offset},
+            orderBy: modified,
+            orderDirection: asc,
+            where: { modified_lte: ${timestamp} }) 
+        {
             amount
             account {
                 id
@@ -91,7 +104,7 @@ const executeSubgraphQuery = async (query: string): Promise<SubgraphResult> => {
     return data;
 }
 
-export const getLpAccountBalanceAtBlock = async (block: number, interval = 1000): Promise<LpAccountBalanceHourly[]> => {
+export const getLpAccountBalanceAtBlock = async (block: number, interval = 1000, account?: string): Promise<LpAccountBalanceHourly[]> => {
     let hasMore = true;
     let offset = 0;
     const balances = new Map<string, LpAccountBalanceHourly[]>()
@@ -99,7 +112,7 @@ export const getLpAccountBalanceAtBlock = async (block: number, interval = 1000)
     while (hasMore) {
         const {
             lpAccountBalanceHourlies
-        } = await executeSubgraphQuery(LP_HOURLY_QUERY_BY_BLOCK(interval, offset, block))
+        } = await executeSubgraphQuery(LP_HOURLY_QUERY_BY_BLOCK(interval, offset, block, account))
         appendSubgraphData(lpAccountBalanceHourlies, balances);
         hasMore = lpAccountBalanceHourlies.length === interval;
         offset += interval;
@@ -148,7 +161,7 @@ export const getCompositeBalances = async (data: LpAccountBalanceHourly[]): Prom
     const client = createPublicClient({ chain: linea, transport: http() });
 
     // get composite balances
-    const balances = await Promise.all(data.map(async ({ token, amount }) => {
+    const balances = await Promise.all(data.map(async ({ token, amount, block }) => {
         const poolId = token.id.toLowerCase();
         const pool = poolInfo.get(poolId);
         if (!pool) {
@@ -159,7 +172,8 @@ export const getCompositeBalances = async (data: LpAccountBalanceHourly[]): Prom
             address: CONNEXT_LINEA_ADDRESS,
             functionName: "calculateRemoveSwapLiquidity",
             args: [pool.key, parseUnits(amount, 18)],
-            abi: CONNEXT_ABI
+            abi: CONNEXT_ABI,
+            blockNumber: BigInt(block)
         }) as [bigint, bigint];
         return withdrawn.map(w => w.toString());
     }));
