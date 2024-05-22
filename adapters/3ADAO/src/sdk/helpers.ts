@@ -1,3 +1,4 @@
+import { BlockData } from "./interfaces";
 import { ethers } from "ethers";
 import { vaultFactoryHelperABI } from "./ABIs/vaultFactoryHelper";
 import { addresses, LINEA_RPC, whitelistedCollaterals } from "./config";
@@ -8,17 +9,17 @@ import { vaultABI } from "./ABIs/vault";
 interface VaultFactoryHelper {
   getAllVaults(
     factoryAddress: string,
-    options: { blockTag: number }
+    options: { blockNumber: number }
   ): Promise<string[]>;
   getVaultTvlByCollateral(
     vaultAddress: string,
     collateral: string,
-    options: { blockTag: number }
+    options: { blockNumber: number }
   ): Promise<ethers.BigNumberish>;
 }
 
 interface Vault {
-  vaultOwner(options: { blockTag: number }): Promise<string>;
+  vaultOwner(options: { blockNumber: number }): Promise<string>;
 }
 
 interface BalanceGetter {
@@ -70,7 +71,7 @@ export const getTvlByVaultAtBlock = async (
 
   // Fetch all vault addresses in parallel
   const vaults = await helper.getAllVaults(addresses.vaultFactory, {
-    blockTag: blockNumber,
+    blockNumber: blockNumber,
   });
 
   const owners: string[] = [];
@@ -82,15 +83,23 @@ export const getTvlByVaultAtBlock = async (
   const vaultPromises = vaults.map(async (vaultAddress: string) => {
     const vault = getVault(vaultAddress);
 
-    const vaultOwnerPromise = vault.vaultOwner({ blockTag: blockNumber });
+    const vaultOwnerPromise = vault.vaultOwner({ blockNumber });
+    const whitelistedCollateralsFiltered = Object.fromEntries(
+      Object.entries(whitelistedCollaterals).filter(
+        ([key]) => Number(key) <= blockNumber
+      )
+    );
 
-    const tvlByCollateralPromises = whitelistedCollaterals.map(
-      async (collateral: string) => {
+    const tvlByCollateralPromises = Object.values(
+      whitelistedCollateralsFiltered
+    )
+      .flat()
+      .map(async (collateral: string) => {
         const collateralTvl = await helper.getVaultTvlByCollateral(
           vaultAddress,
           collateral,
           {
-            blockTag: blockNumber,
+            blockNumber,
           }
         );
         return {
@@ -100,8 +109,7 @@ export const getTvlByVaultAtBlock = async (
               ? Number(ethers.formatEther(collateralTvl))
               : 0,
         };
-      }
-    );
+      });
 
     const [vaultOwner, tvlByCollateralResults] = await Promise.all([
       vaultOwnerPromise,
