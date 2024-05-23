@@ -12,10 +12,11 @@ import { uniq } from "lodash";
 import { multicall } from "./sdk/mutlicall";
 import { IXfaiPool__factory } from "./sdk/factories/IXfaiPool__factory";
 import { getCreate2Address } from "ethers/lib/utils";
-import { Block, StaticJsonRpcProvider } from "@ethersproject/providers";
-import { format, write } from "@fast-csv/format";
-import { time } from "console";
-import { createWriteStream } from "fs";
+import { StaticJsonRpcProvider } from "@ethersproject/providers";
+import { write } from "@fast-csv/format";
+import csv from "csv-parser";
+
+import fs from "fs";
 function getPoolAddressFromTokenAddress(tokenAddress: string): string {
   return getCreate2Address(
     XFAI_FACTORY,
@@ -174,15 +175,58 @@ export async function getUserTVLByBlock(
   return result;
 }
 
-const ws = createWriteStream("outputData.csv");
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
 
-getUserTVLByBlock({ blockNumber: 1140957, blockTimestamp: 1140957 })
-  .then((r) => {
-    write(r, { headers: true })
-      .pipe(ws)
-      .on("finish", () => {
-        ws.close();
-        console.log("CSV file has been written.");
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .on("data", (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on("end", () => {
+        resolve();
+      })
+      .on("error", (err) => {
+        reject(err);
       });
+  });
+
+  return blocks;
+};
+
+readBlocksFromCSV("hourly_blocks.csv")
+  .then(async (blocks: any[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 1000; // Size of batch to trigger writing to the file
+    let i = 0;
+
+    for (const block of blocks) {
+      try {
+        const result = await getUserTVLByBlock(block);
+        // Accumulate CSV rows for all blocks
+        allCsvRows.push(...result);
+      } catch (error) {
+        console.error(`An error occurred for block ${block}:`, error);
+      }
+    }
+    await new Promise((resolve, reject) => {
+      // const randomTime = Math.random() * 1000;
+      // setTimeout(resolve, randomTime);
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      write(allCsvRows, { headers: true })
+        .pipe(ws)
+        .on("finish", () => {
+          console.log(`CSV file has been written.`);
+          resolve;
+        });
+    });
   })
-  .catch((e) => console.error(e));
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
+  });
