@@ -59,7 +59,7 @@ type ChangedLiquidity = {
   blockNumber: bigint;
 };
 
-async function getUserTVLByBlock(
+export async function getUserTVLByBlock(
   block: BlockData
 ): Promise<OutputDataSchemaRow[]> {
   const client = await getDBConnection();
@@ -148,7 +148,7 @@ async function getUserTVLByBlock(
       return [
         // Token reserve
         {
-          block_number: Number(block_number),
+          block_number: Number(block.blockNumber),
           timestamp,
           user_address: owner,
           token_address: token,
@@ -158,7 +158,7 @@ async function getUserTVLByBlock(
         },
         // WETH Reserve
         {
-          block_number: Number(block_number),
+          block_number: Number(block.blockNumber),
           timestamp,
           user_address: owner,
           token_address: WETH,
