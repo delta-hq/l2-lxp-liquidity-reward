@@ -47,14 +47,11 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
     await new Promise<void>((resolve, reject) => {
         fs.createReadStream(filePath)
-            .pipe(csv({ separator: "," })) // Specify the separator as '\t' for TSV files
+            .pipe(csv()) // Specify the separator as '\t' for TSV files
             .on("data", (row) => {
-                //console.log(row);
                 const blockNumber = parseInt(row.number, 10);
                 const blockTimestamp = parseInt(row.timestamp, 10);
-                //console.log(`Maybe Data ${blockNumber} ${blockTimestamp}`);
                 if (!isNaN(blockNumber) && blockTimestamp) {
-                    //console.log(`Valid Data`);
                     blocks.push({ blockNumber: blockNumber, blockTimestamp });
                 }
             })
