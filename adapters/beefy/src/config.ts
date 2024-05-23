@@ -1,5 +1,6 @@
 export const BEEFY_VAULT_API = "https://api.beefy.finance/vaults";
 
+// subgraph source: https://github.com/beefyfinance/l2-lxp-liquidity-subgraph
 //export const BEEFY_SUBGRAPH_URL =
 //  "https://api.goldsky.com/api/public/project_clu2walwem1qm01w40v3yhw1f/subgraphs/beefyfinance/l2-lxp-liquidity-linea/gn";
 export const BEEFY_SUBGRAPH_URL =
