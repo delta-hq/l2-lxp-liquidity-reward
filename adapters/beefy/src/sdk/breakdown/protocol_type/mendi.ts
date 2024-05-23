@@ -1,4 +1,4 @@
-import { getContract } from "viem";
+import { Hex, getContract } from "viem";
 import { BeefyVault } from "../../vault/getBeefyVaultConfig";
 import { BeefyViemClient } from "../../viemClient";
 import { BeefyVaultBreakdown } from "../types";
@@ -26,7 +26,7 @@ export const getMendiVaultBreakdown = async (
     vaultTotalSupply,
     balances: [
       {
-        tokenAddress: vault.undelying_lp_address,
+        tokenAddress: vault.undelying_lp_address.toLocaleLowerCase() as Hex,
         vaultBalance: balance,
       },
     ],

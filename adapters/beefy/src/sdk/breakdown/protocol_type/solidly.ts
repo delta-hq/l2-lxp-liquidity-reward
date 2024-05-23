@@ -1,4 +1,4 @@
-import { getContract } from "viem";
+import { Hex, getContract } from "viem";
 import { BeefyVault } from "../../vault/getBeefyVaultConfig";
 import { BeefyViemClient } from "../../viemClient";
 import { BeefyVaultBreakdown } from "../types";
@@ -40,11 +40,11 @@ export const getSolidlyVaultBreakdown = async (
     vaultTotalSupply,
     balances: [
       {
-        tokenAddress: t0,
+        tokenAddress: t0.toLocaleLowerCase() as Hex,
         vaultBalance: (r0 * balance) / totalSupply,
       },
       {
-        tokenAddress: t1,
+        tokenAddress: t1.toLocaleLowerCase() as Hex,
         vaultBalance: (r1 * balance) / totalSupply,
       },
     ],
