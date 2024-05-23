@@ -1,12 +1,6 @@
-import { Hex } from "viem";
-import {
-  BeefyProtocolType,
-  BeefyVault,
-  getBeefyVaultConfig,
-} from "../vault/getBeefyVaultConfig";
+import { BeefyProtocolType, BeefyVault } from "../vault/getBeefyVaultConfig";
 import { BeefyVaultBreakdown } from "./types";
-import { BeefyViemClient, clients } from "../viemClient";
-import { flatten, sample } from "lodash";
+import { BeefyViemClient, getViemClient } from "../viemClient";
 import { getSolidlyVaultBreakdown } from "./protocol_type/solidly";
 import { getGammaVaultBreakdown } from "./protocol_type/gamma";
 import { getMendiVaultBreakdown } from "./protocol_type/mendi";
@@ -38,11 +32,11 @@ export const getVaultBreakdowns = async (
       return acc;
     }, {} as Record<BeefyProtocolType, BeefyVault[]>);
 
-  return flatten(
+  return (
     await Promise.all(
       (Object.keys(vaultsPerProtocol) as BeefyProtocolType[]).map(
         async (protocolType) => {
-          const client = sample(clients) as BeefyViemClient;
+          const client = getViemClient();
           const vaults = vaultsPerProtocol[protocolType];
           const getBreakdown = breakdownMethods[protocolType];
           return await Promise.all(
@@ -51,5 +45,5 @@ export const getVaultBreakdowns = async (
         }
       )
     )
-  );
+  ).flat();
 };

@@ -1,11 +1,5 @@
-//const BEEFY_LRT_SUBGRAPH_URL =
-
 import { Hex } from "viem";
-
-//  "https://api.goldsky.com/api/public/project_clu2walwem1qm01w40v3yhw1f/subgraphs/beefyfinance/lrt-linea/gn";
-const BEEFY_LRT_SUBGRAPH_URL =
-  "https://api.0xgraph.xyz/subgraphs/name/beefyfinance/lrt-linea";
-const PAGE_SIZE = 1000;
+import { BEEFY_SUBGRAPH_URL, SUBGRAPH_PAGE_SIZE } from "../../config";
 
 type ShareTokenBalance = {
   user_address: Hex;
@@ -38,12 +32,12 @@ export const getVaultShareTokenBalances = async (
   let skip = 0;
   while (true) {
     const query = `
-      query ($blockNumber: Int!, $skip: Int!, $first: Int!) {
+      query LineaUser($blockNumber: Int!, $skip: Int!, $first: Int!) {
         investorPositions(
           block: {number: $blockNumber}
-          where: {rawSharesBalance_gt: 0}
-          skip: $skip,
           first: $first
+          where: { rawSharesBalance_gt: 0 }
+          skip: $skip
         ) {
           investor {
             id
@@ -61,23 +55,32 @@ export const getVaultShareTokenBalances = async (
       }
     `;
 
-    const response = await fetch(BEEFY_LRT_SUBGRAPH_URL, {
+    const response = await fetch(BEEFY_SUBGRAPH_URL, {
       method: "POST",
       body: JSON.stringify({
         query,
         variables: {
           skip,
-          first: PAGE_SIZE,
+          first: SUBGRAPH_PAGE_SIZE,
           blockNumber: Number(blockNumber),
         },
       }),
       headers: { "Content-Type": "application/json" },
     });
 
-    const { data } = (await response.json()) as { data: QueryResult };
+    if (!response.ok) {
+      console.error(await response.text());
+      throw new Error("Subgraph query failed with status " + response.status);
+    }
+
+    const res = (await response.json()) as { data: QueryResult };
+    if (!res.data) {
+      console.error(res);
+      throw new Error("Subgraph query failed");
+    }
 
     allPositions = allPositions.concat(
-      data.investorPositions.map(
+      res.data.investorPositions.map(
         (position): ShareTokenBalance => ({
           shares_balance: BigInt(position.rawSharesBalance),
           user_address: position.investor.id.toLocaleLowerCase() as Hex,
@@ -87,11 +90,11 @@ export const getVaultShareTokenBalances = async (
       )
     );
 
-    if (data.investorPositions.length < PAGE_SIZE) {
+    if (res.data.investorPositions.length < SUBGRAPH_PAGE_SIZE) {
       break;
     }
 
-    skip += PAGE_SIZE;
+    skip += SUBGRAPH_PAGE_SIZE;
   }
 
   return allPositions;

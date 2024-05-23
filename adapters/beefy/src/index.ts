@@ -32,15 +32,16 @@ export const getUserTVLByBlock = async (
     getBeefyVaultConfig("linea"),
     getVaultShareTokenBalances(BigInt(blockNumber)),
   ]);
+
   const vaultAddressWithActivePosition = uniq(
     investorPositions.map((pos) => pos.vault_address.toLowerCase())
   );
   const vaults = vaultConfigs.filter((vault) =>
     vaultAddressWithActivePosition.includes(vault.vault_address)
   );
-
   // get breakdowns for all vaults
   const breakdowns = await getVaultBreakdowns(BigInt(blockNumber), vaults);
+
   const breakdownByVaultAddress = breakdowns.reduce((acc, breakdown) => {
     acc[breakdown.vault.vault_address.toLowerCase() as Hex] = breakdown;
     return acc;
@@ -53,11 +54,9 @@ export const getUserTVLByBlock = async (
   > = {};
   for (const position of investorPositions) {
     const breakdown = breakdownByVaultAddress[position.vault_address];
-
     if (!breakdown) {
-      throw new Error(
-        `Breakdown not found for vault ${position.vault_address}`
-      );
+      // some test vaults were never available in the api
+      continue;
     }
 
     if (!investorTokenBalances[position.user_address]) {
@@ -128,7 +127,10 @@ readBlocksFromCSV("hourly_blocks.csv")
           allCsvRows.push(result[i]);
         }
       } catch (error) {
-        console.error(`An error occurred for block ${block}:`, error);
+        console.error(
+          `An error occurred for block ${JSON.stringify(block)}:`,
+          error
+        );
       }
     }
     await new Promise((resolve, reject) => {

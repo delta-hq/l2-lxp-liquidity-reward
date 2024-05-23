@@ -1,10 +1,9 @@
+import { sample } from "lodash";
 import { createPublicClient, http } from "viem";
 import { linea } from "viem/chains";
+import { RPC_URLS } from "../config";
 
-export const RPC_URLS =
-  process.env.RPC_URLS ?? "https://rpc.linea.build,https://rpc.linea.build";
-
-export const clients = RPC_URLS.split(",").map((url) =>
+const clients = RPC_URLS.map((url) =>
   createPublicClient({
     chain: linea,
     transport: http(url),
@@ -15,3 +14,7 @@ export const clients = RPC_URLS.split(",").map((url) =>
 );
 
 export type BeefyViemClient = (typeof clients)[0];
+
+export const getViemClient = (): BeefyViemClient => {
+  return sample(clients) as BeefyViemClient;
+};

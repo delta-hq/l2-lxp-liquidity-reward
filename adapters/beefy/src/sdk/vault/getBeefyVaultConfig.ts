@@ -1,7 +1,6 @@
 import { memoize } from "lodash";
 import { Hex } from "viem";
-
-const BEEFY_VAULT_API = "https://api.beefy.finance/vaults";
+import { BEEFY_VAULT_API } from "../../config";
 
 export type BeefyVault = {
   id: string;
