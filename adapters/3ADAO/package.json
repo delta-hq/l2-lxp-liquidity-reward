@@ -1,27 +1,30 @@
 {
-  "name": "metavault",
+  "name": "3a-dao",
   "version": "1.0.0",
-  "description": "",
+  "description": "3A DAO Adapter",
   "main": "index.js",
   "type": "commonjs",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
     "start": "node dist/index.js",
     "compile": "tsc",
     "watch": "tsc -w",
-    "clear": "rm -rf dist"
+    "clear": "rm -rf dist",
+    "test": "node "
   },
   "keywords": [],
-  "author": "",
-  "license": "UNLICENSED",
+  "author": "0xCR6",
+  "license": "ISC",
   "dependencies": {
-    "bignumber.js": "^9.1.2",
+    "axios": "^1.6.8",
     "csv-parser": "^3.0.0",
+    "ethers": "^6.11.1",
     "fast-csv": "^5.0.1",
-    "viem": "^2.8.13"
+    "ts-node": "^10.9.2",
+    "write": "^2.0.0"
   },
   "devDependencies": {
     "@types/node": "^20.11.17",
+    "@types/write": "^2.0.4",
     "typescript": "^5.3.3"
   }
 }
