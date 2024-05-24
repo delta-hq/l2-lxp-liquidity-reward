@@ -1,7 +1,14 @@
 import { BlockData } from "./interfaces";
 import { ethers } from "ethers";
 import { vaultFactoryHelperABI } from "./ABIs/vaultFactoryHelper";
-import { addresses, LINEA_RPC, whitelistedCollaterals } from "./config";
+import {
+  addresses,
+  LINEA_RPC1,
+  LINEA_RPC2,
+  LINEA_RPC3,
+  LINEA_RPC4, // Added fourth RPC
+  whitelistedCollaterals,
+} from "./config";
 import { balanceGetterABI } from "./ABIs/balanceGetter";
 import { vaultABI } from "./ABIs/vault";
 
@@ -26,7 +33,14 @@ interface BalanceGetter {
   getBalances(vaultAddress: string, collaterals: string[]): Promise<number[]>;
 }
 
-const provider = new ethers.JsonRpcProvider(LINEA_RPC);
+const provider1 = new ethers.JsonRpcProvider(LINEA_RPC1);
+const provider2 = new ethers.JsonRpcProvider(LINEA_RPC2);
+const provider3 = new ethers.JsonRpcProvider(LINEA_RPC3);
+const provider4 = new ethers.JsonRpcProvider(LINEA_RPC4);
+
+const providers = [provider1, provider2, provider3, provider4];
+let providerIndex = 0;
+let provider = providers[providerIndex];
 
 const getVaultFactoryHelper = (): VaultFactoryHelper => {
   return new ethers.Contract(
@@ -55,6 +69,11 @@ interface TVLResult {
   balancesByVault: number[][];
 }
 
+const switchProvider = () => {
+  providerIndex = (providerIndex + 1) % providers.length;
+  provider = providers[providerIndex];
+};
+
 export const getTvlByVaultAtBlock = async (
   blockNumber: number
 ): Promise<TVLResult> => {
@@ -66,84 +85,92 @@ export const getTvlByVaultAtBlock = async (
     );
   }
 
-  const helper = getVaultFactoryHelper();
-  const balanceGetter = getBalanceGetter();
+  try {
+    const helper = getVaultFactoryHelper();
+    const balanceGetter = getBalanceGetter();
 
-  // Fetch all vault addresses in parallel
-  const vaults = await helper.getAllVaults(addresses.vaultFactory, {
-    blockNumber: blockNumber,
-  });
-
-  const owners: string[] = [];
-  const vaultsTvl: number[][] = [];
-  const balancesByVault: number[][] = [];
-  const collateralsByVaults: string[][] = [];
-
-  // Process each vault concurrently
-  const vaultPromises = vaults.map(async (vaultAddress: string) => {
-    const vault = getVault(vaultAddress);
-
-    const vaultOwnerPromise = vault.vaultOwner({ blockNumber });
-    const whitelistedCollateralsFiltered = Object.fromEntries(
-      Object.entries(whitelistedCollaterals).filter(
-        ([key]) => Number(key) <= blockNumber
-      )
-    );
-
-    const tvlByCollateralPromises = Object.values(
-      whitelistedCollateralsFiltered
-    )
-      .flat()
-      .map(async (collateral: string) => {
-        const collateralTvl = await helper.getVaultTvlByCollateral(
-          vaultAddress,
-          collateral,
-          {
-            blockNumber,
-          }
-        );
-        return {
-          collateral,
-          tvl:
-            Number(collateralTvl) > 0
-              ? Number(ethers.formatEther(collateralTvl))
-              : 0,
-        };
-      });
-
-    const [vaultOwner, tvlByCollateralResults] = await Promise.all([
-      vaultOwnerPromise,
-      Promise.all(tvlByCollateralPromises),
-    ]);
-
-    const tvlByCollateral: number[] = [];
-    const usedCollaterals: string[] = [];
-    tvlByCollateralResults.forEach(({ collateral, tvl }) => {
-      if (tvl > 0) {
-        tvlByCollateral.push(tvl);
-        usedCollaterals.push(collateral);
-      }
+    // Fetch all vault addresses in parallel
+    const vaults = await helper.getAllVaults(addresses.vaultFactory, {
+      blockNumber: blockNumber,
     });
 
-    const balances =
-      usedCollaterals.length > 0
-        ? await balanceGetter.getBalances(vaultAddress, usedCollaterals)
-        : [];
+    const owners: string[] = [];
+    const vaultsTvl: number[][] = [];
+    const balancesByVault: number[][] = [];
+    const collateralsByVaults: string[][] = [];
 
-    owners.push(vaultOwner);
-    vaultsTvl.push(tvlByCollateral);
-    collateralsByVaults.push(usedCollaterals);
-    balancesByVault.push(balances);
-  });
+    // Process each vault concurrently
+    const vaultPromises = vaults.map(async (vaultAddress: string) => {
+      const vault = getVault(vaultAddress);
 
-  await Promise.all(vaultPromises);
+      const vaultOwnerPromise = vault.vaultOwner({ blockNumber });
+      const whitelistedCollateralsFiltered = Object.fromEntries(
+        Object.entries(whitelistedCollaterals).filter(
+          ([key]) => Number(key) <= blockNumber
+        )
+      );
 
-  return {
-    vaultsTvl,
-    owners,
-    collateralsByVaults,
-    balancesByVault,
-  };
+      const tvlByCollateralPromises = Object.values(
+        whitelistedCollateralsFiltered
+      )
+        .flat()
+        .map(async (collateral: string) => {
+          const collateralTvl = await helper.getVaultTvlByCollateral(
+            vaultAddress,
+            collateral,
+            {
+              blockNumber,
+            }
+          );
+          return {
+            collateral,
+            tvl:
+              Number(collateralTvl) > 0
+                ? Number(ethers.formatEther(collateralTvl))
+                : 0,
+          };
+        });
+
+      const [vaultOwner, tvlByCollateralResults] = await Promise.all([
+        vaultOwnerPromise,
+        Promise.all(tvlByCollateralPromises),
+      ]);
+
+      const tvlByCollateral: number[] = [];
+      const usedCollaterals: string[] = [];
+      tvlByCollateralResults.forEach(({ collateral, tvl }) => {
+        if (tvl > 0) {
+          tvlByCollateral.push(tvl);
+          usedCollaterals.push(collateral);
+        }
+      });
+
+      const balances =
+        usedCollaterals.length > 0
+          ? await balanceGetter.getBalances(vaultAddress, usedCollaterals)
+          : [];
+
+      owners.push(vaultOwner);
+      vaultsTvl.push(tvlByCollateral);
+      collateralsByVaults.push(usedCollaterals);
+      balancesByVault.push(balances);
+    });
+
+    await Promise.all(vaultPromises);
+
+    return {
+      vaultsTvl,
+      owners,
+      collateralsByVaults,
+      balancesByVault,
+    };
+  } catch (error) {
+    console.error(
+      `Provider ${providerIndex + 1} failed, switching to the next provider.`
+    );
+    switchProvider();
+    return getTvlByVaultAtBlock(blockNumber);
+  }
 };
 
 // // Usage example

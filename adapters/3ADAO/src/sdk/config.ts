@@ -1,5 +1,7 @@
-export const LINEA_RPC = "https://rpc.linea.build";
-// export const LINEA_RPC = "https://linea.decubate.com";
+export const LINEA_RPC1 = "https://linea.decubate.com";
+export const LINEA_RPC2 = "https://1rpc.io/linea";
+export const LINEA_RPC3 = "https://rpc.linea.build";
+export const LINEA_RPC4 = "https://linea.blockpi.network/v1/rpc/public";
 
 export const addresses = {
   vaultFactory: "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
