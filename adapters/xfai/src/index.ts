@@ -56,8 +56,6 @@ type ChangedLiquidity = {
   owner: string;
   token: string;
   liquidity: number;
-  timestamp: number;
-  blockNumber: bigint;
 };
 
 export async function getUserTVLByBlock(
@@ -70,8 +68,6 @@ export async function getUserTVLByBlock(
     text: `
     SELECT owner,
     token,
-    max("blockNumber")   as "blockNumber",
-    (max("date") / 1000) as "timestamp",
     sum(liquidity)       as liquidity
     FROM "LiquidityTrace"
     WHERE     "blockNumber" <= $1 
@@ -132,14 +128,7 @@ export async function getUserTVLByBlock(
   );
 
   const result: OutputDataSchemaRow[] = liquiditiesRows.flatMap(
-    ({
-      owner,
-      token,
-      pool: poolAddress,
-      liquidity,
-      blockNumber: block_number,
-      timestamp,
-    }) => {
+    ({ owner, token, pool: poolAddress, liquidity }) => {
       const poolSupply = poolSupplies[poolAddress];
       const poolReserve = poolRes[poolAddress];
       const tokenBalance =
@@ -150,7 +139,7 @@ export async function getUserTVLByBlock(
         // Token reserve
         {
           block_number: Number(block.blockNumber),
-          timestamp,
+          timestamp: block.blockTimestamp,
           user_address: owner,
           token_address: token,
           token_balance: tokenBalance,
@@ -160,7 +149,7 @@ export async function getUserTVLByBlock(
         // WETH Reserve
         {
           block_number: Number(block.blockNumber),
-          timestamp,
+          timestamp: block.blockTimestamp,
           user_address: owner,
           token_address: WETH,
           token_balance: ethBalance,
