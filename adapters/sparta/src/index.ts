@@ -38,15 +38,12 @@ async function processBlockData(block: number): Promise<UserPosition[]> {
   // get reserves at block
   const reservesSnapshotAtBlock = await fetchReservesForPools(block);
 
-  console.log("reservesSnapshotAtBlock");
   // calculate tokens based on reserves
   const userReserves = calculateUserReservePortion(
     userPositions,
     cumulativePositions,
     reservesSnapshotAtBlock
   );
-
-  console.log("ok");
 
   const timestamp = await getTimestampAtBlock(block);
 
@@ -59,8 +56,6 @@ function convertToUserPositions(
   block_number: number,
   timestamp: number
 ): UserPosition[] {
-  console.log(`userData`, userData);
-
   const tempResults: Record<string, UserPosition> = {};
 
   Object.keys(userData).forEach((user) => {
@@ -157,46 +152,48 @@ function processTransactions(transactions: Transaction[]): {
     const toAddress = transaction.to.toLowerCase();
     const contractId = transaction.contractId_.toLowerCase();
 
-    // Skip transactions where 'from' or 'to' match the contract ID, or both 'from' and 'to' are zero addresses
+    // Skip internal lp txs
     if (
-      fromAddress === contractId ||
-      toAddress === contractId ||
-      (fromAddress === "0x0000000000000000000000000000000000000000" &&
-        toAddress === "0x0000000000000000000000000000000000000000")
+      (fromAddress === contractId &&
+        toAddress === "0x0000000000000000000000000000000000000000") ||
+      (toAddress === contractId &&
+        fromAddress === "0x0000000000000000000000000000000000000000")
     ) {
       return;
     }
 
-    // Initialize cumulativePositions if not already set
+    // Initialize userPositions and cumulativePositions if not already set
+    if (!userPositions[contractId]) {
+      userPositions[contractId] = {};
+    }
     if (!cumulativePositions[contractId]) {
       cumulativePositions[contractId] = 0;
     }
 
     // Convert the transaction value from string to integer.
-    let value = parseInt(transaction.value.toString());
+    const value = parseInt(transaction.value.toString(), 10);
 
-    // Process transactions that increase liquidity (to address isn't zero)
-    if (toAddress !== "0x0000000000000000000000000000000000000000") {
-      if (!userPositions[contractId]) {
-        userPositions[contractId] = {};
-      }
-      if (!userPositions[contractId][toAddress]) {
-        userPositions[contractId][toAddress] = 0;
-      }
-      userPositions[contractId][toAddress] += value;
-      cumulativePositions[contractId] += value;
-    }
-
-    // Process transactions that decrease liquidity (from address isn't zero)
+    // Decrease liquidity from the sender if the from address is not zero
     if (fromAddress !== "0x0000000000000000000000000000000000000000") {
-      if (!userPositions[contractId]) {
-        userPositions[contractId] = {};
-      }
       if (!userPositions[contractId][fromAddress]) {
         userPositions[contractId][fromAddress] = 0;
       }
       userPositions[contractId][fromAddress] -= value;
       cumulativePositions[contractId] -= value;
+
+      // Remove the sender from userPositions if their balance is zero
+      if (userPositions[contractId][fromAddress] === 0) {
+        delete userPositions[contractId][fromAddress];
+      }
+    }
+
+    // Increase liquidity for the receiver if the to address is not zero
+    if (toAddress !== "0x0000000000000000000000000000000000000000") {
+      if (!userPositions[contractId][toAddress]) {
+        userPositions[contractId][toAddress] = 0;
+      }
+      userPositions[contractId][toAddress] += value;
+      cumulativePositions[contractId] += value;
     }
   });
 
@@ -204,12 +201,34 @@ function processTransactions(transactions: Transaction[]): {
 }
 
 async function fetchTransfers(blockNumber: number) {
-  const { data } = await client.query({
-    query: TRANSFERS_QUERY,
-    variables: { blockNumber },
-    fetchPolicy: "no-cache",
-  });
-  return data.transfers;
+  const allTransfers = [];
+  const pageSize = 1000;
+  let skip = 0;
+  let hasMore = true;
+
+  while (hasMore) {
+    try {
+      const { data } = await client.query({
+        query: TRANSFERS_QUERY,
+        variables: { blockNumber, first: pageSize, skip },
+        fetchPolicy: "no-cache",
+      });
+
+      const transfers = data.transfers;
+      allTransfers.push(...transfers);
+
+      if (transfers.length < pageSize) {
+        hasMore = false;
+      } else {
+        skip += pageSize;
+      }
+    } catch (error) {
+      console.error("Error fetching transfers:", error);
+      break;
+    }
+  }
+
+  return allTransfers;
 }
 
 async function fetchReservesForPools(blockNumber: number): Promise<Reserves> {
@@ -238,8 +257,8 @@ function convertToOutputDataSchema(
     return {
       block_number: userPosition.block_number,
       timestamp: userPosition.timestamp,
-      user_address: userPosition.user,
-      token_address: userPosition.token,
+      user_address: userPosition.user.toLowerCase(),
+      token_address: userPosition.token.toLowerCase(),
       token_balance: BigInt(userPosition.balance), // Ensure balance is treated as bigint
       token_symbol: "", // You may want to fill this based on additional token info you might have
       usd_price: 0, // Adjust if you need to calculate this value or pull from another source
@@ -295,31 +314,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   return convertToOutputDataSchema(data);
 };
 
-async function main() {
-  console.log(`Starting data fetching process mode: ${FIRST_TIME}`);
-  const blocks = await getBlockRangesToFetch();
-
-  let lastblock = 0;
-  try {
-    for (const block of blocks) {
-      lastblock = block;
-      const blockData = await getUserTVLByBlock({
-        blockNumber: block,
-        blockTimestamp: 0,
-      });
-      console.log("Processed block", block);
-      await saveToCSV(blockData);
-    }
-  } catch (error: any) {
-    console.error("Error processing block", lastblock, error.message);
-  } finally {
-    saveLastProcessedBlock(lastblock);
-  }
-}
-
 // IMPORTANT: config::FIRST_TIME is set to true be default
 // after inital fetch set it to false
-// main().catch(console.error);
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];

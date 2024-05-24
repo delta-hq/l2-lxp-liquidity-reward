@@ -1,8 +1,7 @@
 import BigNumber from "bignumber.js";
 import { AMM_TYPES, CHAINS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
 import { PositionMath } from "./utils/positionMath";
-import { LiquidityMap, TokenLiquidityInfo, LiquidityInfo, getOrCreateTokenLiquidityInfo } from "./liquidityTypes";
-
+import { LiquidityInfo, getOrCreateTokenLiquidityInfo } from "./liquidityTypes";
 
 export interface V3Position {
     id: string;
@@ -60,8 +59,11 @@ export interface V2Pair {
     totalSupply: number;
 }
 
-export interface V2MintedUserAddresses {
-    [token: string]: Set<string>;
+export interface V2Position {
+    id: string;
+    account: string;
+    liquidity: string;
+    pairId: string;
 }
 
 export const getPositionsForAddressByPoolAtBlock = async (
@@ -73,10 +75,8 @@ export const getPositionsForAddressByPoolAtBlock = async (
     ammType: AMM_TYPES
 ): Promise<V3Position[]> => {
     let subgraphUrl = SUBGRAPH_URLS[chain][protocol][ammType];
-    let blockQuery =
-        blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
-    let poolQuery =
-        poolId !== "" ? ` pool_:{id: "${poolId.toLowerCase()}"}` : ``;
+    let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
+    let poolQuery = poolId !== "" ? ` pool_:{id: "${poolId.toLowerCase()}"}` : ``;
     let ownerQuery = address !== "" ? `owner: "${address.toLowerCase()}"` : ``;
 
     let whereQuery =
@@ -190,8 +190,7 @@ export const getPositionAtBlock = async (
     ammType: AMM_TYPES
 ): Promise<V3Position> => {
     let subgraphUrl = SUBGRAPH_URLS[chain][protocol][ammType];
-    let blockQuery =
-        blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
+    let blockQuery = blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
     let query = `{
         position(id: "${positionId}" ${blockQuery}) {
             id
@@ -267,9 +266,7 @@ export const getPositionAtBlock = async (
     };
 };
 
-export const getPositionDetailsFromPosition = (
-    position: V3Position
-): V3PositionWithUSDValue => {
+export const getPositionDetailsFromPosition = (position: V3Position): V3PositionWithUSDValue => {
     let tickLow = position.tickLower.tickIdx;
     let tickHigh = position.tickUpper.tickIdx;
     let liquidity = position.liquidity;
@@ -279,20 +276,8 @@ export const getPositionDetailsFromPosition = (
     let decimal1 = position.token1.decimals;
     let token0DerivedUSD = position.token0.derivedUSD;
     let token1DerivedUSD = position.token1.derivedUSD;
-    let token0AmountsInWei = PositionMath.getToken0Amount(
-        tick,
-        tickLow,
-        tickHigh,
-        sqrtPriceX96,
-        liquidity
-    );
-    let token1AmountsInWei = PositionMath.getToken1Amount(
-        tick,
-        tickLow,
-        tickHigh,
-        sqrtPriceX96,
-        liquidity
-    );
+    let token0AmountsInWei = PositionMath.getToken0Amount(tick, tickLow, tickHigh, sqrtPriceX96, liquidity);
+    let token1AmountsInWei = PositionMath.getToken1Amount(tick, tickLow, tickHigh, sqrtPriceX96, liquidity);
 
     let token0DecimalValue = Number(token0AmountsInWei) / 10 ** decimal0;
     let token1DecimalValue = Number(token1AmountsInWei) / 10 ** decimal1;
@@ -317,9 +302,7 @@ export const getPositionDetailsFromPosition = (
     };
 };
 
-export const getLPValueByUserAndPoolFromPositions = (
-    positions: V3Position[]
-): LiquidityInfo => {
+export const getLPValueByUserAndPoolFromPositions = (positions: V3Position[]): LiquidityInfo => {
     let result: LiquidityInfo = {};
     for (let i = 0; i < positions.length; i++) {
         let position = positions[i];
@@ -330,18 +313,8 @@ export const getLPValueByUserAndPoolFromPositions = (
         let token1 = position.token1.id;
         let token1Decimals = position.token1.decimals;
 
-        let token0LiquidityInfo = getOrCreateTokenLiquidityInfo(
-            result,
-            owner,
-            token0,
-            token0Decimals
-        );
-        let token1LiquidityInfo = getOrCreateTokenLiquidityInfo(
-            result,
-            owner,
-            token1,
-            token1Decimals
-        );
+        let token0LiquidityInfo = getOrCreateTokenLiquidityInfo(result, owner, token0, token0Decimals);
+        let token1LiquidityInfo = getOrCreateTokenLiquidityInfo(result, owner, token1, token1Decimals);
 
         let positionWithUSDValue = getPositionDetailsFromPosition(position);
 
@@ -362,10 +335,8 @@ export const getV2Pairs = async (
     ammType: AMM_TYPES
 ): Promise<V2Pair[]> => {
     let subgraphUrl = SUBGRAPH_URLS[chain][protocol][ammType];
-    let blockQuery =
-        blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
     let query = `{
-        pairs (block: {number: ${blockNumber}}){
+        pairs (first: 1000, block: {number: ${blockNumber}}){
           id
           token1 {
             id
@@ -410,44 +381,64 @@ export const getV2Pairs = async (
     return rv;
 };
 
-export const getMintedAddresses = async (
-    blockNumber: number,
-    chain: CHAINS,
-    protocol: PROTOCOLS,
-    ammType: AMM_TYPES
-): Promise<V2MintedUserAddresses> => {
-    let subgraphUrl = SUBGRAPH_URLS[chain][protocol][ammType];
-    let blockQuery =
-        blockNumber !== 0 ? `, block: {number: ${blockNumber}}` : ``;
-    let query = `{
-        mints {
-          pair {
-            id
-          }
-          to
+export const getV2Positions = async (blockNumber: number) => {
+    let subgraphUrl = SUBGRAPH_URLS[CHAINS.LINEA][PROTOCOLS.SECTA][AMM_TYPES.SECTAV2];
+
+    let skip = 0;
+    let fetchNext = true;
+    let lastLiquidity = "0";
+    const result: V2Position[] = [];
+
+    while (fetchNext) {
+        let query = `{
+            positions(
+                first:1000,
+                skip: ${skip},
+                where: { liquidity_gt: ${lastLiquidity} },
+                block: { number: ${blockNumber} },
+                orderBy: liquidity,       
+                orderDirection: asc
+            ) {
+                id
+                account
+                liquidity
+                pair {
+                    id
+                }
+            }
+          }`;
+
+        let response = await fetch(subgraphUrl, {
+            method: "POST",
+            body: JSON.stringify({ query }),
+            headers: { "Content-Type": "application/json" },
+        });
+        let data = await response.json();
+
+        let _positions = data.data.positions;
+
+        let positions: V2Position[] = (
+            _positions as { id: string; account: string; liquidity: string; pair: { id: string } }[]
+        ).map((p) => ({
+            id: p.id,
+            account: p.account,
+            liquidity: p.liquidity,
+            pairId: p.pair.id,
+        }));
+
+        result.push(...positions);
+
+        if (positions.length < 1000) {
+            fetchNext = false;
+        } else {
+            skip += 1000;
         }
-      }`;
 
-    let response = await fetch(subgraphUrl, {
-        method: "POST",
-        body: JSON.stringify({ query }),
-        headers: { "Content-Type": "application/json" },
-    });
-    let data = await response.json();
-    let mints: any[] = data.data.mints;
-
-    let rv: V2MintedUserAddresses = {};
-
-    for (let i = 0; i < mints.length; i++) {
-        const tokenAddress = mints[i].pair.id;
-        const userAddress = mints[i].to;
-
-        if (!(tokenAddress in rv)) {
-            rv[tokenAddress] = new Set<string>();
+        if (skip > 5000) {
+            lastLiquidity = positions[positions.length - 1].liquidity.toString();
+            skip = 0;
         }
-
-        rv[tokenAddress].add(userAddress);
     }
 
-    return rv;
+    return result;
 };

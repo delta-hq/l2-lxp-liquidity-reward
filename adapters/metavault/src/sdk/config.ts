@@ -1,24 +1,11 @@
-export const enum CHAINS{
-    L2_CHAIN_ID = 59144,
-}
-export const enum PROTOCOLS{
-    METAVAULT = 0,
-}
+import { createPublicClient, http } from "viem";
+import { linea } from "viem/chains"
 
-export const enum AMM_TYPES{
-    UNISWAPV3 = 0,
-    TRADE = 1
-}
+export const V2_SUBGRAPH_URL = "https://api.studio.thegraph.com/query/55804/linea-v2/version/latest"
+export const V3_SUBGRAPH_URL = "https://api.studio.thegraph.com/query/55804/linea-v3/version/latest"
+export const TRADE_SUBGRAPH_URL = "https://api.studio.thegraph.com/query/55804/linea-trade/version/latest"
 
-export const SUBGRAPH_URLS = {
-    [CHAINS.L2_CHAIN_ID]: {
-        [PROTOCOLS.METAVAULT]: {
-            [AMM_TYPES.UNISWAPV3]: "https://api.studio.thegraph.com/query/55804/linea-v3/version/latest",
-            [AMM_TYPES.TRADE]: "https://api.studio.thegraph.com/query/55804/linea-trade/version/latest"
-        }
-    },
-    
-}
-export const RPC_URLS = {
-    [CHAINS.L2_CHAIN_ID]: "https://rpc.linea.build"
-}
+export const client = createPublicClient({
+    chain: linea,
+    transport: http("https://rpc.linea.build")
+})

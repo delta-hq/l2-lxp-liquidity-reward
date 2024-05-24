@@ -83,6 +83,8 @@ export const fetchUserPools = async (
     calls,
     blockNumber
   )) as any;
+  const delay = (ms: number | undefined) => new Promise(resolve => setTimeout(resolve, ms))
+  await delay(100)
   return res.map((r: any) => {
     if (r.status !== 'success') {
       throw new Error("RPC call error. Status: " + r.status);

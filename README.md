@@ -178,7 +178,7 @@ And output a CSV file named `outputData.csv` with headers with the following col
 e.g. `adapters/renzo/src/index.ts`
 
 For testing the adapter code for a single hourly block, use the following `hourly_blocks.csv` file:
-```
+``` 
 number,timestamp
 4243360,1714773599
 ```
