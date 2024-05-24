@@ -94,7 +94,7 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
                 block_number: blockNumber,
                 timestamp: blockTimestamp,
                 user_address: user,
-                token_address: token,
+                token_address: token.replace("0x0000000000000000000000000000000000000000", "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f"),
                 token_balance: balance,
                 token_symbol: "",
                 usd_price: 0
