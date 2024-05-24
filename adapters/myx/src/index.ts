@@ -102,7 +102,7 @@ export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData
         for (const [token, tokenBalance] of tokenBalances) {
             result.push({
                 block_number: blockNumber,
-                timestamp: timestamp,
+                timestamp: timestamp / 1000,
                 user_address: user,
                 token_address: token,
                 token_balance: tokenBalance.balance,
