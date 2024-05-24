@@ -34,7 +34,7 @@ export const getEvents = async (
     let retryCount = 0;
     let data = null;
 
-    while (retryCount < 3) {
+    while (retryCount < 5) {
       try {
         const response = await fetch(SUBGRAPH_URL, {
           method: "POST",
