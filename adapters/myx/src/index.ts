@@ -5,7 +5,7 @@ import fs from 'fs';
 import {write} from 'fast-csv';
 
 import {BlockData, OutputSchemaRow} from './sdk/types';
-import {getUserPositionsAtBlock} from './sdk/lib';
+import {getTimestampAtBlock, getUserPositionsAtBlock} from './sdk/lib';
 
 const pipeline = promisify(stream.pipeline);
 
@@ -96,11 +96,13 @@ export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData
         }
     }
 
+    const timestamp = await getTimestampAtBlock(blockNumber);
+
     for (const [user, tokenBalances] of balances) {
         for (const [token, tokenBalance] of tokenBalances) {
             result.push({
                 block_number: blockNumber,
-                timestamp: blockTimestamp,
+                timestamp: timestamp,
                 user_address: user,
                 token_address: token,
                 token_balance: tokenBalance.balance,
