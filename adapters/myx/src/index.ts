@@ -62,7 +62,7 @@ export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData
             userPosition = new Map<string, TokenBalance>();
         }
 
-        {
+        if (position.token0.balance > 0n) {
             let tokenBalance = userPosition.get(position.token0.address);
 
             if (tokenBalance) {
@@ -75,11 +75,11 @@ export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData
                     symbol: position.token0.symbol,
                     balance: position.token0.balance
                 });
-                balances.set(position.user,userPosition);
+                balances.set(position.user, userPosition);
             }
         }
 
-        {
+        if (position.token1.balance > 0n) {
             let tokenBalance = userPosition.get(position.token1.address);
             if (tokenBalance) {
                 tokenBalance.balance += position.token1.balance;
@@ -91,7 +91,7 @@ export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData
                     symbol: position.token1.symbol,
                     balance: position.token1.balance
                 });
-                balances.set(position.user,userPosition);
+                balances.set(position.user, userPosition);
             }
         }
     }
