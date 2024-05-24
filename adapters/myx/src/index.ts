@@ -1,30 +1,121 @@
-import {
-    getPositionsForAddressByPoolAtBlock as getSyncSwapPositionsForAddressByPoolAtBlock
-} from "./sdk/positionSnapshots"
-
 import {promisify} from 'util';
 import stream from 'stream';
 import csv from 'csv-parser';
 import fs from 'fs';
 import {write} from 'fast-csv';
 
-export interface OutputDataSchemaRow {
-    block_number: number;  //block_number which was given as input
-    timestamp: number;     // block timestamp which was given an input, epoch format
-    user_address: string;   // wallet address, all lowercase
-    token_address: string;  // token address all lowercase
-    token_balance: bigint;  // token balance, raw amount. Please dont divide by decimals
-    token_symbol: string; //token symbol should be empty string if it is not available
-    usd_price: number; //assign 0 if not available
+import {BlockData, OutputSchemaRow} from './sdk/types';
+import {getUserPositionsAtBlock} from './sdk/lib';
+
+const pipeline = promisify(stream.pipeline);
+
+// const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
+//     const blocks: number[] = [];
+//     await pipeline(
+//         fs.createReadStream(filePath),
+//         csv(),
+//         async function* (source) {
+//             for await (const chunk of source) {
+//                 // Assuming each row in the CSV has a column 'block' with the block number
+//                 if (chunk.block) blocks.push(parseInt(chunk.block, 10));
+//             }
+//         }
+//     );
+//     return blocks;
+// };
+
+// const getData = async () => {
+//     const blocks = [
+//         3203675
+//     ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
+
+//     const csvRows: OutputSchemaRow[] = [];
+
+//     for (const block of blocks) {
+//         const timestamp = await getTimestampAtBlock(block)
+
+//         csvRows.push(...await getUserTVLByBlock({ blockNumber: block, blockTimestamp: timestamp }))
+//     }
+
+//     // Write the CSV output to a file
+//     const ws = fs.createWriteStream('outputData.csv');
+//     write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
+//         console.log("CSV file has been written.");
+//     });
+// };
+
+type TokenBalance = {
+    token: string,
+    symbol: string,
+    balance: bigint,
 }
 
-interface BlockData {
-    blockNumber: number;
-    blockTimestamp: number;
-}
+export const getUserTVLByBlock = async ({blockNumber, blockTimestamp}: BlockData): Promise<OutputSchemaRow[]> => {
+    const result: OutputSchemaRow[] = []
 
-// Assuming you have the following functions and constants already defined
-// getPositionsForAddressByPoolAtBlock, CHAINS, PROTOCOLS, AMM_TYPES, getPositionDetailsFromPosition, getLPValueByUserAndPoolFromPositions, BigNumber
+    const positions = await getUserPositionsAtBlock(blockNumber)
+
+    const balances: Map<string, Map<string, TokenBalance>> = new Map();
+    for (const position of positions) {
+        let userPosition = balances.get(position.user);
+        if (!userPosition) {
+            userPosition = new Map<string, TokenBalance>();
+        }
+
+        {
+            let tokenBalance = userPosition.get(position.token0.address);
+
+            if (tokenBalance) {
+                tokenBalance.balance += position.token0.balance;
+                userPosition.set(position.token0.address, tokenBalance);
+                balances.set(position.user, userPosition);
+            } else {
+                userPosition.set(position.token0.address, {
+                    token: position.token0.address,
+                    symbol: position.token0.symbol,
+                    balance: position.token0.balance
+                });
+                balances.set(position.user,userPosition);
+            }
+        }
+
+        {
+            let tokenBalance = userPosition.get(position.token1.address);
+            if (tokenBalance) {
+                tokenBalance.balance += position.token1.balance;
+                userPosition.set(position.token1.address, tokenBalance);
+                balances.set(position.user, userPosition);
+            } else {
+                userPosition.set(position.token1.address, {
+                    token: position.token1.address,
+                    symbol: position.token1.symbol,
+                    balance: position.token1.balance
+                });
+                balances.set(position.user,userPosition);
+            }
+        }
+    }
+
+    for (const [user, tokenBalances] of balances) {
+        for (const [token, tokenBalance] of tokenBalances) {
+            result.push({
+                block_number: blockNumber,
+                timestamp: blockTimestamp,
+                user_address: user,
+                token_address: token,
+                token_balance: tokenBalance.balance,
+                token_symbol: tokenBalance.symbol,
+                usd_price: 0,
+            })
+        }
+    }
+
+    return result
+};
+
+// getData().then(() => {
+//     console.log("Done");
+// });
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     const blocks: BlockData[] = [];
@@ -36,7 +127,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
                 const blockNumber = parseInt(row.number, 10);
                 const blockTimestamp = parseInt(row.timestamp, 10);
                 if (!isNaN(blockNumber) && blockTimestamp) {
-                    blocks.push({ blockNumber: blockNumber, blockTimestamp });
+                    blocks.push({blockNumber: blockNumber, blockTimestamp});
                 }
             })
             .on('end', () => {
@@ -50,27 +141,20 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     return blocks;
 };
 
-export const getUserTVLByBlock = async (blocks: BlockData) => {
-    const {blockNumber, blockTimestamp} = blocks
-    //    Retrieve data using block number and timestamp
-
-    const csvRows = await getSyncSwapPositionsForAddressByPoolAtBlock(blockNumber);
-    // console.log(csvRows);
-    return csvRows;
-};
 
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
     console.log(blocks);
-    const allCsvRows: any[] = [];
-
-    // test
-    // const result = await getUserTVLByBlock({blockNumber:4605383, blockTimestamp: 1715864188});
-    // allCsvRows.push(...result);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    const batchSize = 1000; // Size of batch to trigger writing to the file
+    let i = 0;
 
     for (const block of blocks) {
         try {
             const result = await getUserTVLByBlock(block);
-            allCsvRows.push(...result);
+            // Accumulate CSV rows for all blocks
+            for (let i = 0; i < result.length; i++) {
+                allCsvRows.push(result[i])
+            }
         } catch (error) {
             console.error(`An error occurred for block ${block}:`, error);
         }
