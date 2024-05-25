@@ -22,7 +22,7 @@ const getAllPools = async () => {
     }
   `;
 
-  const response = await fetch('https://graph.zklink.io/subgraphs/name/lxp-points-distribution', {
+  const response = await fetch('https://graph.zklink.io/subgraphs/name/lxp-points', {
     method: 'POST',
     body: JSON.stringify({ query }),
     headers: { 'Content-Type': 'application/json' },
