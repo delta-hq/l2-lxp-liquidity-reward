@@ -1,4 +1,3 @@
-import { BlockData } from "./interfaces";
 import { ethers } from "ethers";
 import { vaultFactoryHelperABI } from "./ABIs/vaultFactoryHelper";
 import {
@@ -6,7 +5,8 @@ import {
   LINEA_RPC1,
   LINEA_RPC2,
   LINEA_RPC3,
-  LINEA_RPC4, // Added fourth RPC
+  LINEA_RPC4,
+  LINEA_RPC5,
   whitelistedCollaterals,
 } from "./config";
 import { balanceGetterABI } from "./ABIs/balanceGetter";
@@ -33,12 +33,18 @@ interface BalanceGetter {
   getBalances(vaultAddress: string, collaterals: string[]): Promise<number[]>;
 }
 
+const switchProvider = () => {
+  providerIndex = (providerIndex + 1) % providers.length;
+  provider = providers[providerIndex];
+};
+
 const provider1 = new ethers.JsonRpcProvider(LINEA_RPC1);
 const provider2 = new ethers.JsonRpcProvider(LINEA_RPC2);
 const provider3 = new ethers.JsonRpcProvider(LINEA_RPC3);
 const provider4 = new ethers.JsonRpcProvider(LINEA_RPC4);
+const provider5 = new ethers.JsonRpcProvider(LINEA_RPC4);
 
-const providers = [provider1, provider2, provider3, provider4];
+const providers = [provider1, provider2, provider3, provider4, provider5];
 let providerIndex = 0;
 let provider = providers[providerIndex];
 
@@ -69,11 +75,6 @@ interface TVLResult {
   balancesByVault: number[][];
 }
 
-const switchProvider = () => {
-  providerIndex = (providerIndex + 1) % providers.length;
-  provider = providers[providerIndex];
-};
-
 export const getTvlByVaultAtBlock = async (
   blockNumber: number
 ): Promise<TVLResult> => {
@@ -94,10 +95,8 @@ export const getTvlByVaultAtBlock = async (
       blockNumber: blockNumber,
     });
 
-    const owners: string[] = [];
-    const vaultsTvl: number[][] = [];
-    const balancesByVault: number[][] = [];
-    const collateralsByVaults: string[][] = [];
+    const ownerCollateralMap: Record<string, Record<string, number>> = {};
+    const ownerBalancesMap: Record<string, Record<string, number>> = {};
 
     // Process each vault concurrently
     const vaultPromises = vaults.map(async (vaultAddress: string) => {
@@ -136,11 +135,21 @@ export const getTvlByVaultAtBlock = async (
         Promise.all(tvlByCollateralPromises),
       ]);
 
-      const tvlByCollateral: number[] = [];
+      if (!ownerCollateralMap[vaultOwner]) {
+        ownerCollateralMap[vaultOwner] = {};
+      }
+
+      if (!ownerBalancesMap[vaultOwner]) {
+        ownerBalancesMap[vaultOwner] = {};
+      }
+
       const usedCollaterals: string[] = [];
       tvlByCollateralResults.forEach(({ collateral, tvl }) => {
         if (tvl > 0) {
-          tvlByCollateral.push(tvl);
+          if (!ownerCollateralMap[vaultOwner][collateral]) {
+            ownerCollateralMap[vaultOwner][collateral] = 0;
+          }
+          ownerCollateralMap[vaultOwner][collateral] += tvl;
           usedCollaterals.push(collateral);
         }
       });
@@ -150,13 +159,35 @@ export const getTvlByVaultAtBlock = async (
           ? await balanceGetter.getBalances(vaultAddress, usedCollaterals)
           : [];
 
-      owners.push(vaultOwner);
-      vaultsTvl.push(tvlByCollateral);
-      collateralsByVaults.push(usedCollaterals);
-      balancesByVault.push(balances);
+      balances.forEach((balance, index) => {
+        const collateral = usedCollaterals[index];
+        if (!ownerBalancesMap[vaultOwner][collateral]) {
+          ownerBalancesMap[vaultOwner][collateral] = 0;
+        }
+        ownerBalancesMap[vaultOwner][collateral] += Number(balance);
+      });
     });
 
     await Promise.all(vaultPromises);
+
+    const owners = Object.keys(ownerCollateralMap);
+    const vaultsTvl: number[][] = [];
+    const collateralsByVaults: string[][] = [];
+    const balancesByVault: number[][] = [];
+
+    owners.forEach((owner) => {
+      const collaterals = Object.keys(ownerCollateralMap[owner]);
+      const tvl = collaterals.map(
+        (collateral) => ownerCollateralMap[owner][collateral]
+      );
+      const balances = collaterals.map(
+        (collateral) => ownerBalancesMap[owner][collateral]
+      );
+
+      collateralsByVaults.push(collaterals);
+      vaultsTvl.push(tvl);
+      balancesByVault.push(balances);
+    });
 
     return {
       vaultsTvl,
@@ -168,6 +199,7 @@ export const getTvlByVaultAtBlock = async (
     console.error(
       `Provider ${providerIndex + 1} failed, switching to the next provider.`
     );
+    console.log(error);
     switchProvider();
     return getTvlByVaultAtBlock(blockNumber);
   }

@@ -1,7 +1,8 @@
-export const LINEA_RPC1 = "https://linea.decubate.com";
+export const LINEA_RPC1 = "https://surge.3adao.org";
 export const LINEA_RPC2 = "https://1rpc.io/linea";
 export const LINEA_RPC3 = "https://rpc.linea.build";
 export const LINEA_RPC4 = "https://linea.blockpi.network/v1/rpc/public";
+export const LINEA_RPC5 = "https://linea.decubate.com";
 
 export const addresses = {
   vaultFactory: "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
@@ -12,6 +13,7 @@ export const addresses = {
   cashbackPool: "0xa1bDB7f6B749Ab887Bd712c7198aFaE6F25a3c12",
   balanceGetter: "0x1d42656c2f56e81678d5a6a9965937e3a5677f4d",
 };
+
 export const whitelistedCollaterals: Record<number, string[]> = {
   3130793: [
     "0x176211869cA2b568f2A7D4EE941E073a821EE1ff",
@@ -32,4 +34,18 @@ export const whitelistedCollaterals: Record<number, string[]> = {
     "0xCeEd853798ff1c95cEB4dC48f68394eb7A86A782",
     "0x9be5e24f05bbafc28da814bd59284878b388a40f",
   ],
+};
+
+// meToken/underlyingToken
+export const receiptTokens = {
+  "0x333d8b480bdb25ea7be4dd87eeb359988ce1b30d":
+    "0x176211869ca2b568f2a7d4ee941e073a821ee1ff", //meUSDC
+  "0xf669C3C03D9fdF4339e19214A749E52616300E89":
+    "0xa219439258ca9da29e9cc4ce5596924745e12b93", //meUSDT
+  "0xad7f33984bed10518012013d4ab0458d37fee6f3":
+    "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f", //meWETH
+  "0xCeEd853798ff1c95cEB4dC48f68394eb7A86A782":
+    "0xb5bedd42000b71fdde22d3ee8a79bd49a568fc8f", //mewstETH
+  "0x9be5e24f05bbafc28da814bd59284878b388a40f":
+    "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4", //meWBTC
 };
