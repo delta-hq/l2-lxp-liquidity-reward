@@ -35,7 +35,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         timestamp: blockTimestamp,
         user_address: snapshot.id,
         token_address: snapshot.token,
-        token_balance: BigInt(snapshot.balance.toString()),
+        token_balance: BigInt(snapshot.balance.toFixed(0)),
         token_symbol: snapshot.tokenSymbol,
         usd_price: 0
       };
