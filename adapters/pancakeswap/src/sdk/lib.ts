@@ -244,7 +244,7 @@ const getOwnerFromMasterChef = async (
   });
 };
 
-const getSickleOwners = async (sickleAddresses: `0x${string}`[]) => {
+export const getSickleOwners = async (sickleAddresses: `0x${string}`[]) => {
   const abi: Abi = [
     {
       inputs: [],

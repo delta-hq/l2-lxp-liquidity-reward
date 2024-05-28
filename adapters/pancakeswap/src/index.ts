@@ -8,6 +8,8 @@ import { BlockData, OutputSchemaRow } from './sdk/types';
 import {
   getTimestampAtBlock,
   getV3UserPositionsAtBlock,
+  getSickles,
+  getSickleOwners,
 } from './sdk/lib';
 
 const pipeline = promisify(stream.pipeline);
@@ -78,7 +80,27 @@ export const getUserTVLByBlock = async ({
         position.token1.balance;
   }
 
+  // Get sickles and their owners
+  const sickleAddresses = await getSickles();
+  const sickleOwners = await getSickleOwners(sickleAddresses.map(s => s.sickle));
+
+  // Replace sickle addresses with their owners
+  const updatedBalances: Record<string, Record<string, bigint>> = {};
   for (const [user, tokenBalances] of Object.entries(balances)) {
+    const owner = (sickleOwners as Record<string, string>)[user] || user; // Replace sickle address with owner address
+    if (!updatedBalances[owner]) {
+      updatedBalances[owner] = {};
+    }
+
+    for (const [token, balance] of Object.entries(tokenBalances)) {
+      if (!updatedBalances[owner][token]) {
+        updatedBalances[owner][token] = 0n;
+      }
+      updatedBalances[owner][token] += balance;
+    }
+  }
+
+  for (const [user, tokenBalances] of Object.entries(updatedBalances)) {
     for (const [token, balance] of Object.entries(tokenBalances)) {
       result.push({
         block_number: blockNumber,
@@ -92,10 +114,6 @@ export const getUserTVLByBlock = async ({
 
   return result;
 };
-
-// getData().then(() => {
-//   console.log('Done');
-// });
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -121,7 +139,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
@@ -129,22 +146,22 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   let i = 0;
 
   for (const block of blocks) {
-      try {
-          const result = await getUserTVLByBlock(block);
-          // Accumulate CSV rows for all blocks
-          allCsvRows.push(...result);
-      } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
-      }
+    try {
+      const result = await getUserTVLByBlock(block);
+      // Accumulate CSV rows for all blocks
+      allCsvRows.push(...result);
+    } catch (error) {
+      console.error(`An error occurred for block ${block}:`, error);
+    }
   }
   await new Promise((resolve, reject) => {
     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
     write(allCsvRows, { headers: true })
-        .pipe(ws)
-        .on("finish", () => {
+      .pipe(ws)
+      .on('finish', () => {
         console.log(`CSV file has been written.`);
         resolve;
-        });
+      });
   });
 
 }).catch((err) => {
