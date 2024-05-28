@@ -31,11 +31,23 @@ export const getEvents = async (
         }
       }`;
 
-    const response = await fetch(SUBGRAPH_URL, {
-        method: "POST",
-        body: JSON.stringify({ query }),
-        headers: { "Content-Type": "application/json" },
-    });
-    const data = await response.json();
-    return data.data;
+    let retryCount = 0;
+    let data = null;
+
+    while (retryCount < 5) {
+      try {
+        const response = await fetch(SUBGRAPH_URL, {
+          method: "POST",
+          body: JSON.stringify({ query }),
+          headers: { "Content-Type": "application/json" },
+        });
+        data = await response.json();
+        break;
+      } catch (error) {
+        console.error("Request failed, retrying...");
+        retryCount++;
+      }
+    }
+
+    return data?.data;
 }

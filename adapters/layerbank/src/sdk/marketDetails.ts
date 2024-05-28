@@ -28,6 +28,7 @@ export const getMarketInfos = async (
   });
 
   const marketAddresses = await core.read.allMarkets();
+
   const markets = marketAddresses.map((m) =>
     getContract({
       address: m,
@@ -46,23 +47,21 @@ export const getMarketInfos = async (
 
   const underlyingAddresses = underlyingResults
     .map((v) => v.result as `0x${string}`)
-    .map((m) => m.toLowerCase());
+    .map((m) => {
+      if (m === "0x0000000000000000000000000000000000000000") {
+        return "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f".toLowerCase();
+      } else {
+        return m.toLowerCase();
+      }
+    });
 
-  const underlyings = underlyingAddresses.map((m) => {
-    if (m === "0x0000000000000000000000000000000000000000") {
-      return getContract({
-        address: "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f",
-        abi: ltokenAbi,
-        client: publicClient,
-      });
-    } else {
-      return getContract({
-        address: m,
-        abi: ltokenAbi,
-        client: publicClient,
-      });
-    }
-  });
+  const underlyings = underlyingAddresses.map((m) =>
+    getContract({
+      address: m as `0x${string}`,
+      abi: ltokenAbi,
+      client: publicClient,
+    })
+  );
 
   const underlyingSymbolResults = await publicClient.multicall({
     contracts: underlyings.map((m) => ({
@@ -85,7 +84,7 @@ export const getMarketInfos = async (
 
   for (let i = 0; i < markets.length; i++) {
     const marketAddress = markets[i].address.toLowerCase();
-    const underlyingAddress = underlyingResults[i].result?.toLowerCase();
+    const underlyingAddress = underlyingAddresses[i];
 
     marketInfos.push({
       address: marketAddress,

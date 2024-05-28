@@ -82,7 +82,12 @@ export const getAccountStatesForAddressByPoolAtBlock = async (
       .map((m: any) => ({
         id: m.id.toLowerCase(),
         account: m.account.toLowerCase(),
-        token: marketsToUnderlying[m.token].toLowerCase(),
+        token:
+          marketsToUnderlying[
+            m.token === zeroAddress
+              ? "0xe5D7C2a44FfDDf6b295A15c148167daaAf5Cf34f".toLowerCase()
+              : m.token
+          ].toLowerCase(),
         lentAmount: BigInt(m.supplied),
         borrowAmount: BigInt(m.borrowed),
       }));

@@ -46,7 +46,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     PROTOCOLS.LAYERBANK
   );
   states = states.filter(
-    (s) => marketInfos.findIndex((mi) => mi.address == s.account) == -1
+    (s) => marketInfos.findIndex((lu) => lu.address == s.account) == -1
   );
 
   console.log(`Block: ${block}`);
