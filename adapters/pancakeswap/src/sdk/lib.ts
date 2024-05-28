@@ -1,5 +1,6 @@
 import { V3_SUBGRAPH_URL, VFAT_SUBGRAPH_URL, client } from './config';
 import { UserPosition } from './types';
+import { Abi } from 'viem';
 
 type V3Position = {
   id: string;
@@ -179,9 +180,8 @@ export const getSickles = async () => {
 
   const { data } = await response.json();
 
-  return (data as { sickleAddresses: { sickle: string }[] }).sickleAddresses;
+  return (data as { sickleAddresses: { sickle: `0x${string}` }[] }).sickleAddresses;
 }
-
 
 const getOwnerFromMasterChef = async (
   pids: string[],
@@ -244,9 +244,40 @@ const getOwnerFromMasterChef = async (
   });
 };
 
+const getSickleOwners = async (sickleAddresses: `0x${string}`[]) => {
+  const abi: Abi = [
+    {
+      inputs: [],
+      name: 'owner',
+      outputs: [{ internalType: 'address', name: '', type: 'address' }],
+      stateMutability: 'view',
+      type: 'function',
+    },
+  ] as const;
+
+  const results = await client.multicall({
+    allowFailure: false,
+    contracts: sickleAddresses.map(
+      (sickle) =>
+        ({
+          abi,
+          address: sickle,
+          functionName: 'owner',
+          args: [],
+        } as const),
+    ),
+  });
+
+  return results.reduce((acc: any, owner: any, index) => {
+    acc[sickleAddresses[index]] = owner[0];
+    return acc;
+  }, {} as Record<string, string>);
+};
+
 export const getTimestampAtBlock = async (blockNumber: number) => {
   const block = await client.getBlock({
     blockNumber: BigInt(blockNumber),
   });
   return Number(block.timestamp * 1000n);
 };
+
