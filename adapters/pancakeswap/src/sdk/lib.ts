@@ -1,4 +1,4 @@
-import { V3_SUBGRAPH_URL, client } from './config';
+import { V3_SUBGRAPH_URL, VFAT_SUBGRAPH_URL, client } from './config';
 import { UserPosition } from './types';
 
 type V3Position = {
@@ -163,6 +163,25 @@ export const getV3UserPositionsAtBlock = async (
 
   return [...resultMap.values()];
 };
+
+export const getSickles = async () => {
+  const query = `query fetchSickles {
+        sickleAddresses {
+            sickle
+        }
+    }`;
+
+  const response = await fetch(VFAT_SUBGRAPH_URL, {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const { data } = await response.json();
+
+  return (data as { sickleAddresses: { sickle: string }[] }).sickleAddresses;
+}
+
 
 const getOwnerFromMasterChef = async (
   pids: string[],
