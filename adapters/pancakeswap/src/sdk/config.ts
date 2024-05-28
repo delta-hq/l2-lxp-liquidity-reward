@@ -5,7 +5,7 @@ export const V3_SUBGRAPH_URL =
   'https://api.studio.thegraph.com/query/45376/exchange-v3-linea/version/latest';
 
   export const VFAT_SUBGRAPH_URL =
-  'https://graph.vf.at/subgraphs/name/sickle/graphql';
+  'https://graph.vf.at/subgraphs/name/sickle';
 
 export const client = createPublicClient({
   chain: linea,
