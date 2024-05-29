@@ -1,8 +1,8 @@
 import fs from 'fs';
 import { write } from 'fast-csv';
-import { OutputDataSchemaRow,getUserTVLByBlock } from './sdk/subgraphDetails';
+import { OutputDataSchemaRow,queryUserTVLByBlock } from './sdk/subgraphDetails';
+import csv from 'csv-parser';
 import * as swapindex from './sdk/swap/swapindex'
-
 
 interface BlockData {
     blockNumber: number;
@@ -12,9 +12,9 @@ interface BlockData {
 
 async function getUserTvlFromPerpetual(blocks: BlockData[]) {
     let snapshots: OutputDataSchemaRow[] = [];
-    for (const {blockNumber, blockTimestamp} of blocks) {
-        try {
-            snapshots = snapshots.concat(await getUserTVLByBlock(blockNumber, blockTimestamp))
+    for (const { blockNumber, blockTimestamp } of blocks) {
+        try {          
+            snapshots = snapshots.concat(await queryUserTVLByBlock(blockNumber,blockTimestamp))         
         } catch (error) {
             console.error(`An error occurred for block ${blockNumber}:`, error);
         }
@@ -65,7 +65,7 @@ async function mergeTvl(from: {[p: string]: OutputDataSchemaRow}, to: { [p: stri
     return to;
 }
 
-export const main = async (blocks: BlockData[]) => {
+export const queryAllByBloks = async (blocks: BlockData[]) => {
     // tvl in perpetual
     let groupedSnapshots = await getUserTvlFromPerpetual(blocks);
     // tvl in swap
@@ -73,16 +73,65 @@ export const main = async (blocks: BlockData[]) => {
 
     // merge tvl: from swap to perpetual
     groupedSnapshots = await mergeTvl(groupedSnapshots2, groupedSnapshots);
-
     let csvRows: OutputDataSchemaRow[] = Object.values(groupedSnapshots);
-    console.log(`length:---${csvRows.length}`);
+    return csvRows;
+    /*console.log(`length:---${csvRows.length}`);
     const ws = fs.createWriteStream('outputData.csv');
     write(csvRows, { headers: true }).pipe(ws).on('finish', () => {
       console.log("CSV file has been written.");
-    });
+    });*/
 };
 
+// 4457308
+export const getUserTVLByBlock = async(blocks: BlockData) =>{
+    const { blockNumber, blockTimestamp } = blocks
+    return await queryAllByBloks([blocks])
+}
 
-// main([{blockNumber:4457308,blockTimestamp:1715394711}]).then(() => {
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+    const blocks: BlockData[] = [];
+
+    await new Promise<void>((resolve, reject) => {
+        fs.createReadStream(filePath)
+        .pipe(csv()) // Specify the separator as '\t' for TSV files
+        .on('data', (row) => {
+            const blockNumber = parseInt(row.number, 10);
+            const blockTimestamp = parseInt(row.timestamp, 10);
+            if (!isNaN(blockNumber) && blockTimestamp) {
+            blocks.push({ blockNumber: blockNumber, blockTimestamp });
+            }
+        })
+        .on('end', () => {
+            resolve();
+        })
+        .on('error', (err) => {
+            reject(err);
+        });
+    });
+
+    return blocks;
+    };
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
+    console.log(blocks);
+    let allCsvRows: any[] = []; 
+
+    let csvRows: OutputDataSchemaRow[] = await queryAllByBloks(blocks);
+    console.log(`length:---${csvRows.length}`);
+    await new Promise((resolve, reject) => {
+        const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
+        write(csvRows, { headers: true })
+            .pipe(ws)
+            .on("finish", () => {
+            console.log(`CSV file has been written.`);
+            resolve;
+            });
+    });
+
+    }).catch((err) => {
+    console.error('Error reading CSV file:', err);
+    });
+
+// main([{blockNumber:669512,blockTimestamp:1715394711}]).then(() => {
 //     console.log("Done");
 //   });

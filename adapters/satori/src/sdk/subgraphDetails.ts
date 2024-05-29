@@ -1,4 +1,4 @@
-import { ASSET, SYMBOL, SUBGRAPH_URL,KEY } from "./config";
+import { ASSET, SYMBOL, SUBGRAPH_URL,KEY,PRICE } from "./config";
 
 export interface OutputDataSchemaRow {
     block_number:number
@@ -6,10 +6,11 @@ export interface OutputDataSchemaRow {
     user_address:string
     token_address:string
     token_symbol:string
-    token_balance:number
+    token_balance:bigint
+    usd_price: number
 }
 
-export const getUserTVLByBlock = async (
+export const queryUserTVLByBlock = async (
     blockNumber: number,
     timestamp: number,
 ):Promise<OutputDataSchemaRow[]> =>  {
@@ -44,8 +45,9 @@ export const getUserTVLByBlock = async (
                 user_address:snapshot.user,
                 token_address:ASSET,
                 token_symbol:SYMBOL,
-                token_balance:snapshot.lpAmount
-            } 
+                token_balance:snapshot.lpAmount,
+                usd_price: PRICE
+            }             
             result.push(userLpSnapshot)
         }
         if(snapshots.length < 1000){
