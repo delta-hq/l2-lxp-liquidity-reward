@@ -63,12 +63,6 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
   const amounts: UserTokenAmounts = {};
   const symbols: TokenSymbol = {};
 
-  const usersShareTokenBalances = await getUsersShareTokenBalancesByBlock(blockNumber);
-  // console.log('Users share token balances:', usersShareTokenBalances);
-  
-  const wrapperShareTokenBalance = await getWrapperUsersShareTokenBalancesByBlock(blockNumber);
-  // console.log('Wrapper share token balance:', wrapperShareTokenBalance);
-
   const mergedShareTokenBalances = await getActualUsersShareTokenBalancesByBlock(blockNumber);
   // console.log('Merged share token balances:', mergedShareTokenBalances);
 
