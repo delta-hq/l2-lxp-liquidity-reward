@@ -57,14 +57,6 @@ const getData = async () => {
       console.log("CSV file has been written.");
   });
 };
-async function stringifyBigInts(obj: any) {
-  return JSON.stringify(obj, (key, value) => {
-      if (typeof value === 'bigint') {
-          return value.toString();
-      }
-      return value;
-  });
-}
 
 export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockData): Promise<OutputDataSchemaRow[]> => {
   const result: OutputDataSchemaRow[] = []
