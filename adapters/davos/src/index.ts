@@ -105,8 +105,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
                 csvRows.push({
                     block_number: blockNumber,
                     timestamp: blockTimestamp,
-                    user_address: address,
-                    token_address: collateral,
+                    user_address: address.toLowerCase(),
+                    token_address: collateral.toLowerCase(),
                     token_balance: BigInt(value),
                     token_symbol: '',
                     usd_price: 0
@@ -190,7 +190,7 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
             const result = await getUserTVLByBlock(block);
             allCsvRows.push(...result);
         } catch (error) {
-            console.error(`An error occurred for block ${block}:`, error);
+            console.error(`An error  occurred for block ${block}:`, error);
         }
     }
     await new Promise((resolve, reject) => {
