@@ -6,12 +6,11 @@ export const LINEA_RPC5 = "https://linea.decubate.com";
 
 export const addresses = {
   vaultFactory: "0x65c6FD9B3a2A892096881e28f07c732ed128893E",
-  vaultFactoryHelper: "0x045d6078dd0d2436b67bc4050ab8f2a7e7e9b03c",
   euro3: "0x3F817b28Da4940F018C6b5c0A11C555ebB1264f9",
   a3a: "0x3d4b2132ed4ea0aa93903713a4de9f98e625a5c7",
   stabilityPool: "0x51c3db485e3b21193636a83f05b3517f691cd68c",
   cashbackPool: "0xa1bDB7f6B749Ab887Bd712c7198aFaE6F25a3c12",
-  balanceGetter: "0x1d42656c2f56e81678d5a6a9965937e3a5677f4d",
+  surgeHelper: "0x4fa03364c121c19C69136d75C6BC8E39c5667232",
 };
 
 export const whitelistedCollaterals: Record<number, string[]> = {
@@ -36,16 +35,28 @@ export const whitelistedCollaterals: Record<number, string[]> = {
   ],
 };
 
-// meToken/underlyingToken
-export const receiptTokens = {
-  "0x333d8b480bdb25ea7be4dd87eeb359988ce1b30d":
-    "0x176211869ca2b568f2a7d4ee941e073a821ee1ff", //meUSDC
-  "0xf669C3C03D9fdF4339e19214A749E52616300E89":
-    "0xa219439258ca9da29e9cc4ce5596924745e12b93", //meUSDT
-  "0xad7f33984bed10518012013d4ab0458d37fee6f3":
-    "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f", //meWETH
-  "0xCeEd853798ff1c95cEB4dC48f68394eb7A86A782":
-    "0xb5bedd42000b71fdde22d3ee8a79bd49a568fc8f", //mewstETH
-  "0x9be5e24f05bbafc28da814bd59284878b388a40f":
-    "0x3aab2285ddcddad8edf438c1bab47e1a9d05a9b4", //meWBTC
+// Define the type for receiptTokens
+export const receiptTokens: {
+  [key: string]: { underlying: string };
+} = {
+  // meUSDC
+  "0X333D8B480BDB25EA7BE4DD87EEB359988CE1B30D": {
+    underlying: "0X176211869CA2B568F2A7D4EE941E073A821EE1FF",
+  },
+  // meUSDT
+  "0XF669C3C03D9FDF4339E19214A749E52616300E89": {
+    underlying: "0XA219439258CA9DA29E9CC4CE5596924745E12B93",
+  },
+  // meWETH
+  "0XAD7F33984BED10518012013D4AB0458D37FEE6F3": {
+    underlying: "0XE5D7C2A44FFDDF6B295A15C148167DAAAF5CF34F",
+  },
+  // mewstETH
+  "0XCEED853798FF1C95CEB4DC48F68394EB7A86A782": {
+    underlying: "0XB5BEDD42000B71FDDE22D3EE8A79BD49A568FC8F",
+  },
+  // meWBTC
+  "0X9BE5E24F05BBAFC28DA814BD59284878B388A40F": {
+    underlying: "0X3AAB2285DDCDDAD8EDF438C1BAB47E1A9D05A9B4",
+  },
 };
