@@ -87,7 +87,7 @@ export const getUserTVLByBlock = async ({
   // Replace sickle addresses with their owners
   const updatedBalances: Record<string, Record<string, bigint>> = {};
   for (const [user, tokenBalances] of Object.entries(balances)) {
-    const owner = (sickleOwners as Record<string, string>)[user] || user; // Replace sickle address with owner address
+    const owner = ((sickleOwners as Record<string, string>)[user] || user).toLowerCase(); // Replace sickle address with owner address
     if (!updatedBalances[owner]) {
       updatedBalances[owner] = {};
     }
