@@ -1,4 +1,4 @@
-import { HORIZON_SUBGRAPH_URL, HORIZON_V2_SUBGRAPH_URL, client } from "./config"
+import { client } from "./config"
 import { UserPosition } from "./types"
 
 type V3Position = {

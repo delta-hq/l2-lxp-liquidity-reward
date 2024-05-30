@@ -5,7 +5,7 @@ import fs from 'fs';
 import { write } from 'fast-csv';
 
 import { BlockData, OutputSchemaRow } from './sdk/types';
-import { getTimestampAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
+import { getV3UserPositionsAtBlock } from './sdk/lib';
 import {HORIZON_SUBGRAPH_URL, HORIZON_V2_SUBGRAPH_URL} from "./sdk/config";
 
 const pipeline = promisify(stream.pipeline);
@@ -19,6 +19,7 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
     ])
 
     const combinedPositions = [...horizonPositions, ...horizonV2Positions]
+    const tokenSymbols: Record<string, string> = {}
     const balances: Record<string, Record<string, bigint>> = {}
     for (const position of combinedPositions) {
         balances[position.user] = balances[position.user] || {}
@@ -32,6 +33,9 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
         balances[position.user][position.token1.address] =
             (balances?.[position.user]?.[position.token1.address] ?? 0n)
                 + position.token1.balance
+
+        tokenSymbols[position.token0.address] = position.token0.symbol
+        tokenSymbols[position.token1.address] = position.token1.symbol
     }
 
     for (const [user, tokenBalances] of Object.entries(balances)) {
@@ -42,6 +46,8 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
                 user_address: user,
                 token_address: token,
                 token_balance: balance,
+                token_symbol: tokenSymbols[token] || "",
+                usd_price: 0
             })
         }
     }

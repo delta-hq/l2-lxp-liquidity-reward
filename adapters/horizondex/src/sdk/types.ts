@@ -17,10 +17,12 @@ export type UserPosition = {
     user: string;
     token0: {
         address: string,
+        symbol: string
         balance: bigint,
     }
     token1: {
         address: string,
+        symbol: string
         balance: bigint,
     }
 }
