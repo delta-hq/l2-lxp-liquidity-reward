@@ -1,6 +1,6 @@
 import fs from "fs";
 import { write } from "fast-csv";
-import csv from 'csv-parser';
+import csv from "csv-parser";
 
 type OutputDataSchemaRow = {
   block_number: number;
@@ -54,7 +54,7 @@ const getLTokenPositions = async (blockNumber: number): Promise<Position[]> => {
   let result: Position[] = [];
   while (fetchNext) {
     let query = `{
-            adjustedLTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}}) {
+            adjustedLTokenPositions(where: {blockNumber: ${blockNumber}, first: 5000, skip:${skip}) {
               user
               bToken
               tokenB0
@@ -253,17 +253,17 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   await new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(csv()) // Specify the separator as '\t' for TSV files
-      .on('data', (row) => {
+      .on("data", (row) => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
-      .on('end', () => {
+      .on("end", () => {
         resolve();
       })
-      .on('error', (err) => {
+      .on("error", (err) => {
         reject(err);
       });
   });
@@ -271,30 +271,30 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
+readBlocksFromCSV("hourly_blocks.csv")
+  .then(async (blocks: any[]) => {
+    console.log(blocks);
+    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
 
-readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
-  console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-
-  for (const block of blocks) {
+    for (const block of blocks) {
       try {
-          const result = await getUserTVLByBlock(block);
-          // Accumulate CSV rows for all blocks
-          allCsvRows.push(...result);
+        const result = await getUserTVLByBlock(block);
+        // Accumulate CSV rows for all blocks
+        allCsvRows.push(...result);
       } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
+        console.error(`An error occurred for block ${block}:`, error);
       }
-  }
-  await new Promise((resolve, reject) => {
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
+    }
+    await new Promise((resolve, reject) => {
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
+          console.log(`CSV file has been written.`);
+          resolve;
         });
+    });
+  })
+  .catch((err) => {
+    console.error("Error reading CSV file:", err);
   });
-
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
-});
