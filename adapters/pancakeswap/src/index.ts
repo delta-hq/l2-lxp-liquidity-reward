@@ -81,7 +81,7 @@ export const getUserTVLByBlock = async ({
   }
 
   // Get sickles and their owners
-  const sickleAddresses = await getSickles();
+  const sickleAddresses = await getSickles(blockNumber);
   const sickleOwners = await getSickleOwners(sickleAddresses.map(s => s.sickle));
 
   // Replace sickle addresses with their owners

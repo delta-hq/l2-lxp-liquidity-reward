@@ -165,9 +165,9 @@ export const getV3UserPositionsAtBlock = async (
   return [...resultMap.values()];
 };
 
-export const getSickles = async () => {
+export const getSickles = async (blockNumber: number) => {
   const query = `query fetchSickles {
-        sickleAddresses {
+        sickleAddresses(block: { number: ${blockNumber} }) {
             sickle
         }
     }`;
@@ -181,7 +181,8 @@ export const getSickles = async () => {
   const { data } = await response.json();
 
   return (data as { sickleAddresses: { sickle: `0x${string}` }[] }).sickleAddresses;
-}
+};
+
 
 const getOwnerFromMasterChef = async (
   pids: string[],
