@@ -13,7 +13,11 @@ export interface BlockData {
     blockNumber: number;
     blockTimestamp: number;
   }
-  
+
+export interface StakedToken {
+    [wrapperAddress: string]: string;
+}
+
 export interface UserTokenAmounts {
     [user: string]: {
         [token: string]: bigint;
