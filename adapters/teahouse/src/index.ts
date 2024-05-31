@@ -13,8 +13,11 @@ import {
   getPoolInfoByBlock, 
   getVaultsAllPositionsByBlock, 
   getAmountsForLiquidityByBlock, 
-  getUsersShareTokenBalancesByBlock
+  getUsersShareTokenBalancesByBlock,
+  getWrapperUsersShareTokenBalancesByBlock,
+  getActualUsersShareTokenBalancesByBlock
 } from "./sdk/lib";
+import { wrap } from 'module';
 
 const ERC20abi = ["function symbol() view returns (string)"];
 const provider = new ethers.JsonRpcProvider(client.transport.url);
@@ -39,7 +42,7 @@ const pipeline = promisify(stream.pipeline);
 
 const getData = async () => {
   const blocks = [
-    4368847
+    4973414
   ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
   const csvRows: OutputDataSchemaRow[] = [];
@@ -61,9 +64,9 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
   const amounts: UserTokenAmounts = {};
   const symbols: TokenSymbol = {};
 
-  const usersShareTokenBalances = await getUsersShareTokenBalancesByBlock(blockNumber);
-  // console.log('Users share token balances:', usersShareTokenBalances);
-  
+  const mergedShareTokenBalances = await getActualUsersShareTokenBalancesByBlock(blockNumber);
+  // console.log('Merged share token balances:', mergedShareTokenBalances);
+
   for (const vaultAddress of VAULT_ADDRESS) {
     try {
       const contract = new ethers.Contract(vaultAddress, vault_ABI, provider);
@@ -118,8 +121,8 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
       // console.log('Total supply by block:', totalSupplyByBlock);
       
       // Step 7: Iterate over user share token balances and calculate token amounts
-      if (usersShareTokenBalances) {
-        for (const userBalance of usersShareTokenBalances) {
+      if (mergedShareTokenBalances) {
+        for (const userBalance of mergedShareTokenBalances) {
           if (userBalance.contractId.toLowerCase() === vaultAddress.toLowerCase() && userBalance.balance > 0n) {
             // Calculate token0 and token1 amounts based on the share ratio
             const token0Amount: bigint = userBalance.balance === 0n || totalSupplyByBlock === 0n

@@ -2,18 +2,11 @@ import BigNumber from "bignumber.js";
 import { CHAINS, PROTOCOLS, AMM_TYPES, RPC_URLS } from "./sdk/config";
 import {
     getLPValueByUserAndPoolFromPositions,
-    getMintedAddresses,
-    getPositionAtBlock,
     getPositionDetailsFromPosition,
     getPositionsForAddressByPoolAtBlock,
     getV2Pairs,
 } from "./sdk/subgraphDetails";
-import {
-    LiquidityMap,
-    TokenLiquidityInfo,
-    LiquidityInfo,
-    combineLiquidityInfoMaps,
-} from "./sdk/liquidityTypes";
+import { combineLiquidityInfoMaps } from "./sdk/liquidityTypes";
 
 (BigInt.prototype as any).toJSON = function () {
     return this.toString();
@@ -23,12 +16,8 @@ import stream from "stream";
 import csv from "csv-parser";
 import fs from "fs";
 import path from "path";
-import { format } from "fast-csv";
 import { write } from "fast-csv";
-import { pipeline as streamPipeline } from "stream";
-import { captureRejectionSymbol } from "events";
 import { getV2LpValue } from "./sdk/poolDetails";
-
 
 interface LPValueDetails {
     pool: string;
@@ -58,14 +47,11 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
     await new Promise<void>((resolve, reject) => {
         fs.createReadStream(filePath)
-            .pipe(csv({ separator: "," })) // Specify the separator as '\t' for TSV files
+            .pipe(csv()) // Specify the separator as '\t' for TSV files
             .on("data", (row) => {
-                //console.log(row);
                 const blockNumber = parseInt(row.number, 10);
                 const blockTimestamp = parseInt(row.timestamp, 10);
-                //console.log(`Maybe Data ${blockNumber} ${blockTimestamp}`);
                 if (!isNaN(blockNumber) && blockTimestamp) {
-                    //console.log(`Valid Data`);
                     blocks.push({ blockNumber: blockNumber, blockTimestamp });
                 }
             })
@@ -91,9 +77,8 @@ type OutputDataSchemaRow = {
     usd_price: number;
 };
 
-export const getUserTVLByBlock = async (blocks: BlockData) => {
-    const { blockNumber, blockTimestamp } = blocks;
-    //console.log(`Getting tvl in block: ${blockNumber}`);
+export const getUserTVLByBlock = async (block: BlockData) => {
+    const { blockNumber, blockTimestamp } = block;
 
     const v3Positions = await getPositionsForAddressByPoolAtBlock(
         blockNumber,
@@ -106,25 +91,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     let v3PositionsWithValue = v3Positions.map(getPositionDetailsFromPosition);
     let v3LpValue = getLPValueByUserAndPoolFromPositions(v3PositionsWithValue);
 
-    let pairs = await getV2Pairs(
-        blockNumber,
-        CHAINS.LINEA,
-        PROTOCOLS.SECTA,
-        AMM_TYPES.SECTAV2
-    );
-    let mintedAddresses = await getMintedAddresses(
-        blockNumber,
-        CHAINS.LINEA,
-        PROTOCOLS.SECTA,
-        AMM_TYPES.SECTAV2
-    );
-
-    let v2LpValue = await getV2LpValue(
-        RPC_URLS[CHAINS.LINEA],
-        pairs,
-        mintedAddresses,
-        blockNumber
-    );
+    let pairs = await getV2Pairs(blockNumber, CHAINS.LINEA, PROTOCOLS.SECTA, AMM_TYPES.SECTAV2);
+    let v2LpValue = await getV2LpValue(pairs, blockNumber);
 
     const combinedLpValue = combineLiquidityInfoMaps(v3LpValue, v2LpValue);
 
@@ -170,8 +138,9 @@ readBlocksFromCSV(path.resolve(__dirname, "../hourly_blocks.csv"))
         const ws = fs.createWriteStream(`outputData.csv`, {
             flags: "w",
         });
-        write(allCsvRows, {headers: true})
-            .pipe(ws).on("finish", () => {
+        write(allCsvRows, { headers: true })
+            .pipe(ws)
+            .on("finish", () => {
                 console.log(`CSV file has been written.`);
             });
     })

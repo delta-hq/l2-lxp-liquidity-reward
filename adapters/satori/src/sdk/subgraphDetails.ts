@@ -1,4 +1,4 @@
-import { ASSET, SYMBOL, SUBGRAPH_URL,KEY } from "./config";
+import { ASSET, SYMBOL, SUBGRAPH_URL,KEY,PRICE } from "./config";
 
 export interface OutputDataSchemaRow {
     block_number:number
@@ -6,25 +6,22 @@ export interface OutputDataSchemaRow {
     user_address:string
     token_address:string
     token_symbol:string
-    token_balance:number
+    token_balance:bigint
+    usd_price: number
 }
 
-
-export const getUserTVLByBlock = async (
+export const queryUserTVLByBlock = async (
     blockNumber: number,
-    address: string,
+    timestamp: number,
 ):Promise<OutputDataSchemaRow[]> =>  {
     let subgraphUrl = SUBGRAPH_URL;
     let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
-    let ownerQuery = address !== "" ? `owner: "${address.toLowerCase()}"` : ``;
-
-    let whereQuery = ownerQuery !== "" ?`where: {${ownerQuery}}`:  ``;
     let skip = 0;
     let fetchNext = true;
     let result: OutputDataSchemaRow[] = [];
     while(fetchNext){
         let query = `{
-            userLpSnapshots(${whereQuery} ${blockQuery} orderBy: timestamp, first:1000,skip:${skip}){
+            userLpSnapshots(${blockQuery} orderBy: timestamp, first:1000,skip:${skip}){
               id
               user
               block
@@ -43,14 +40,14 @@ export const getUserTVLByBlock = async (
         let snapshots = data.data.userLpSnapshots
         for (const snapshot of snapshots) {
             let userLpSnapshot:OutputDataSchemaRow = {
- 
                 block_number:snapshot.block,
                 timestamp:snapshot.timestamp,
                 user_address:snapshot.user,
                 token_address:ASSET,
                 token_symbol:SYMBOL,
-                token_balance:snapshot.lpAmount
-            } 
+                token_balance:snapshot.lpAmount,
+                usd_price: PRICE
+            }             
             result.push(userLpSnapshot)
         }
         if(snapshots.length < 1000){

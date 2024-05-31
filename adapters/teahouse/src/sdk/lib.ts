@@ -1,5 +1,6 @@
 import { ethers } from 'ethers';
-import { client, V3_SUBGRAPH_URL } from "./config";
+import { client, V3_SUBGRAPH_URL, WRAPPER_SUBGRAPH_URL } from "./config";
+import {WRAPPER_ADDRESS} from "./vaults";
 
 const ZERO_ADDRESS = "0x0000000000000000000000000000000000000000";
 
@@ -34,11 +35,140 @@ interface Transfer {
     timestamp_: string;
     block_number: number;
   }
-  
+
+interface MintData {
+  contractId_: string;
+  amount: string;
+  user: string;
+  block_number: number;
+}
+
+interface WithdrawData {
+  contractId_: string;
+  amount: string;
+  user: string;
+  block_number: number;
+}
+
 interface TransferData {
     data: {
         transfers: Transfer[];
     };
+}
+
+function mergeAndCalculateNetAmount(
+  mintData: MintData[],
+  withdrawData: WithdrawData[]
+): UserShareTokenBalance[] {
+  const userAmounts: { [user: string]: { [contractId: string]: { amount: bigint; block_number: number } } } = {};
+
+  // Add mint amounts
+  for (const { contractId_, amount, user, block_number } of mintData) {
+    if (!userAmounts[user]) {
+      userAmounts[user] = {};
+    }
+    if (userAmounts[user][contractId_]) {
+      userAmounts[user][contractId_].amount += BigInt(amount);
+      userAmounts[user][contractId_].block_number = block_number; // Update block_number with the latest value
+    } else {
+      userAmounts[user][contractId_] = { amount: BigInt(amount), block_number };
+    }
+  }
+
+  // Subtract withdraw amounts
+  for (const { contractId_, amount, user, block_number } of withdrawData) {
+    if (!userAmounts[user]) {
+      userAmounts[user] = {};
+    }
+    if (userAmounts[user][contractId_]) {
+      userAmounts[user][contractId_].amount -= BigInt(amount);
+      userAmounts[user][contractId_].block_number = block_number; // Update block_number with the latest value
+    } else {
+      userAmounts[user][contractId_] = { amount: -BigInt(amount), block_number };
+    }
+  }
+
+  const netAmountData: UserShareTokenBalance[] = [];
+
+  for (const [user, contractAmounts] of Object.entries(userAmounts)) {
+    for (const [contractId, { amount, block_number }] of Object.entries(contractAmounts)) {
+      if (amount > 0n) {
+        netAmountData.push({
+          user,
+          block_number,
+          contractId,
+          balance: amount,
+        });
+      }
+    }
+  }
+
+  return netAmountData;
+}
+
+export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: number): Promise<UserShareTokenBalance[] | null> => {
+  // Function implementation goes here
+  let snapshotsArrays: UserShareTokenBalance[] = []; // Define snapshotsArrays as an empty array
+
+  let skip = 0;
+  const b_end = blockNumber;
+  let b_start = 0;
+  while (true) {
+    let mintQuery = `
+      query MintQuery {
+        mintThenDeposits(
+          skip: ${skip},
+          first: 1000,
+          orderBy: contractId_,
+          orderDirection: asc,
+          where: {
+            block_number_lte: ${b_end},
+          }
+        ) {
+          contractId_
+          amount
+          user
+          block_number
+        }
+      }`;
+
+    let withdrawQuery = `
+      query WithdrawQuery {
+        withdrawThenBurns(
+          skip: ${skip},
+          first: 1000,
+          orderBy: contractId_,
+          orderDirection: asc,
+          where: {
+            block_number_lte: ${b_end},
+          }
+        ) {
+          contractId_
+          amount
+          user
+          block_number
+        }
+      }`;
+
+    const mintResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: mintQuery });
+    const withdrawResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: withdrawQuery });
+    
+    const mintData: MintData[] = (mintResponseJson as any).data.mintThenDeposits;
+    const withdrawData: WithdrawData[] = (withdrawResponseJson as any).data.withdrawThenBurns;
+    const netAmountData = mergeAndCalculateNetAmount(mintData, withdrawData);
+    
+    snapshotsArrays = snapshotsArrays.concat(netAmountData);
+
+    if (netAmountData.length !== 1000) {
+      break;
+    }
+    skip += 1000;
+    if (skip > 5000) {
+      skip = 0;
+      b_start = snapshotsArrays[snapshotsArrays.length - 1].block_number + 1;
+    }
+  }
+  return snapshotsArrays.length > 0 ? snapshotsArrays : null;
 }
 
 export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Promise<UserShareTokenBalance[] | null> => {
@@ -105,20 +235,87 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
     });
 
     Object.entries(addressBalances).forEach(([address, balances]) => {
-        Object.entries(balances).forEach(([contractId, balance]) => {
-          usersShareTokenBalances.push({
-            block_number: blockNumber,
-            contractId: contractId,
-            user: address,
-            balance: balance,
-          });
+      Object.entries(balances).forEach(([contractId, balance]) => {
+        usersShareTokenBalances.push({
+          block_number: blockNumber,
+          contractId: contractId,
+          user: address,
+          balance: balance,
         });
       });
-
+    });
     // Filter out entries with balance === 0
     const filteredBalances = usersShareTokenBalances.filter(balance => balance.balance !== 0n);
-
     return filteredBalances.length > 0 ? filteredBalances : null;    
+}
+
+export const getActualUsersShareTokenBalancesByBlock = async (blockNumber: number): Promise<UserShareTokenBalance[] | null> => {
+  const usersShareTokenBalances = await getUsersShareTokenBalancesByBlock(blockNumber);
+  const wrapperUsersShareTokenBalances = await getWrapperUsersShareTokenBalancesByBlock(blockNumber);
+  
+  const LOWER_WRAPPER_ADDRESS = WRAPPER_ADDRESS.map(address => address.toLowerCase());
+
+  if (!usersShareTokenBalances && !wrapperUsersShareTokenBalances) {
+    return null;
+  }
+
+  let actualUsersShareTokenBalances: UserShareTokenBalance[] = [];
+
+  if (usersShareTokenBalances) {
+    // Remove columns from usersShareTokenBalances where user is a wrapper contract
+    const filteredUsersShareTokenBalances = usersShareTokenBalances.filter(
+      (position) => !LOWER_WRAPPER_ADDRESS.includes(position.user.toLowerCase())
+    );
+    actualUsersShareTokenBalances = [...filteredUsersShareTokenBalances];
+    // console.log('Filtered out wrapper:', actualUsersShareTokenBalances.length);
+  }
+
+  if (wrapperUsersShareTokenBalances) {
+    for (const wrapper of LOWER_WRAPPER_ADDRESS) {
+      // console.log('Processing wrapper:', wrapper);
+      const StakedToken = usersShareTokenBalances?.find(
+        (position) => position.user.toLowerCase() === wrapper
+      )?.contractId;
+      // console.log('StakedToken:', StakedToken);
+
+      // Skip iteration if StakedToken is falsy
+      if (!StakedToken) {
+        continue;
+      }
+
+      const filteredWrapperUsersShareTokenBalances = wrapperUsersShareTokenBalances.filter(
+        (position) => position.contractId.toLowerCase() === wrapper
+      );
+      // console.log('Wrapper deposit users:', filteredWrapperUsersShareTokenBalances.length);
+
+      // Replace contractId with StakedToken before pushing to actualUsersShareTokenBalances
+      const updatedBalances = filteredWrapperUsersShareTokenBalances.map((balance) => ({
+        ...balance,
+        contractId: StakedToken,
+      }));
+      // console.log('Updated balances:', updatedBalances);
+
+      // Merge balances
+      updatedBalances.forEach(updatedBalance => {
+        const existingBalance = actualUsersShareTokenBalances.find(
+          balance =>
+            balance.user === updatedBalance.user &&
+            balance.contractId === updatedBalance.contractId
+        );
+
+        if (existingBalance) {
+          // console.log('Existing balance:', existingBalance);
+          existingBalance.balance += updatedBalance.balance;
+        } else {
+          actualUsersShareTokenBalances.push(updatedBalance);
+        }
+      });
+    }
+  }
+
+  // Filter out entries with balance === 0
+  const filteredBalances = actualUsersShareTokenBalances.filter(balance => balance.balance !== 0n);
+  return filteredBalances.length > 0 ? filteredBalances : null;
 }
 
 export const getVaultsAllPositionsByBlock = async (contract: ethers.Contract, blockNumber: number): Promise<Position[]> => {
