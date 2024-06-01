@@ -1,4 +1,4 @@
-import { SUBGRAPH_URL } from "./config";
+import { SUBGRAPH_URL, VFAT_SUBGRAPH_URL } from "./config";
 import { UserPosition } from "./types";
 
 type V2Position = {
@@ -201,4 +201,22 @@ export const getV3UserPositionsAtBlock = async (
   }
 
   return result;
+};
+
+export const getSickles = async (blockNumber: number) => {
+  const query = `query fetchSickles {
+        sickleAddresses(block: { number: ${blockNumber} }) {
+            sickle
+        }
+    }`;
+
+  const response = await fetch(VFAT_SUBGRAPH_URL, {
+    method: 'POST',
+    body: JSON.stringify({ query }),
+    headers: { 'Content-Type': 'application/json' },
+  });
+
+  const { data } = await response.json();
+
+  return (data as { sickleAddresses: { sickle: `0x${string}` }[] }).sickleAddresses;
 };

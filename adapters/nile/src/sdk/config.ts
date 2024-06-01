@@ -4,6 +4,9 @@ import { linea } from "viem/chains";
 export const SUBGRAPH_URL =
   "https://api.goldsky.com/api/public/project_clsz7bxuh5rj401vagtp8a5f9/subgraphs/nile-minimal/prod/gn";
 
+export const VFAT_SUBGRAPH_URL =
+  'https://graph.vf.at/subgraphs/name/sickle';
+
 export const client = createPublicClient({
   chain: linea,
   transport: http("https://rpc.linea.build", {
