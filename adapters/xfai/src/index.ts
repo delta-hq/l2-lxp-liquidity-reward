@@ -146,6 +146,41 @@ function getLiquidityFromTransfers(
   return groupedTransfers;
 }
 
+function groupLiquidityByUserAndToken(
+  block: BlockData,
+  liquidities: Omit<OutputDataSchemaRow, "block_number" | "timestamp">[]
+): OutputDataSchemaRow[] {
+  const groupedLiquidity: OutputDataSchemaRow[] = [];
+  const liquidityMap: Map<string, Map<string, bigint>> = new Map();
+
+  for (const liquidity of liquidities) {
+    const { user_address, token_address, token_balance } = liquidity;
+    const userMap = liquidityMap.get(user_address) || new Map();
+    const existingBalance = userMap.get(token_address) || 0n;
+    userMap.set(token_address, existingBalance + token_balance);
+    liquidityMap.set(user_address, userMap);
+  }
+
+  for (const [user, tokenMap] of liquidityMap) {
+    for (const [token, balance] of tokenMap) {
+      if (balance === 0n) {
+        continue;
+      }
+      groupedLiquidity.push({
+        block_number: Number(block.blockNumber),
+        timestamp: block.blockTimestamp,
+        user_address: user,
+        token_address: token,
+        token_balance: balance,
+        token_symbol: "",
+        usd_price: 0,
+      });
+    }
+  }
+
+  return groupedLiquidity;
+}
+
 export async function getUserTVLByBlock(
   block: BlockData
 ): Promise<OutputDataSchemaRow[]> {
@@ -204,40 +239,40 @@ export async function getUserTVLByBlock(
     ])
   );
 
-  const result: OutputDataSchemaRow[] = liquiditiesRows.flatMap(
-    ({ owner, token, pool: poolAddress, liquidity }) => {
-      const poolSupply = poolSupplies[poolAddress];
-      const poolReserve = poolRes[poolAddress];
-      const tokenBalance =
-        (liquidity * poolReserve.reserve.toBigInt()) / poolSupply.toBigInt();
-      const ethBalance =
-        (liquidity * poolReserve.ethReserve.toBigInt()) / poolSupply.toBigInt();
-      return [
-        // Token reserve
-        {
-          block_number: Number(block.blockNumber),
-          timestamp: block.blockTimestamp,
-          user_address: owner,
-          token_address: token,
-          token_balance: tokenBalance,
-          token_symbol: "",
-          usd_price: 0,
-        },
-        // WETH Reserve
-        {
-          block_number: Number(block.blockNumber),
-          timestamp: block.blockTimestamp,
-          user_address: owner,
-          token_address: WETH,
-          token_balance: ethBalance,
-          token_symbol: "WETH",
-          usd_price: 0,
-        },
-      ];
-    }
-  );
+  const result: Omit<OutputDataSchemaRow, "timestamp" | "block_number">[] =
+    liquiditiesRows.flatMap(
+      ({ owner, token, pool: poolAddress, liquidity }) => {
+        const poolSupply = poolSupplies[poolAddress];
+        const poolReserve = poolRes[poolAddress];
+        const tokenBalance =
+          (liquidity * poolReserve.reserve.toBigInt()) / poolSupply.toBigInt();
+        const ethBalance =
+          (liquidity * poolReserve.ethReserve.toBigInt()) /
+          poolSupply.toBigInt();
+        return [
+          // Token reserve
+          {
+            user_address: owner,
+            token_address: token,
+            token_balance: tokenBalance,
+            token_symbol: "",
+            usd_price: 0,
+          },
+          // WETH Reserve
+          {
+            user_address: owner,
+            token_address: WETH,
+            token_balance: ethBalance,
+            token_symbol: "WETH",
+            usd_price: 0,
+          },
+        ];
+      }
+    );
 
-  return result;
+  //
+
+  return groupLiquidityByUserAndToken(block, result);
 }
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
