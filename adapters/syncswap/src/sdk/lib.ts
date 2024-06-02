@@ -86,7 +86,6 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
         })
         const jsonData = await response.json();
 
-        console.log("jsonData",jsonData,blockNumber)
         const liquidityPositions: V2Position[] = [];
         if(jsonData.data.hasOwnProperty('liquidityPositions')) {
             liquidityPositions.push(...jsonData.data.liquidityPositions)
@@ -115,7 +114,6 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
         } else {
             skip += 1000;
         }
-        console.log("skip",skip, liquidityPositions.length)
         if(skip > 5000) {
             lastLiquidityTokenBalance = liquidityPositions[liquidityPositions.length - 1].liquidityTokenBalance
             skip = 0
