@@ -33,3 +33,18 @@ export type LpAccountBalanceHourly = {
 export type SubgraphResult = {
     lpAccountBalanceHourlies: LpAccountBalanceHourly[];
 }
+
+// Router liquidity event response
+export type RouterEventResponse = {
+    id: string;
+    domain: string;
+    router: string;
+    event: 'Add' | 'Remove';
+    asset: string;
+    amount: number;
+    balance: number;
+    block_number: number;
+    transaction_hash: string;
+    timestamp: number;
+    nonce: number;
+}
