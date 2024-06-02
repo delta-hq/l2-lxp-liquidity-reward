@@ -1,4 +1,4 @@
-import {V2_SUBGRAPH_URL, client, V2_SUBGRAPH_URL_AFTER_4515693} from "./config"
+import {V2_SUBGRAPH_URL, client} from "./config"
 import { UserPosition } from "./types"
 import {Decimal} from 'decimal.js'
 
@@ -79,12 +79,14 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             }
         }`
 
-        const response = await fetch(blockNumber >= 4515693 ? V2_SUBGRAPH_URL_AFTER_4515693 : V2_SUBGRAPH_URL, {
+        const response = await fetch(V2_SUBGRAPH_URL, {
             method: "POST",
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         })
         const jsonData = await response.json();
+
+        console.log("jsonData",jsonData,blockNumber)
         const liquidityPositions: V2Position[] = [];
         if(jsonData.data.hasOwnProperty('liquidityPositions')) {
             liquidityPositions.push(...jsonData.data.liquidityPositions)
@@ -113,6 +115,7 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
         } else {
             skip += 1000;
         }
+        console.log("skip",skip, liquidityPositions.length)
         if(skip > 5000) {
             lastLiquidityTokenBalance = liquidityPositions[liquidityPositions.length - 1].liquidityTokenBalance
             skip = 0
