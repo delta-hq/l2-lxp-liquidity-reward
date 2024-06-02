@@ -142,13 +142,16 @@ export const getUserVotesTVLByBlock = async (
     [userAddress: string]: BigNumber;
   };
 
-  const userVotesFetch = [];
-
-  for (const user of userAddresses) {
-    userVotesFetch.push(fetchUserVotes(BigInt(blockNumber), user));
+  const batchSize = 300;
+  let userVotesResult: any[] = [];
+  for (let i = 0; i < userAddresses.length; i += batchSize) {
+    const batch = userAddresses.slice(i, i + batchSize);
+    userVotesResult = userVotesResult.concat(
+      await Promise.all(
+        batch.map((user) => fetchUserVotes(BigInt(blockNumber), user)),
+      ),
+    );
   }
-
-  const userVotesResult = await Promise.all(userVotesFetch);
 
   for (const userFecthedVotes of userVotesResult) {
     for (const userVote of userFecthedVotes) {
