@@ -3,15 +3,6 @@ import {write} from "fast-csv";
 import fs from "fs";
 import _, {keys} from 'lodash';
 
-/**
- * The objective is to quantify:
- *     - TVL on Linea (size of collateral minting GRAI on Linea)
- *     - GRAI stability pool deposits on Linea
- *
- * For that, we'll be querying an existing Gravita Subgraph deployed on TheGraph.
- */
-
-
 interface BlockData {
     blockNumber: number;
     blockTimestamp: number;
@@ -196,7 +187,7 @@ export const main = async (blocks: BlockData[]) => {
                 const ws = fs.createWriteStream(`outputData.csv`, {
                     flags: i === batchSize ? "w" : "a",
                 });
-                write(allCsvRows, {headers: i === batchSize ? true : false})
+                write(allCsvRows, {headers: i === batchSize})
                     .pipe(ws)
                     .on("finish", () => {
                         console.log(`CSV file has been written.`);
@@ -214,11 +205,10 @@ export const main = async (blocks: BlockData[]) => {
 export const getUserTVLByBlock = async (blocks: BlockData) => {
     const {blockNumber, blockTimestamp} = blocks;
     //    Retrieve data using block number and timestamp
-    const csvRowsStabilityPool = await getBorrowRepaidData(
+    return await getBorrowRepaidData(
         blockNumber,
         blockTimestamp
     );
-    return csvRowsStabilityPool;
 };
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
@@ -248,8 +238,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV('./hourly_blocks.csv').then(async (blocks: any[]) => {
     // console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-    const batchSize = 1000; // Size of batch to trigger writing to the file
-    let i = 0;
 
     for (const block of blocks) {
         try {
@@ -259,7 +247,7 @@ readBlocksFromCSV('./hourly_blocks.csv').then(async (blocks: any[]) => {
             console.error(`An error occurred for block ${block}:`, error);
         }
     }
-    await new Promise((resolve, reject) => {
+    await new Promise((resolve) => {
         // const randomTime = Math.random() * 1000;
         // setTimeout(resolve, randomTime);
         const ws = fs.createWriteStream(`outputData.csv`, {flags: 'w'});
