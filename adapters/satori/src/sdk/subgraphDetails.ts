@@ -41,7 +41,7 @@ export const queryUserTVLByBlock = async (
         for (const snapshot of snapshots) {
             let userLpSnapshot:OutputDataSchemaRow = {
                 block_number:snapshot.block,
-                timestamp:snapshot.timestamp,
+                timestamp:timestamp,
                 user_address:snapshot.user,
                 token_address:ASSET,
                 token_symbol:SYMBOL,
