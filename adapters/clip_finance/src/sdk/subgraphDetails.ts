@@ -128,7 +128,7 @@ export const getUserBalanceSnapshotAtBlock = async (
     const user= share.id.substring(0, 42);
     const key = user.concat(balance.token);
     if (user == "0xa663f143055254a503467ff8b18aa9e70b9455b6" || 
-      user == "0x8355FB68eCB3F705f0eF14263A1F7FCBedE67b42") {
+      user == "0x8355fb68ecb3f705f0ef14263a1f7fcbede67b42") {
       strategyRouterBalance.set(key.concat(balance.token), balance);
     } else if (balance.balance.gt(0)) {
       if (!balanceMap.has(key)) {
