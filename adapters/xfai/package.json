@@ -1,0 +1,30 @@
+{
+  "name": "xfai",
+  "version": "1.0.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@ethersproject/providers": "^5.7.2",
+    "csv-parser": "^3.0.0",
+    "ethers": "^5.7.2",
+    "fast-csv": "^5.0.1",
+    "lodash": "^4.17.21",
+    "pg": "^8.11.5"
+  },
+  "devDependencies": {
+    "@types/lodash": "^4.17.0",
+    "@types/node": "^20.11.17",
+    "@types/pg": "^8.11.5",
+    "typescript": "^5.3.3"
+  }
+}
