@@ -5,8 +5,9 @@ import { BlockData, OutputSchemaRow, UserVote } from "./sdk/types";
 import {
   getV2UserPositionsAtBlock,
   getV3UserPositionsAtBlock,
+  getSickles,
 } from "./sdk/positions";
-import { getTimestampAtBlock } from "./sdk/common";
+import { getTimestampAtBlock, getSickleOwners } from "./sdk/common";
 import { fetchUserVotes } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
 
@@ -56,7 +57,28 @@ export const getUserTVLByBlock = async ({
         position.token_balance;
   }
 
+  // Get sickles and their owners
+  const sickleAddresses = await getSickles(blockNumber);
+  const sickleOwners = await getSickleOwners(sickleAddresses.map(s => s.sickle));
+  console.log(sickleOwners);
+
+  // Replace sickle addresses with their owners
+  const updatedBalances: Record<string, Record<string, bigint>> = {};
   for (const [user, tokenBalances] of Object.entries(balances)) {
+    const owner = (sickleOwners[user.toLowerCase()] || user).toLowerCase();
+    if (!updatedBalances[owner]) {
+      updatedBalances[owner] = {};
+    }
+
+    for (const [token, balance] of Object.entries(tokenBalances)) {
+      if (!updatedBalances[owner][token]) {
+        updatedBalances[owner][token] = 0n;
+      }
+      updatedBalances[owner][token] += balance;
+    }
+  }
+
+  for (const [user, tokenBalances] of Object.entries(updatedBalances)) {
     for (const [token, balance] of Object.entries(tokenBalances)) {
       result.push({
         block_number: blockNumber,
@@ -171,11 +193,6 @@ export const getUserVotesTVLByBlock = async (
   return result;
 };
 
-// getData().then(() => {
-//   console.log("Done");
-// });
-
-
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
 
@@ -199,7 +216,6 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
   return blocks;
 };
-
 
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
