@@ -12,43 +12,51 @@ interface BlockData {
 
 async function getUserTvlFromPerpetual(blocks: BlockData[]) {
     let snapshots: OutputDataSchemaRow[] = [];
+    let groupedSnapshots: { [user_address: string]: OutputDataSchemaRow } = {};
     for (const { blockNumber, blockTimestamp } of blocks) {
         try {          
-            snapshots = snapshots.concat(await queryUserTVLByBlock(blockNumber,blockTimestamp))         
+            snapshots = snapshots.concat(await queryUserTVLByBlock(blockNumber,blockTimestamp))
+            snapshots = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());
+            snapshots.forEach(obj => {
+                const key = obj.user_address;
+                if (!groupedSnapshots[key] || obj.block_number > groupedSnapshots[key].block_number) {
+                    groupedSnapshots[key] = obj;
+                }
+            });
+            for (const key in groupedSnapshots) {
+                groupedSnapshots[key].block_number = blockNumber;
+                groupedSnapshots[key].timestamp = blockTimestamp;
+            }
         } catch (error) {
             console.error(`An error occurred for block ${blockNumber}:`, error);
         }
-    }
-    // Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());
-    snapshots = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());
-    let groupedSnapshots: { [user_address: string]: OutputDataSchemaRow } = {};
-    snapshots.forEach(obj => {
-        const key = obj.user_address;
-        if (!groupedSnapshots[key] || obj.block_number > groupedSnapshots[key].block_number) {
-            groupedSnapshots[key] = obj;
-        }
-    });
-    return groupedSnapshots;
+    } 
+    return groupedSnapshots;         
 }
 
 async function getUserTvlFromSwap(blocks: BlockData[]) {
     let snapshots: OutputDataSchemaRow[] = [];
+    let groupedSnapshots: { [user_address: string]: OutputDataSchemaRow } = {};
     for (const {blockNumber, blockTimestamp} of blocks) {
         try {
             snapshots = snapshots.concat(await swapindex.getUserTVLByBlock({blockNumber:blockNumber, blockTimestamp:blockTimestamp}))
+            snapshots = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number + '|' + obj.token_address, obj])).values());
+            snapshots.forEach(obj => {
+                const key = obj.user_address + obj.token_address;
+                if (!groupedSnapshots[key] || obj.block_number > groupedSnapshots[key].block_number) {
+                    groupedSnapshots[key] = obj;
+                }
+            });
+            for (const key in groupedSnapshots) {
+                groupedSnapshots[key].block_number = blockNumber;
+                groupedSnapshots[key].timestamp = blockTimestamp;
+
+            }
         } catch (error) {
             console.error(`An error occurred for block ${blockNumber}:`, error);
         }
     }
-    // Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number, obj])).values());
-    snapshots = Array.from(new Map(snapshots.map(obj => [obj.user_address + '|' + obj.block_number + '|' + obj.token_address, obj])).values());
-    let groupedSnapshots: { [user_address: string]: OutputDataSchemaRow } = {};
-    snapshots.forEach(obj => {
-        const key = obj.user_address + obj.token_address;
-        if (!groupedSnapshots[key] || obj.block_number > groupedSnapshots[key].block_number) {
-            groupedSnapshots[key] = obj;
-        }
-    });
+
     return groupedSnapshots;
 }
 
