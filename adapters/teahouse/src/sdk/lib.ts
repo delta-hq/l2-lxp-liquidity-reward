@@ -36,29 +36,16 @@ interface Transfer {
     block_number: number;
   }
 
-interface MintData {
+interface Data {
   contractId_: string;
   amount: string;
   user: string;
   block_number: number;
-}
-
-interface WithdrawData {
-  contractId_: string;
-  amount: string;
-  user: string;
-  block_number: number;
-}
-
-interface TransferData {
-    data: {
-        transfers: Transfer[];
-    };
 }
 
 function mergeAndCalculateNetAmount(
-  mintData: MintData[],
-  withdrawData: WithdrawData[]
+  mintData: Data[],
+  withdrawData: Data[]
 ): UserShareTokenBalance[] {
   const userAmounts: { [user: string]: { [contractId: string]: { amount: bigint; block_number: number } } } = {};
 
@@ -153,8 +140,8 @@ export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: numb
     const mintResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: mintQuery });
     const withdrawResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: withdrawQuery });
     
-    const mintData: MintData[] = (mintResponseJson as any).data.mintThenDeposits;
-    const withdrawData: WithdrawData[] = (withdrawResponseJson as any).data.withdrawThenBurns;
+    const mintData: Data[] = (mintResponseJson as any).data.mintThenDeposits;
+    const withdrawData: Data[] = (withdrawResponseJson as any).data.withdrawThenBurns;
     const netAmountData = mergeAndCalculateNetAmount(mintData, withdrawData);
     
     snapshotsArrays = snapshotsArrays.concat(netAmountData);
@@ -188,6 +175,7 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
             orderBy: contractId_,
             orderDirection: asc,
             where: {
+              block_number_gte: ${b_start},
               block_number_lte: ${b_end},
             }
           ) {
@@ -195,17 +183,23 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
             from
             to
             value
-            timestamp_
+            block_number
           }
         }`;
   
       const responseJson = await post(V3_SUBGRAPH_URL, { query: transferQuery });
-      const transferData: TransferData = responseJson as TransferData;
-      snapshotsArrays = snapshotsArrays.concat(transferData.data.transfers);
-
-      if (transferData.data.transfers.length !== 1000) {
+      if(responseJson) {
+        const transferData: Transfer[] = (responseJson as any).data.transfers;
+        // console.log('Transfer data:', transferData);
+        snapshotsArrays = snapshotsArrays.concat(transferData);
+  
+        if (transferData.length !== 1000) {
+          break;
+        }
+      } else {
         break;
       }
+      
       skip += 1000;
       if (skip > 5000) {
         skip = 0;
@@ -216,7 +210,7 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
     const addressBalances: { [address: string]: { [contractId: string]: bigint } } = {};
   
     snapshotsArrays.forEach(transfer => {
-      const { contractId_, from, to, value } = transfer;
+      const { contractId_, from, to, value, block_number } = transfer;
       const bigIntValue = BigInt(value);
   
       if (from !== ZERO_ADDRESS) {
