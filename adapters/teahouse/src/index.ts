@@ -42,7 +42,7 @@ const pipeline = promisify(stream.pipeline);
 
 const getData = async () => {
   const blocks = [
-    4973414
+    5060431, 5062829
   ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
   const csvRows: OutputDataSchemaRow[] = [];
