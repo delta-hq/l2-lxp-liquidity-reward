@@ -99,7 +99,6 @@ export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: numb
 
   let skip = 0;
   const b_end = blockNumber;
-  let b_start = 0;
   while (true) {
     let mintQuery = `
       query MintQuery {
@@ -140,20 +139,23 @@ export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: numb
     const mintResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: mintQuery });
     const withdrawResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: withdrawQuery });
     
-    const mintData: Data[] = (mintResponseJson as any).data.mintThenDeposits;
-    const withdrawData: Data[] = (withdrawResponseJson as any).data.withdrawThenBurns;
+    let mintData: Data[] = []; // Declare and initialize mintData as an empty array
+    let withdrawData: Data[] = [];
+
+    if (mintResponseJson) {
+      mintData = (mintResponseJson as any).data.mintThenDeposits;
+    }
+    if (withdrawResponseJson) {
+      withdrawData = (withdrawResponseJson as any).data.withdrawThenBurns;
+    }
     const netAmountData = mergeAndCalculateNetAmount(mintData, withdrawData);
-    
+
     snapshotsArrays = snapshotsArrays.concat(netAmountData);
 
-    if (netAmountData.length !== 1000) {
+    if (mintData.length < 1000 && withdrawData.length < 1000) {
       break;
     }
     skip += 1000;
-    if (skip > 5000) {
-      skip = 0;
-      b_start = snapshotsArrays[snapshotsArrays.length - 1].block_number + 1;
-    }
   }
   return snapshotsArrays.length > 0 ? snapshotsArrays : null;
 }
@@ -165,7 +167,6 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
 
     let skip = 0;
     const b_end = blockNumber;
-    let b_start = 0;
     while (true) {
       let transferQuery = `
         query TransferQuery {
@@ -175,7 +176,6 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
             orderBy: contractId_,
             orderDirection: asc,
             where: {
-              block_number_gte: ${b_start},
               block_number_lte: ${b_end},
             }
           ) {
@@ -193,18 +193,13 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
         // console.log('Transfer data:', transferData);
         snapshotsArrays = snapshotsArrays.concat(transferData);
   
-        if (transferData.length !== 1000) {
+        if (transferData.length < 1000) {
           break;
         }
       } else {
         break;
       }
-      
       skip += 1000;
-      if (skip > 5000) {
-        skip = 0;
-        b_start = snapshotsArrays[snapshotsArrays.length - 1].block_number + 1;
-      }
     }
   
     const addressBalances: { [address: string]: { [contractId: string]: bigint } } = {};
