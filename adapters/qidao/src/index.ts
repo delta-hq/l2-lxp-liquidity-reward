@@ -13,9 +13,19 @@ export interface GQLResp {
 }
 
 export interface Data {
+    boughtRiskyDebtVaults: BoughtRiskyDebtVault[];
     liquidateVaults: {vaultInfo: VaultInfo}[];
     payBackTokens: PayBackToken[];
     borrowTokens: BorrowToken[];
+}
+
+interface BoughtRiskyDebtVault {
+    timestamp: string;
+    blockNumber: string;
+    riskyVault: VaultInfo;
+    riskyVaultBuyer: string;
+    amountPaidtoBuy: string;
+    newVault: VaultInfo;
 }
 
 export interface BorrowToken {
@@ -47,7 +57,7 @@ type OutputDataSchemaRow = {
 
 
 const SUBGRAPH_QUERY_URL =
-    "https://api.goldsky.com/api/public/project_clwvughgzvxku01xigwdkgqw5/subgraphs/qidao-linea/1.2/gn";
+    "https://api.goldsky.com/api/public/project_clwvughgzvxku01xigwdkgqw5/subgraphs/qidao-linea/1.3/gn";
 
 const PAGE_SIZE = 1_000
 
@@ -65,6 +75,10 @@ const post = async <T>(url: string, data: any): Promise<T> => {
     return await response.json();
 }
 
+function isBoughtRiskyDebtVault(arg: BoughtRiskyDebtVault | {vaultInfo: VaultInfo}): arg is BoughtRiskyDebtVault {
+    return "riskyVault" in arg;
+}
+
 const getBorrowRepaidData = async (
     blockNumber: number,
     blockTimestamp: number,
@@ -72,6 +86,25 @@ const getBorrowRepaidData = async (
 ): Promise<OutputDataSchemaRow[]> => {
     const BORROW_PAYBACK_QUERY = `
 {
+  boughtRiskyDebtVaults(
+    orderBy: blockNumber, 
+    orderDirection: desc,
+    where: {id_gt: "${lastId}"},
+    block: {number: ${blockNumber}}
+  ) {
+    timestamp
+    blockNumber
+    riskyVault {
+      id
+      owner
+      debt
+    }
+    riskyVault {
+      id
+      owner
+      debt
+    }
+  }
   liquidateVaults(
     orderBy: blockNumber, 
     orderDirection: asc,
@@ -134,21 +167,28 @@ const getBorrowRepaidData = async (
         const grpedBorrows = _.groupBy(borrowTokens, 'vaultInfo.owner')
         const grpedLiquidates = _.groupBy(liquidateVaults, 'vaultInfo.owner')
         const grpedPaybacks = _.groupBy(payBackTokens, 'vaultInfo.owner')
-        const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks)
+        const grpedBoughtRiskyDebtVaults = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'riskyVault.owner')
+        const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, grpedBoughtRiskyDebtVaults)
         // const sorted = _.orderBy(merged, 'blockNumber', 'asc')
         console.dir(merged, {depth: null})
-        const vInfo = Object.values(merged).flatMap( (e) => {
+        const vInfo: ({vaultInfo: VaultInfo} | BoughtRiskyDebtVault)[] = Object.values(merged).flatMap( (e) => {
             const res = _.maxBy(e, 'blockNumber')
             return res ? [res] : []
         })
 
         for (const item of vInfo) {
+            let vault: VaultInfo
+            if(isBoughtRiskyDebtVault(item)) {
+                vault = item.newVault
+            } else {
+                vault = item.vaultInfo
+            }
             csvRows.push({
                 block_number: blockNumber,
                 timestamp: blockTimestamp,
-                user_address: item.vaultInfo.owner,
+                user_address: vault.owner,
                 token_address: MAI_ADDRESS,
-                token_balance: BigInt(item.vaultInfo.debt),
+                token_balance: BigInt(vault.debt),
                 token_symbol: "MAI",
                 usd_price: 0,
             });
