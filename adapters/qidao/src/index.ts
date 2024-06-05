@@ -1,7 +1,7 @@
 import csv from 'csv-parser';
 import {write} from "fast-csv";
 import fs from "fs";
-import _, {keys} from 'lodash';
+import _ from 'lodash';
 
 interface BlockData {
     blockNumber: number;
@@ -99,7 +99,7 @@ const getBorrowRepaidData = async (
       owner
       debt
     }
-    riskyVault {
+    newVault {
       id
       owner
       debt
@@ -157,18 +157,16 @@ const getBorrowRepaidData = async (
         query: BORROW_PAYBACK_QUERY,
     });
     const k = 'borrowTokens'
-    console.log(keys(responseJson.data))
     if (!responseJson.data) {
-
         console.error('No data found for block:', blockNumber)
-        console.log(responseJson)
     } else {
         const {liquidateVaults, borrowTokens, payBackTokens} = responseJson.data
         const grpedBorrows = _.groupBy(borrowTokens, 'vaultInfo.owner')
         const grpedLiquidates = _.groupBy(liquidateVaults, 'vaultInfo.owner')
         const grpedPaybacks = _.groupBy(payBackTokens, 'vaultInfo.owner')
-        const grpedBoughtRiskyDebtVaults = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'riskyVault.owner')
-        const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, grpedBoughtRiskyDebtVaults)
+        const riskyVaultsByOwner = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'riskyVault.owner')
+        const newRiskyVaultsByOwner = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'newVault.owner')
+        const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, riskyVaultsByOwner, newRiskyVaultsByOwner)
         // const sorted = _.orderBy(merged, 'blockNumber', 'asc')
         console.dir(merged, {depth: null})
         const vInfo: ({vaultInfo: VaultInfo} | BoughtRiskyDebtVault)[] = Object.values(merged).flatMap( (e) => {
@@ -176,14 +174,8 @@ const getBorrowRepaidData = async (
             return res ? [res] : []
         })
 
-        for (const item of vInfo) {
-            let vault: VaultInfo
-            if(isBoughtRiskyDebtVault(item)) {
-                vault = item.newVault
-            } else {
-                vault = item.vaultInfo
-            }
-            csvRows.push({
+        const vaultToCsvRow = (vault: VaultInfo) => {
+            return {
                 block_number: blockNumber,
                 timestamp: blockTimestamp,
                 user_address: vault.owner,
@@ -191,7 +183,14 @@ const getBorrowRepaidData = async (
                 token_balance: BigInt(vault.debt),
                 token_symbol: "MAI",
                 usd_price: 0,
-            });
+            };
+        }
+        for (const item of vInfo) {
+            if(isBoughtRiskyDebtVault(item)) {
+                csvRows.push(vaultToCsvRow(item.newVault), vaultToCsvRow(item.riskyVault))
+            } else {
+                csvRows.push(vaultToCsvRow(item.vaultInfo));
+            }
         }
         if (responseJson.data.borrowTokens.length == PAGE_SIZE ||
             responseJson.data.liquidateVaults.length == PAGE_SIZE ||
