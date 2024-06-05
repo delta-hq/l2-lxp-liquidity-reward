@@ -321,14 +321,7 @@ export const getUserTVLByBlock = async ({
 }
 
 export const getTimestampAtBlock = async (blockNumber: number) => {
-    const publicClient = createPublicClient({
-      chain: extractChain({ chains: [linea], id: CHAINS.LINEA }),
-      transport: http(RPC_URLS[CHAINS.LINEA]),
-    });
-  
-    const block = await publicClient.getBlock({
-      blockNumber: BigInt(blockNumber),
-    });
-    
-    return Number(block.timestamp * 1000n);
-  };
+    const provider = new ethers.providers.StaticJsonRpcProvider(LINEA_RPC);
+    const block = await provider.getBlock(blockNumber)
+    return Number(block.timestamp * 1000);
+};

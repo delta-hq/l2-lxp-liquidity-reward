@@ -36,29 +36,16 @@ interface Transfer {
     block_number: number;
   }
 
-interface MintData {
+interface Data {
   contractId_: string;
   amount: string;
   user: string;
   block_number: number;
-}
-
-interface WithdrawData {
-  contractId_: string;
-  amount: string;
-  user: string;
-  block_number: number;
-}
-
-interface TransferData {
-    data: {
-        transfers: Transfer[];
-    };
 }
 
 function mergeAndCalculateNetAmount(
-  mintData: MintData[],
-  withdrawData: WithdrawData[]
+  mintData: Data[],
+  withdrawData: Data[]
 ): UserShareTokenBalance[] {
   const userAmounts: { [user: string]: { [contractId: string]: { amount: bigint; block_number: number } } } = {};
 
@@ -112,7 +99,6 @@ export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: numb
 
   let skip = 0;
   const b_end = blockNumber;
-  let b_start = 0;
   while (true) {
     let mintQuery = `
       query MintQuery {
@@ -153,20 +139,23 @@ export const getWrapperUsersShareTokenBalancesByBlock = async (blockNumber: numb
     const mintResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: mintQuery });
     const withdrawResponseJson = await post(WRAPPER_SUBGRAPH_URL, { query: withdrawQuery });
     
-    const mintData: MintData[] = (mintResponseJson as any).data.mintThenDeposits;
-    const withdrawData: WithdrawData[] = (withdrawResponseJson as any).data.withdrawThenBurns;
+    let mintData: Data[] = []; // Declare and initialize mintData as an empty array
+    let withdrawData: Data[] = [];
+
+    if (mintResponseJson) {
+      mintData = (mintResponseJson as any).data.mintThenDeposits;
+    }
+    if (withdrawResponseJson) {
+      withdrawData = (withdrawResponseJson as any).data.withdrawThenBurns;
+    }
     const netAmountData = mergeAndCalculateNetAmount(mintData, withdrawData);
-    
+
     snapshotsArrays = snapshotsArrays.concat(netAmountData);
 
-    if (netAmountData.length !== 1000) {
+    if (mintData.length < 1000 && withdrawData.length < 1000) {
       break;
     }
     skip += 1000;
-    if (skip > 5000) {
-      skip = 0;
-      b_start = snapshotsArrays[snapshotsArrays.length - 1].block_number + 1;
-    }
   }
   return snapshotsArrays.length > 0 ? snapshotsArrays : null;
 }
@@ -178,7 +167,6 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
 
     let skip = 0;
     const b_end = blockNumber;
-    let b_start = 0;
     while (true) {
       let transferQuery = `
         query TransferQuery {
@@ -195,28 +183,29 @@ export const getUsersShareTokenBalancesByBlock = async (blockNumber: number): Pr
             from
             to
             value
-            timestamp_
+            block_number
           }
         }`;
   
       const responseJson = await post(V3_SUBGRAPH_URL, { query: transferQuery });
-      const transferData: TransferData = responseJson as TransferData;
-      snapshotsArrays = snapshotsArrays.concat(transferData.data.transfers);
-
-      if (transferData.data.transfers.length !== 1000) {
+      if(responseJson) {
+        const transferData: Transfer[] = (responseJson as any).data.transfers;
+        // console.log('Transfer data:', transferData);
+        snapshotsArrays = snapshotsArrays.concat(transferData);
+  
+        if (transferData.length < 1000) {
+          break;
+        }
+      } else {
         break;
       }
       skip += 1000;
-      if (skip > 5000) {
-        skip = 0;
-        b_start = snapshotsArrays[snapshotsArrays.length - 1].block_number + 1;
-      }
     }
   
     const addressBalances: { [address: string]: { [contractId: string]: bigint } } = {};
   
     snapshotsArrays.forEach(transfer => {
-      const { contractId_, from, to, value } = transfer;
+      const { contractId_, from, to, value, block_number } = transfer;
       const bigIntValue = BigInt(value);
   
       if (from !== ZERO_ADDRESS) {
