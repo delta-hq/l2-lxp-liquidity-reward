@@ -41,8 +41,8 @@ const DYSON_POOLS_QUERY = `
 `;
 
 const DYSON_POSITIONS_QUERY = `
-    query DysonPositionsQuery($blockNumber: Int!) {
-        noteEntities(first: 1000, skip: 0, where: {isWithdrawed: false}, block: {number: $blockNumber}, orderBy: timestamp, orderDirection: desc) {
+    query DysonPositionsQuery($blockNumber: Int!, $interval: Int!, $offset: Int!) {
+        noteEntities(first: $interval, skip: $offset, where: {isWithdrawed: false}, block: {number: $blockNumber}, orderBy: timestamp, orderDirection: desc) {
             timestamp
             user
             pair
@@ -83,7 +83,6 @@ const getLatestBlockNumberAndTimestamp = async () => {
 
 const getBlockTimestamp = async (number: number): Promise<number> => {
 	const hexBlockNumber = "0x" + number.toString(16); // Convert decimal block number to hexadecimal
-	console.log(hexBlockNumber);
 	const data = await post(LINEA_RPC, {
 		jsonrpc: "2.0",
 		method: "eth_getBlockByNumber",
@@ -139,18 +138,31 @@ interface SumPosition {
 	tokenSymbol: string;
 }
 
+const fetchingAllPositionData = async (queryBlock: number, interval = 1000) => {
+	let hasMore = true;
+	let offset = 0;
+	let positionsArray: any[] = [];
+	while (hasMore) {
+		const responseJson = await post(DYSON_SUBGRAPH_QUERY_URL, {
+			query: DYSON_POSITIONS_QUERY,
+			variables: { blockNumber: queryBlock, interval, offset },
+		});
+		const partPositionsArray = responseJson?.data?.noteEntities as any[] || [];
+		hasMore = partPositionsArray.length === interval;
+		offset += interval;
+		positionsArray = positionsArray.concat(partPositionsArray);
+	}
+	return positionsArray;
+};
+
 const getPositionData = async (
 	blockNumber: number,
 	blockTimestamp: number,
 ): Promise<OutputDataSchemaRow[]> => {
 	const queryBlock = blockNumber > 675341 ? blockNumber : 675341;
 	const poolMap = await getPoolsData(blockNumber, blockTimestamp);
-	const responseJson = await post(DYSON_SUBGRAPH_QUERY_URL, {
-		query: DYSON_POSITIONS_QUERY,
-		variables: { blockNumber: queryBlock },
-	});
 	const userPositionMap = new Map<string, SumPosition>();
-	const positionsArray = responseJson?.data?.noteEntities || [];
+	const positionsArray = await fetchingAllPositionData(queryBlock)
 
 	for (let index = 0; index < positionsArray.length; index++) {
 		const element = positionsArray[index];
