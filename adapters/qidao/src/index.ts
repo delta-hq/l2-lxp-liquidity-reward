@@ -61,7 +61,7 @@ const SUBGRAPH_QUERY_URL =
 
 const PAGE_SIZE = 1_000
 
-const MAI_ADDRESS = "0xf3B001D64C656e30a62fbaacA003B1336b4ce12A"
+const MAI_ADDRESS = "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
 
 const post = async <T>(url: string, data: any): Promise<T> => {
     const response = await fetch(url, {
@@ -178,7 +178,7 @@ const getBorrowRepaidData = async (
             return {
                 block_number: blockNumber,
                 timestamp: blockTimestamp,
-                user_address: vault.owner,
+                user_address: vault.owner.toLowerCase(),
                 token_address: MAI_ADDRESS,
                 token_balance: BigInt(vault.debt),
                 token_symbol: "MAI",
