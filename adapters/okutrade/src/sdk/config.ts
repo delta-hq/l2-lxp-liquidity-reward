@@ -6,4 +6,4 @@ export const client = createPublicClient({
     transport: http("https://rpc.linea.build")
 })
 
-export const okuApiUrl = "https://accounts.icarus.tools"
+export const okuAccountApiUrl = "https://accounts.icarus.tools"

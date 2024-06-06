@@ -1,5 +1,5 @@
 import axios from "axios";
-import { client, okuApiUrl } from "./config";
+import { client, okuAccountApiUrl } from "./config";
 import { UserTvl } from "./types";
 
 export const getV3UserPositionsAtTimestamp = async (
@@ -7,7 +7,7 @@ export const getV3UserPositionsAtTimestamp = async (
 ): Promise<UserTvl[]> => {
     const result: UserTvl[] = [];
     try {
-        const userTvls = await axios.get(`${okuApiUrl}/rewards/linea/${timeStamp}`);
+        const userTvls = await axios.get(`${okuAccountApiUrl}/rewards/linea/${timeStamp}`);
         result.push(...userTvls.data);
     } catch (e) {
         console.error("failed to query userTvl values:", e);
