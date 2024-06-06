@@ -77,7 +77,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
     await new Promise<void>((resolve, reject) => {
         fs.createReadStream(filePath)
-            .pipe(csv()) // Specify the separator as '\t' for TSV files
+            .pipe(csv())
             .on('data', (row) => {
                 const blockNumber = parseInt(row.number, 10);
                 const blockTimestamp = parseInt(row.timestamp, 10);
