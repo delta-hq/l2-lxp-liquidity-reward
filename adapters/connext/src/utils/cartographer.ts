@@ -20,7 +20,12 @@ type PoolInformationResponse = {
     pool_token_decimals: [number, number];
 }
 
+export const poolInfo = new Map<string, PoolInformation>();
+
 export const getPoolInformationFromLpToken = async (lpToken: string, chainId: number): Promise<PoolInformation> => {
+    if (poolInfo.has(lpToken.toLowerCase())) {
+        return poolInfo.get(lpToken.toLowerCase())!;
+    }
     const url = `${MAINNET_CARTOGRAPHER_URL}/stableswap_pools?lp_token=eq.${lpToken.toLowerCase()}&domain=eq.${chainIdToDomain(chainId)}`;
 
     const response = await fetch(url);
@@ -29,13 +34,15 @@ export const getPoolInformationFromLpToken = async (lpToken: string, chainId: nu
         throw new Error(`More than one pool found for lpToken/chain: ${lpToken}/${chainId}`)
     }
     const { key, lp_token, pooled_tokens, pool_token_decimals, domain } = data[0];
-    return {
+    const ret = {
         key,
         lpToken: lp_token,
         pooledTokens: pooled_tokens,
         pooledTokenDecimals: pool_token_decimals,
         chainId: domainToChainId(+domain)
     }
+    poolInfo.set(lpToken.toLowerCase(), ret);
+    return ret;
 };
 
 
