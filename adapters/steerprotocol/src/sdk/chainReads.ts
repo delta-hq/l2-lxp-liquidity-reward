@@ -1,5 +1,6 @@
 import { Provider, ethers } from "ethers"
 import { RPC_URLS, CHAINS } from "./config"
+// import { Contract, Provider as MC_Provider } from 'ethers-multicall';
 
 export async function getCurrentTickAtBlock(pool: string, block: number): Promise<number> {
 
@@ -48,4 +49,48 @@ export async function getCurrentTickAtBlock(pool: string, block: number): Promis
         }
     }
     return tick
+}
+
+export interface TokenBalances  {
+    user: string;
+    balance: bigint;
+}
+
+export async function getBalanceAtBlock(token: string, potentialHolder: string, block: number): Promise<TokenBalances> {
+
+    const provider = new ethers.JsonRpcProvider(RPC_URLS[CHAINS.L2_CHAIN_ID])
+    // const provider = new MC_Provider(raw_provider, CHAINS.L2_CHAIN_ID)
+
+    
+    const balanceOfABI = [{
+        "inputs": [
+          {
+            "internalType": "address",
+            "name": "account",
+            "type": "address"
+          }
+        ],
+        "name": "balanceOf",
+        "outputs": [
+          {
+            "internalType": "uint256",
+            "name": "",
+            "type": "uint256"
+          }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+      }]
+
+    const TokenContract = new ethers.Contract(token, balanceOfABI, provider)
+    const functionFragment = TokenContract.interface.getFunction('balanceOf');
+    if (!functionFragment) throw new Error();
+
+        const callData = TokenContract.interface.encodeFunctionData(functionFragment, [potentialHolder]);
+        const tx = {
+            to: token,
+            data: callData,
+        };
+        const result = await provider.call({ ...tx, blockTag: block });
+        return ({user: potentialHolder, balance: BigInt(result)})
 }

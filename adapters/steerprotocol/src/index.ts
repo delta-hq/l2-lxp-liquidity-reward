@@ -1,5 +1,5 @@
 import { CHAINS, PROTOCOLS, RPC_URLS } from "./sdk/config";
-import { VaultPositions, getDepositorsForAddressByVaultAtBlock, getVaultPositions } from "./sdk/subgraphDetails";
+import { Depositor, VaultPositions, getDepositors, getVaultPositions } from "./sdk/subgraphDetails";
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -12,14 +12,24 @@ import { promisify } from 'util';
 
 
 
-interface CSVRow {
-  user: string;
-  vaultId: string;
-  block: number;
-  lpvalue: string;
-  poolId: string,
-  positions: number
-}
+// interface CSVRow {
+//   user: string;
+//   vaultId: string;
+//   block: number;
+//   lpvalue: string;
+//   poolId: string,
+//   positions: number
+// }
+
+type OutputDataSchemaRow = {
+  block_number: number;
+  timestamp: number;
+  user_address: string;
+  token_address: string;
+  token_balance: bigint;
+  token_symbol: string; //token symbol should be empty string if it is not available
+  usd_price: number; //assign 0 if not available
+};
 
 interface BlockData {
   blockNumber: number;
@@ -31,17 +41,17 @@ const pipeline = promisify(stream.pipeline);
 
 const getData = async () => {
   const snapshotBlocks: BlockData[] = [
-    {blockNumber: 5339627, blockTimestamp: 123}, {blockNumber: 5447950, blockTimestamp: 124}, {blockNumber: 5339736, blockTimestamp: 125}
+    // {blockNumber: 5339627, blockTimestamp: 123}, {blockNumber: 5447950, blockTimestamp: 124}, {blockNumber: 5339736, blockTimestamp: 125}
+    {blockNumber: 4153440, blockTimestamp: 1714306343}
   ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
 
   
-  let csvRows: CSVRow[] = [];
+  let csvRows: OutputDataSchemaRow[] = [];
 
   for (let block of snapshotBlocks) {
-    const depositors = await getDepositorsForAddressByVaultAtBlock(
-      block.blockNumber, block.blockTimestamp, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER
-    );
+    // const depositors = await getDepositorsForAddressByVaultAtBlock(block.blockNumber, block.blockTimestamp, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER);
+    const depositors = await getDepositors(block.blockNumber, block.blockTimestamp, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER);
 
     const vaultSet = new Set()
     for (let i = 0; i < depositors.length; i++) {
@@ -64,37 +74,43 @@ const getData = async () => {
       }
     }
 
-
-    const depositorsRow: CSVRow[] = depositors.map((depositor) => {
+    const depositorsRow: OutputDataSchemaRow[] = depositors.map((depositor: Depositor) => {
       return {
-        user: depositor.account,
-        vaultId: depositor.vault.id,
-        poolId: depositor.vault.pool,
-        block: Number(depositor.blockNumber),
-        lpvalue: (depositor.shares * vaultLPT_usd.get(depositor.vault.pool)).toString()
+        // user_address: depositor.sender,
+        // vaultId: depositor.vault.id,
+        // poolId: depositor.vault.pool,
+        // block: Number(depositor.blockNumber),
+        // lpvalue: (depositor.shares * vaultLPT_usd.get(depositor.vault.pool)).toString()
         // lpvalue: depositor.shares.toString()
-      } as CSVRow
+        block_number: depositor.blockNumber,
+        timestamp: depositor.timestamp,
+        user_address: depositor.sender,
+        token_address: depositor.vault.id,
+        token_balance: depositor.shares,
+        token_symbol: '',
+        usd_price: Number(depositor.shares * vaultLPT_usd.get(depositor.vault.pool))
+      } as OutputDataSchemaRow
     });
 
     csvRows = csvRows.concat(depositorsRow);
   } 
 
-  const vaultsPositions: {
-    [key: string]: VaultPositions[]
-  } = {};
+  // const vaultsPositions: {
+  //   [key: string]: VaultPositions[]
+  // } = {};
 
-  for (const csvRow of csvRows) {
-    let vaultPositions = [];
+  // for (const csvRow of csvRows) {
+  //   let vaultPositions = [];
 
-    if (vaultsPositions[csvRow.vaultId]) {
-      vaultPositions = vaultsPositions[csvRow.vaultId];
-    } else {
-      vaultPositions = await getVaultPositions( CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, csvRow.vaultId)
-      vaultsPositions[csvRow.vaultId] = vaultPositions;
-    }
+  //   if (vaultsPositions[csvRow.vaultId]) {
+  //     vaultPositions = vaultsPositions[csvRow.vaultId];
+  //   } else {
+  //     vaultPositions = await getVaultPositions( CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, csvRow.vaultId)
+  //     vaultsPositions[csvRow.vaultId] = vaultPositions;
+  //   }
 
-    csvRow.positions = vaultPositions[0].lowerTick.length;
-  }
+  //   csvRow.positions = vaultPositions[0].lowerTick.length;
+  // }
 
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData.csv');
