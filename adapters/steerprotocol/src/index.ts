@@ -1,5 +1,5 @@
 import { CHAINS, PROTOCOLS, RPC_URLS } from "./sdk/config";
-import { Depositor, VaultPositions, getDepositors, getVaultPositions } from "./sdk/subgraphDetails";
+import { Depositor, VaultPositions, checkMostRecentVaultPositionsInRange, getDepositors, getUserSharesByVaultAtTime, getVaultsCreatedBefore } from "./sdk/subgraphDetails";
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
@@ -9,6 +9,8 @@ import { write } from 'fast-csv';
 import fs from 'fs';
 import stream from 'stream';
 import { promisify } from 'util';
+import { getCurrentTickAtBlock } from "./sdk/chainReads";
+import Big from "big.js";
 
 
 
@@ -39,78 +41,60 @@ interface BlockData {
 const pipeline = promisify(stream.pipeline);
 
 
-const getData = async () => {
-  const snapshotBlocks: BlockData[] = [
-    // {blockNumber: 5339627, blockTimestamp: 123}, {blockNumber: 5447950, blockTimestamp: 124}, {blockNumber: 5339736, blockTimestamp: 125}
-    {blockNumber: 4153440, blockTimestamp: 1714306343}
-  ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
+export const getUserTVLByBlock  = async (blocks: BlockData) => {
+  // const getData = async () => { // FOR TESTING
+  // const snapshotBlocks: BlockData[] = [
+  //   // {blockNumber: 5339627, blockTimestamp: 123}, {blockNumber: 5447950, blockTimestamp: 124}, {blockNumber: 5339736, blockTimestamp: 125}
+  //   {blockNumber: 4153440, blockTimestamp: 1714306343}
+  // ]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
 
 
   
   let csvRows: OutputDataSchemaRow[] = [];
 
-  for (let block of snapshotBlocks) {
-    // const depositors = await getDepositorsForAddressByVaultAtBlock(block.blockNumber, block.blockTimestamp, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER);
-    const depositors = await getDepositors(block.blockNumber, block.blockTimestamp, "", "", CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER);
+  // for (let block of snapshotBlocks) {
+    const vaults = await getVaultsCreatedBefore(CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, blocks.blockTimestamp)
+    for (let i = 0; i < vaults.length; i++) {
+      const vault = vaults[i];
+      // check was in range
+      const tick = await getCurrentTickAtBlock(vault.pool, blocks.blockNumber)
+      const wasInRange = await checkMostRecentVaultPositionsInRange(CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, vault.vault, blocks.blockTimestamp, tick)
+      if (wasInRange) {
+        const userHoldings = await getUserSharesByVaultAtTime(CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, vault.vault, blocks.blockTimestamp)
+        if (Object.keys(userHoldings).length) {
+          // fetch USD for LPT
+          let value = 0
+          const url = `https://api.steer.finance/pool/lp/value?chain=${CHAINS.L2_CHAIN_ID}&address=${vault.vault}`
+          try {
+            const res = await fetch(url);
+            if (!res.ok) {
+              throw new Error(`Steer pricing api error - Status: ${res.status}`);
+            }
+            const data = await res.json()
+            value =  data.pricePerLP
+          } catch (error) {
+            // fallback keep 0
+          }
+          if (!value) value = 0;
 
-    const vaultSet = new Set()
-    for (let i = 0; i < depositors.length; i++) {
-      vaultSet.add(depositors[i].vault.id)
-    }
-    const vaultArray = Array.from(vaultSet)
-    const vaultLPT_usd = new Map()
-    for (let index = 0; index < vaultArray.length; index++) {
-      const url = `https://api.steer.finance/pool/lp/value?chain=${CHAINS.L2_CHAIN_ID}&address=${vaultArray[index]}`
-      try {
-        const res = await fetch(url);
-        if (!res.ok) {
-          throw new Error(`Steer pricing api error - Status: ${res.status}`);
+          // format obj to add
+          for (const sender in userHoldings) {
+            if (userHoldings.hasOwnProperty(sender) && userHoldings[sender] > 0){
+              csvRows.push({
+                block_number: blocks.blockNumber,
+                timestamp: blocks.blockTimestamp,
+                user_address: sender,
+                token_address: vault.vault,
+                token_balance: userHoldings[sender],
+                token_symbol: '',
+                usd_price: value // Number(userHoldings[sender]) * value / 1e18
+              })
+            }
+          }
         }
-        const data = await res.json()
-        vaultLPT_usd.set(vaultArray[index], data.pricePerLP)
-      } catch (error) {
-        // fallback to 0
-        vaultLPT_usd.set(vaultArray[index], 0)
       }
     }
-
-    const depositorsRow: OutputDataSchemaRow[] = depositors.map((depositor: Depositor) => {
-      return {
-        // user_address: depositor.sender,
-        // vaultId: depositor.vault.id,
-        // poolId: depositor.vault.pool,
-        // block: Number(depositor.blockNumber),
-        // lpvalue: (depositor.shares * vaultLPT_usd.get(depositor.vault.pool)).toString()
-        // lpvalue: depositor.shares.toString()
-        block_number: depositor.blockNumber,
-        timestamp: depositor.timestamp,
-        user_address: depositor.sender,
-        token_address: depositor.vault.id,
-        token_balance: depositor.shares,
-        token_symbol: '',
-        usd_price: Number(depositor.shares * vaultLPT_usd.get(depositor.vault.pool))
-      } as OutputDataSchemaRow
-    });
-
-    csvRows = csvRows.concat(depositorsRow);
-  } 
-
-  // const vaultsPositions: {
-  //   [key: string]: VaultPositions[]
-  // } = {};
-
-  // for (const csvRow of csvRows) {
-  //   let vaultPositions = [];
-
-  //   if (vaultsPositions[csvRow.vaultId]) {
-  //     vaultPositions = vaultsPositions[csvRow.vaultId];
-  //   } else {
-  //     vaultPositions = await getVaultPositions( CHAINS.L2_CHAIN_ID, PROTOCOLS.STEER, csvRow.vaultId)
-  //     vaultsPositions[csvRow.vaultId] = vaultPositions;
-  //   }
-
-  //   csvRow.positions = vaultPositions[0].lowerTick.length;
-  // }
+  // } 
 
   // Write the CSV output to a file
   const ws = fs.createWriteStream('outputData.csv');
@@ -119,9 +103,9 @@ const getData = async () => {
   });
 };
 
-getData().then(() => {
-  console.log("Done");
-});
+// getData().then(() => {
+//   console.log("Done");
+// });
 // getPrice(new BigNumber('1579427897588720602142863095414958'), 6, 18); //Uniswap
 // getPrice(new BigNumber('3968729022398277600000000'), 18, 6); //SupSwap
 

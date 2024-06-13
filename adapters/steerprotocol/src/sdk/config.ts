@@ -11,7 +11,7 @@ export const enum AMM_TYPES{
 
 export const SUBGRAPH_URLS = {
     [CHAINS.L2_CHAIN_ID]: {
-        [PROTOCOLS.STEER]:  "https://subgraph.steer.finance/linea/subgraphs/name/steerprotocol/steer-linea"
+        [PROTOCOLS.STEER]:  "https://api.goldsky.com/api/public/project_clohj3ta78ok12nzs5m8yag0b/subgraphs/steer-protocol-linea/1.1.1/gn"
     }
 }
 export const RPC_URLS = {

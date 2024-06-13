@@ -94,6 +94,108 @@ export async function checkMostRecentVaultPositionsInRange(
   // return highestTimestampPositions;
 }
 
+interface VaultPool {
+  vault: string;
+  pool: string;
+}
+
+export async function getVaultsCreatedBefore(
+  chainId: CHAINS,
+  protocol: PROTOCOLS,
+  timestamp: number,
+): Promise<VaultPool[]> {
+  let subgraphUrl = SUBGRAPH_URLS[chainId][protocol];
+  const query = `{
+  vaults(first: 1000, where: {createdAt_lte: "${timestamp}", pool_not: ""}) {
+      id
+      pool
+    }
+  }`
+  
+  let response = await fetch(subgraphUrl, {
+    method: "POST",
+    body: JSON.stringify({ query }),
+    headers: { "Content-Type": "application/json" },
+  });
+
+  let data: any = await response.json();
+
+  let vaultIds = data.data.vaults || [];
+  return vaultIds.map((vault: {id: string, pool: string}) => {return {vault: vault.id, pool: vault.pool}})
+}
+
+interface UserHolding {
+  sender: string;
+  shares: string;
+}
+
+export async function getUserSharesByVaultAtTime(
+  chainId: CHAINS,
+  protocol: PROTOCOLS,
+  vaultId: string,
+  timestamp: number,
+): Promise<{ [sender: string]: bigint }> {
+  let subgraphUrl = SUBGRAPH_URLS[chainId][protocol];
+  const withdrawQuery = `{
+  vaultWithdraws(where: {timeStamp_lte: "${timestamp}", vault_: {id: "${vaultId}"}}, first: 1000) {
+    sender
+    shares
+  }
+}`
+
+const depositQuery = `{
+  vaultDeposits(first: 1000, where: {timeStamp_lte: "${timestamp}", vault_: {id: "${vaultId}"}}) {
+    sender
+    shares
+  }
+}`
+
+let response = await fetch(subgraphUrl, {
+  method: "POST",
+  body: JSON.stringify({ query: depositQuery }),
+  headers: { "Content-Type": "application/json" },
+});
+
+let data: any = await response.json();
+
+const vaultDeposits: UserHolding[] = data.data.vaultDeposits || [];
+
+response = await fetch(subgraphUrl, {
+  method: "POST",
+  body: JSON.stringify({ query: withdrawQuery }),
+  headers: { "Content-Type": "application/json" },
+});
+
+data = await response.json();
+
+const vaultWithdraws: UserHolding[] = data.data.vaultWithdraws || [];
+
+  // Aggregate the net holdings of shares for each user
+  const userShares: { [sender: string]: bigint } = {};
+
+  // Process deposits
+  for (const deposit of vaultDeposits) {
+    const shares = BigInt(deposit.shares);
+    if (userShares[deposit.sender]) {
+      userShares[deposit.sender] += shares;
+    } else {
+      userShares[deposit.sender] = shares;
+    }
+  }
+
+  // Process withdrawals
+  for (const withdraw of vaultWithdraws) {
+    const shares = BigInt(withdraw.shares);
+    if (userShares[withdraw.sender]) {
+      userShares[withdraw.sender] -= shares;
+    } else {
+      userShares[withdraw.sender] = -shares;
+    }
+  }
+
+  return userShares;
+}
+
 
 
 export async function getDepositors(  
