@@ -6,8 +6,23 @@ interface IResponse {
 
 interface IData {
   id: string;
-  shareAmount: string;
+  pairs: IUserPair[];
+}
+
+interface IUserPair {
+  assetAmount: string;
   collateralAmount: string;
+  pair: IPair;
+}
+
+interface IPair {
+  asset: IAsset;
+  collateralAsset: IAsset;
+}
+
+interface IAsset {
+  id: string;
+  symbol: string;
 }
 
 type OutputDataSchemaRow = {
@@ -41,12 +56,26 @@ export const getUserTVLByBlock = async (
     const query = `{
       users(
         block: {number: ${blocks.blockNumber}}
-        where: {and: [{or: [{shareAmount_gt: 0}, {collateralAmount_gt: 0}]}, {id_gt: "${lastAddress}"}]}
+        where: {id_gt: "${lastAddress}"}
         first: ${first}
       ) {
         id
-        shareAmount
-        collateralAmount
+        pairs(
+          where: {or: [{assetAmount_gt: 0}, {collateralAmount_gt: 0}]}
+        ) {
+          assetAmount
+          collateralAmount
+          pair {
+            asset {
+              id
+              symbol
+            }
+            collateralAsset {
+              id
+              symbol
+            }
+          }
+        }
       }
     }`;
 
@@ -60,26 +89,29 @@ export const getUserTVLByBlock = async (
     if (!batch.data || batch.data.users.length == 0) break;
 
     batch.data.users.forEach((data: IData) => {
-      if (BigInt(data.shareAmount) !== 0n)
-        rows.push({
-          block_number: blocks.blockNumber,
-          timestamp,
-          user_address: data.id,
-          token_address: "0x6EeFDBAd45AA2a688bbD5b7c098c323f05Df2223",
-          token_balance: Number(data.shareAmount),
-          token_symbol: "fWETH(ezETH)-1",
-          usd_price: 0,
-        });
-      if (BigInt(data.collateralAmount) !== 0n)
+      data.pairs.forEach((userPair: IUserPair) => {
+        if (BigInt(userPair.assetAmount) !== 0n)
           rows.push({
             block_number: blocks.blockNumber,
             timestamp,
             user_address: data.id,
-            token_address: "0x2416092f143378750bb29b79eD961ab195CcEea5",
-            token_balance: Number(data.collateralAmount),
-            token_symbol: "ezETH",
+            token_address: userPair.pair.asset.id,
+            token_balance: Number(userPair.assetAmount),
+            token_symbol: userPair.pair.asset.symbol,
             usd_price: 0,
           });
+        if (BigInt(userPair.collateralAmount) !== 0n)
+            rows.push({
+              block_number: blocks.blockNumber,
+              timestamp,
+              user_address: data.id,
+              token_address: userPair.pair.collateralAsset.id,
+              token_balance: Number(userPair.collateralAmount),
+              token_symbol: userPair.pair.collateralAsset.symbol,
+              usd_price: 0,
+            });
+      });
+      
 
       lastAddress = data.id;
     });
