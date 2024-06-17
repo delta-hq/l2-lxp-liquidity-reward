@@ -7,8 +7,12 @@ const TOKEN_SYMBOL = 'miweETH';
 
 const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.0.0/gn";
 
-const makeQuery = (blockNumber: number, next = "") => `query balance {
-  tokenBalances(block: {number: ${blockNumber}}, first: 1000, where: { id_gt: "${next}" }) {
+const makeQuery = (blockNumber: number, next = "") => `query {
+  tokenBalances(
+    block: {number: ${blockNumber}},
+    first: 1000,
+    where: { id_gt: "${next}" }
+  ) {
     value
     id
   }
@@ -38,16 +42,17 @@ type OutputDataSchemaRow = {
   usd_price: number; //assign 0 if not available
 };
 
-async function post<T = any>(url: string, data: any): Promise<{ data: T }> {
+async function post<T = any>(url: string, query: any): Promise<{ data: T }> {
   const response = await fetch(url, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       Accept: "application/json",
     },
-    body: JSON.stringify(data),
+    body: JSON.stringify({ query }),
   });
-  return await response.json();
+
+  return response.json();
 };
 
 const toOutput = ({ blockNumber, blockTimestamp }: BlockData, { tokenBalances }: TokenBalancesResponse): OutputDataSchemaRow[] =>
