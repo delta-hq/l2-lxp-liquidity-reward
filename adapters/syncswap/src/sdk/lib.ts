@@ -4,6 +4,7 @@ import {Decimal} from 'decimal.js'
 
 
 type V2Position = {
+    id: string,
     liquidityTokenBalance: string,
     user: {
         id: string,
@@ -44,17 +45,20 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
 
     let skip = 0
     let fetchNext = true
-    let lastLiquidityTokenBalance = '0'
+    let lastLiquidityTokenBalance = '0.000000000000000001'
+    const uniqueMap = new Map<string, number>();
     while (fetchNext) {
+        // console.log(`fetching SyncSwap liquidityPositions size:${uniqueMap.size}, lastLiquidityTokenBalance: ${lastLiquidityTokenBalance}`)
         const query = `query {
             liquidityPositions(
                 first: 1000,
                 skip: ${skip},
-                where: { liquidityTokenBalance_gt: ${lastLiquidityTokenBalance} },
+                where: { liquidityTokenBalance_gte: ${lastLiquidityTokenBalance} },
                 block: { number: ${blockNumber} },
                 orderBy: liquidityTokenBalance,
                 orderDirection: asc
             ) {
+                id
                 liquidityTokenBalance
                 user {
                     id
@@ -90,7 +94,7 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
         if(jsonData.data.hasOwnProperty('liquidityPositions')) {
             liquidityPositions.push(...jsonData.data.liquidityPositions)
         }
-        result.push(...liquidityPositions.map((position: V2Position) => {
+        result.push(...liquidityPositions.filter(lp => !uniqueMap.has(lp['id']) && uniqueMap.set(lp['id'], 1)).map((position: V2Position) => {
             const { reserve0, reserve1 } = getV2PositionReserves(position)
             return {
                 user: position.user.id,
