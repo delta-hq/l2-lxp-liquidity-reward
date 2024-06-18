@@ -130,10 +130,10 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
                 console.log("cached collateral")
             }
 
-            let ratio = ratioCache[vault]
+            let ratio = ratioCache[usersCollaterals[user][1]]
             if (!ratio) {
-                ratio = (await (new ethers.Contract(RATIO_FEED, RATIO_ABI, lineaWallet) as any).getRatioFor(vault, {blockTag: blockNumber})).toString();
-                ratioCache[vault] = ratio;
+                ratio = (await (new ethers.Contract(RATIO_FEED, RATIO_ABI, lineaWallet) as any).getRatioFor(usersCollaterals[user][1], {blockTag: blockNumber})).toString();
+                ratioCache[usersCollaterals[user][1]] = ratio;
             } else {
                 console.log("cached ratio")
             }
@@ -205,7 +205,7 @@ export const main = async (blocks: BlockData[]) => {
 };
 
 
-// main([{blockNumber: 5251934, blockTimestamp: 123456}]);
+// main([{blockNumber: 5633581, blockTimestamp: 123456}]);
 
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
