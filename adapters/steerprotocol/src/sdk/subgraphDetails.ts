@@ -97,6 +97,10 @@ export async function checkMostRecentVaultPositionsInRange(
 interface VaultPool {
   vault: string;
   pool: string;
+  token0: string;
+  token1: string;
+  token0Symbol: string;
+  token1Symbol: string;
 }
 
 export async function getVaultsCreatedBefore(
@@ -109,6 +113,10 @@ export async function getVaultsCreatedBefore(
   vaults(first: 1000, where: {createdAt_lte: "${timestamp}", pool_not: ""}) {
       id
       pool
+      token0
+      token1
+      token0Symbol
+      token1Symbol
     }
   }`
   
@@ -121,7 +129,14 @@ export async function getVaultsCreatedBefore(
   let data: any = await response.json();
 
   let vaultIds = data.data.vaults || [];
-  return vaultIds.map((vault: {id: string, pool: string}) => {return {vault: vault.id, pool: vault.pool}})
+  return vaultIds.map((vault: {
+    token0: any;
+    token1: any;
+    token0Symbol: any;
+    token1Symbol: any;
+    id: string;
+    pool: string;
+}) => {return {vault: vault.id, pool: vault.pool, token0: vault.token0, token1: vault.token1, token0Symbol: vault.token0Symbol, token1Symbol: vault. token1Symbol}})
 }
 
 interface UserHolding {
@@ -325,6 +340,36 @@ export async function getDepositors(
   return result;
 }
 
+export async function getUnderlyingBalance(
+  chainId: CHAINS,
+  protocol: PROTOCOLS,
+  vaultId: string,
+  timestamp: number,
+): Promise<[bigint, bigint, bigint]> {
+  const query = `{
+  vaultSnapshots(
+    first: 1
+    orderBy: timestamp
+    orderDirection: desc
+    where: {timestamp_lte: "${timestamp}", vaultAddress: "${vaultId}"}
+  ) {
+    totalAmount0
+    totalAmount1
+    totalSupply
+  }
+}`
+
+let subgraphUrl = SUBGRAPH_URLS[chainId][protocol];
+let response = await fetch(subgraphUrl, {
+  method: "POST",
+  body: JSON.stringify({ query }),
+  headers: { "Content-Type": "application/json" },
+});
+let data: any = await response.json();
+let snapshot = data.data.vaultSnapshots || [];
+if ( snapshot.length == 0) return [0n,0n,0n]
+return [BigInt(snapshot[0].totalSupply), BigInt(snapshot[0].totalAmount0), BigInt(snapshot[0].totalAmount1)]
+}
 
 // export async function getVaultPositions(
 //   chainId: CHAINS,
