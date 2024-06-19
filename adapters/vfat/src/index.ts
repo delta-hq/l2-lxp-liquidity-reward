@@ -4,13 +4,13 @@ import csv from 'csv-parser';
 import fs from 'fs';
 import { write } from 'fast-csv';
 
-import { BlockData, OutputSchemaRow } from './sdk/types';
+import { BlockData, OutputSchemaRow } from './sdk/pancake/types';
 import {
   getTimestampAtBlock,
   getV3UserPositionsAtBlock,
   getSickles,
   getSickleOwners,
-} from './sdk/lib';
+} from './sdk/pancake/lib';
 
 const pipeline = promisify(stream.pipeline);
 
