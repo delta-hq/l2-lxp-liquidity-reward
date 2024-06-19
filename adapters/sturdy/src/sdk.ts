@@ -12,6 +12,7 @@ interface IData {
 interface IUserPair {
   assetAmount: string;
   collateralAmount: string;
+  debtAssetAmount: string;
   pair: IPair;
 }
 
@@ -61,10 +62,11 @@ export const getUserTVLByBlock = async (
       ) {
         id
         pairs(
-          where: {or: [{assetAmount_gt: 0}, {collateralAmount_gt: 0}]}
+          where: {or: [{assetAmount_gt: 0}, {collateralAmount_gt: 0}, {debtAssetAmount_gt: 0}]}
         ) {
           assetAmount
           collateralAmount
+          debtAssetAmount
           pair {
             asset {
               id
@@ -101,15 +103,25 @@ export const getUserTVLByBlock = async (
             usd_price: 0,
           });
         if (BigInt(userPair.collateralAmount) !== 0n)
-            rows.push({
-              block_number: blocks.blockNumber,
-              timestamp,
-              user_address: data.id,
-              token_address: userPair.pair.collateralAsset.id,
-              token_balance: Number(userPair.collateralAmount),
-              token_symbol: userPair.pair.collateralAsset.symbol,
-              usd_price: 0,
-            });
+          rows.push({
+            block_number: blocks.blockNumber,
+            timestamp,
+            user_address: data.id,
+            token_address: userPair.pair.collateralAsset.id,
+            token_balance: Number(userPair.collateralAmount),
+            token_symbol: userPair.pair.collateralAsset.symbol,
+            usd_price: 0,
+          });
+        if (BigInt(userPair.debtAssetAmount) !== 0n)
+          rows.push({
+            block_number: blocks.blockNumber,
+            timestamp,
+            user_address: data.id,
+            token_address: userPair.pair.asset.id,
+            token_balance: -Number(userPair.debtAssetAmount),
+            token_symbol: userPair.pair.asset.symbol,
+            usd_price: 0,
+          });
       });
       
 
