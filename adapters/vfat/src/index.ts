@@ -69,23 +69,19 @@ export const getUserTVLByBlock = async ({
   // Get sickles and their owners
   const sickleAddresses = await getSickles(blockNumber);
   const sickleOwners = await getSickleOwners(
-    sickleAddresses.map((s) => s.sickle)
+    sickleAddresses.map((s: any) => s.sickle)
   );
 
-  // Remove all non-sickle addresses from balances
-  const sickleAddressSet = new Set(
-    sickleAddresses.map((s) => s.sickle.toLowerCase())
-  );
-  const sickleBalances: Record<string, Record<string, bigint>> = {};
+// remove non sickle addresses from balances
   for (const [user, tokenBalances] of Object.entries(balances)) {
-    if (sickleAddressSet.has(user.toLowerCase())) {
-      sickleBalances[user] = tokenBalances;
+    if (!sickleOwners[user]) {
+      delete balances[user];
     }
   }
 
   // Replace sickle addresses with their owners
   const updatedBalances: Record<string, Record<string, bigint>> = {};
-  for (const [user, tokenBalances] of Object.entries(sickleBalances)) {
+  for (const [user, tokenBalances] of Object.entries(balances)) {
     const owner = (
       (sickleOwners as Record<string, string>)[user] || user
     ).toLowerCase(); // Replace sickle address with owner address
