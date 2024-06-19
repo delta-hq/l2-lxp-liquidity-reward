@@ -54,6 +54,10 @@ query Transfers {
 
 let vaults: Record<string, string> = {"0xf073bac22dab7faf4a3dd6c6189a70d54110525c": "0x5A7a183B6B44Dc4EC2E3d2eF43F98C5152b1d76d"}
 let collaterals: Record<string, string> = {"0xf073bac22dab7faf4a3dd6c6189a70d54110525c": "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2"}
+let collateralsLinea: Record<string, string> = {
+    "0xc02aaa39b223fe8d0a0e5c4f27ead9083c756cc2": "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f",
+    "0xae7ab96520de3a18e5e111b5eaab095312d7fe84": "0xe5d7c2a44ffddf6b295a15c148167daaaf5cf34f"
+}
 
 const post = async (url: string, data: any) => {
     try {
@@ -159,7 +163,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
                     block_number: blockNumber,
                     timestamp: blockTimestamp,
                     user_address: address.toLowerCase(),
-                    token_address: collateral.toLowerCase(),
+                    token_address: collateralsLinea[collateral.toLowerCase()],
                     token_balance: BigInt(value),
                     token_symbol: '',
                     usd_price: 0
