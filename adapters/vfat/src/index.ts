@@ -12,6 +12,11 @@ import {
   getSickleOwners,
 } from './sdk/pancake/lib';
 
+import {
+  getNileV3UserPositionsAtBlock,
+  getV2UserPositionsAtBlock,
+} from './sdk/nile/positions';
+
 const pipeline = promisify(stream.pipeline);
 
 export const getUserTVLByBlock = async ({
