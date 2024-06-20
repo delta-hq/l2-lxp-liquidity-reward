@@ -81,11 +81,15 @@ export const getBalanceMap = async (blockNumber: number) => {
             let token_address = tokenBalanceShot["token_address"];
             let token_balance = tokenBalanceShot["token_balance"];
 
-            let tokenBalance = balanceMap.get(user_address)?.get(token_address);
+            let tokenBalance = balanceMap.get(user_address);
             if (tokenBalance == undefined) {
                 let newBalance = new Map<string, string>();
                 newBalance.set(token_address, token_balance);
                 balanceMap.set(user_address, newBalance);
+            } else {
+                let balance = tokenBalance.get(token_address);
+                if (balance == undefined)
+                    tokenBalance.set(token_address, token_balance);
             }
         }
         if (tokenBalanceShots.length < 1000) {
