@@ -90,43 +90,47 @@ export const getUserTVLByBlock = async (
 
     if (!batch.data || batch.data.users.length == 0) break;
 
+    const usersInfo = {} as any;
     batch.data.users.forEach((data: IData) => {
       data.pairs.forEach((userPair: IUserPair) => {
-        if (BigInt(userPair.assetAmount) !== 0n)
-          rows.push({
-            block_number: blocks.blockNumber,
-            timestamp,
-            user_address: data.id,
-            token_address: userPair.pair.asset.id,
-            token_balance: Number(userPair.assetAmount),
-            token_symbol: userPair.pair.asset.symbol,
-            usd_price: 0,
-          });
-        if (BigInt(userPair.collateralAmount) !== 0n)
-          rows.push({
-            block_number: blocks.blockNumber,
-            timestamp,
-            user_address: data.id,
-            token_address: userPair.pair.collateralAsset.id,
-            token_balance: Number(userPair.collateralAmount),
-            token_symbol: userPair.pair.collateralAsset.symbol,
-            usd_price: 0,
-          });
-        if (BigInt(userPair.debtAssetAmount) !== 0n)
-          rows.push({
-            block_number: blocks.blockNumber,
-            timestamp,
-            user_address: data.id,
-            token_address: userPair.pair.asset.id,
-            token_balance: -Number(userPair.debtAssetAmount),
-            token_symbol: userPair.pair.asset.symbol,
-            usd_price: 0,
-          });
-      });
-      
+        if (!usersInfo[data.id])
+          usersInfo[data.id] = {} as any;
+
+        if (BigInt(userPair.assetAmount) !== 0n) {
+          if (!usersInfo[data.id][userPair.pair.asset.id])
+            usersInfo[data.id][userPair.pair.asset.id] = { amount: 0, symbol: userPair.pair.asset.symbol }
+          usersInfo[data.id][userPair.pair.asset.id]['amount'] += Number(userPair.assetAmount);
+        }
+
+        if (BigInt(userPair.collateralAmount) !== 0n) {
+          if (!usersInfo[data.id][userPair.pair.collateralAsset.id])
+            usersInfo[data.id][userPair.pair.collateralAsset.id] = { amount: 0, symbol: userPair.pair.collateralAsset.symbol }
+          usersInfo[data.id][userPair.pair.collateralAsset.id]['amount'] += Number(userPair.collateralAmount);
+        }
+
+        if (BigInt(userPair.debtAssetAmount) !== 0n) {
+          if (!usersInfo[data.id][userPair.pair.asset.id])
+            usersInfo[data.id][userPair.pair.asset.id] = { amount: 0, symbol: userPair.pair.asset.symbol }
+          usersInfo[data.id][userPair.pair.asset.id]['amount'] -= Number(userPair.debtAssetAmount);
+        }
+      })
 
       lastAddress = data.id;
     });
+
+    for (let user of Object.keys(usersInfo)) {
+      for (let token of Object.keys(usersInfo[user])) {
+        rows.push({
+          block_number: blocks.blockNumber,
+          timestamp,
+          user_address: user,
+          token_address: token,
+          token_balance: usersInfo[user][token]['amount'],
+          token_symbol: usersInfo[user][token]['symbol'],
+          usd_price: 0,
+        });
+      }
+    }
 
     console.log(
       `Processed ${rows.length} rows. Last address is ${lastAddress}`
