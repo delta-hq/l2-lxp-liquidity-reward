@@ -6,13 +6,19 @@ export type BeefyVault = {
   id: string;
   vault_address: Hex;
   undelying_lp_address: Hex;
+  strategy_address: Hex;
   chain: string;
   protocol_type: BeefyProtocolType;
 };
 
-export type BeefyProtocolType = "gamma" | "ichi" | "mendi" | "solidly";
+export type BeefyProtocolType =
+  | "gamma"
+  | "ichi"
+  | "mendi"
+  | "solidly"
+  | "beefy_clm";
 
-type ApiPlatformId = "gamma" | "ichi" | "lynex" | "mendi" | "nile"; // and more but we don't use those on linea
+type ApiPlatformId = "gamma" | "ichi" | "lynex" | "mendi" | "nile" | "beefy"; // and more but we don't use those on linea
 
 type ApiVault = {
   id: string;
@@ -21,6 +27,7 @@ type ApiVault = {
   chain: string;
   platformId: ApiPlatformId;
   tokenAddress: Hex;
+  strategy: Hex;
 };
 
 const protocol_map: Record<ApiPlatformId, BeefyProtocolType> = {
@@ -29,6 +36,7 @@ const protocol_map: Record<ApiPlatformId, BeefyProtocolType> = {
   lynex: "solidly",
   mendi: "mendi",
   nile: "solidly",
+  beefy: "beefy_clm",
 };
 
 export const getBeefyVaultConfig = memoize(
@@ -49,6 +57,7 @@ export const getBeefyVaultConfig = memoize(
           vault_address: vault.earnedTokenAddress.toLocaleLowerCase() as Hex,
           chain: vault.chain,
           protocol_type,
+          strategy_address: vault.strategy.toLocaleLowerCase() as Hex,
           undelying_lp_address: vault.tokenAddress.toLocaleLowerCase() as Hex,
         };
       });
