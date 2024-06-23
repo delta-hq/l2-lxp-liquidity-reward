@@ -3,31 +3,29 @@ export interface BlockData {
     blockTimestamp: number;
 }
 
-export type OutputSchemaRow = {
-    block_number: number;
-    timestamp: number;
-    user_address: string;
-    token_address: string;
-    token_balance: string;
-    token_symbol?: string;
-    usd_price?: number;
-};
 
-export type UserPositions = {
-    userPositions: Array<{
+export type UserBalance = {
+    userAddress: string,
+    poolAddress: string
+    tokenAddress: string
+    blockNumber: number
+    balance: bigint
+}
+
+export type LPMap = Map<string, {
+    tokenAddress: string,
+    userAddress: string,
+    balance: bigint
+}>
+
+export type UserPosition = {
+    userPositions: {
         id: string;
-        balances: Array<{
-            id: string;
-            balance: string
-            token: string;
-        }>,
-        positions: Array<{
-            id: string;
-            pool: string;
-            token: string;
-            supplied: string;
-        }>
-    }>
+        balances: {
+            balance: string,
+            token: string
+        }[]
+    }[]
 }
 
 export interface Pool {

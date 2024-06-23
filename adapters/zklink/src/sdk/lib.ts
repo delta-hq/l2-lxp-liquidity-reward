@@ -1,150 +1,242 @@
-import { OutputSchemaRow, Pool, UserPositions } from './types';
-import { getAddress, JsonRpcProvider } from 'ethers'
-import { getAllLiquidities } from './izumi.js'
+import { JsonRpcProvider } from 'ethers'
+import { getUserTVLData as getUserTVLDataInAgx } from '../protocols/agx'
+import { getUserTVLData as getUserTVLDataInInterport } from '../protocols/interport'
+import { getUserTVLData as getUserBalanceInIzumi } from '../protocols/izumi'
+import { getUserTVLData as getUserTVLDataInLayerbank } from '../protocols/layerbank'
+import { getUserTVLData as getUserTVLDataInLinkswap } from '../protocols/linkswap'
+import { getUserTVLData as getUserTVLDataInNative } from '../protocols/native'
+import { getUserTVLData as getUserTVLDataInNovaswap } from '../protocols/novaswap'
+import { getUserTVLData as getUserTVLDataInShoebill } from '../protocols/shoebill'
+import { getUserTVLData as getUserTVLDataInWagmi } from '../protocols/wagmi'
+import { getUserTVLData as getUserTVLDataInZkdx } from '../protocols/zkdx'
+import type { UserPosition, LPMap, UserBalance } from './types'
 
-type UserBalance = Pick<OutputSchemaRow, 'user_address' | 'token_balance' | 'token_address' | 'token_symbol'>
-const ezETHAddress = getAddress('0x8fee71ab3ffd6f8aec8cd2707da20f4da2bf583d')
-const ethAddress = getAddress('0x0000000000000000000000000000000000000000')
-const wETHAddress = getAddress('0x8280a4e7D5B3B658ec4580d3Bc30f5e50454F169')
 
-const getAllPools = async () => {
-  const query = `
-    query MyQuery {
-      pools(first: 1000) {
-        id
-        balance
-        decimals
-        poolName
-        symbol
-        totalSupplied
-        underlying
+const addresses = [
+  {
+    zklinkAddress: '0x0000000000000000000000000000000000000000', // ETH
+    lineaAddress: '0x0000000000000000000000000000000000000000'
+  },
+  {
+    zklinkAddress: '0x000000000000000000000000000000000000800A', // ETH
+    lineaAddress: '0x0000000000000000000000000000000000000000'
+  },
+  {
+    zklinkAddress: '0x8280a4e7D5B3B658ec4580d3Bc30f5e50454F169', // WETH
+    lineaAddress: '0x0000000000000000000000000000000000000000'
+  },
+  {
+    zklinkAddress: '0x8fee71ab3ffd6f8aec8cd2707da20f4da2bf583d', // ezETH
+    lineaAddress: '0x2416092f143378750bb29b79eD961ab195CcEea5'
+  },
+  // {
+  //   zklinkAddress: '0xAF5852CA4Fc29264226Ed0c396dE30C945589D6D', // USDT
+  //   lineaAddress: '0xA219439258ca9da29E9Cc4cE5596924745e12B93'
+  // },
+  // {
+  //   zklinkAddress: '0xfFE944D301BB97b1271f78c7d0E8C930b75DC51B', // USDC
+  //   lineaAddress: '0x176211869cA2b568f2A7D4EE941E073a821EE1ff'
+  // }
+]
+
+const tokenWhiteList = addresses.map(i => i.zklinkAddress.toLowerCase())
+
+const addressMap = new Map(addresses.map(item => [item.zklinkAddress.toLowerCase(), item.lineaAddress]))
+
+const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type QueryFunction<T> = (skip: number, pageSize: number) => Promise<T>;
+
+const fetchInParallel = async (
+  queryFunction: QueryFunction<UserPosition['userPositions']>,
+  pageSize: number,
+  maxConcurrency: number
+): Promise<UserPosition['userPositions']> => {
+  let result: UserPosition['userPositions'] = [];
+  const promises: Array<Promise<void>> = [];
+  let processedRecords = 0;
+
+  const fetchPage = async (startSkip: number) => {
+    let localSkip = startSkip;
+    let fetchNext = true;
+
+    while (fetchNext) {
+      const data = await queryFunction(localSkip, pageSize);
+      result = result.concat(data);
+      processedRecords += data.length;
+      console.log(`Processed ${processedRecords} records so far`);
+
+      if (data.length < pageSize) {
+        fetchNext = false;
+      } else {
+        localSkip += pageSize * maxConcurrency;
       }
     }
-  `;
+  };
 
-  const response = await fetch('https://graph.zklink.io/subgraphs/name/lxp-points', {
-    method: 'POST',
-    body: JSON.stringify({ query }),
-    headers: { 'Content-Type': 'application/json' },
-  });
+  for (let i = 0; i < maxConcurrency; i++) {
+    promises.push(fetchPage(i * pageSize));
+  }
 
-  const { data } = await response.json();
-  const { pools } = data
+  await Promise.all(promises);
 
-  return pools as Pool[]
-}
+  console.log(`Total processed records: ${processedRecords}`);
+  return result;
+};
 
-export const getUserPositionsAtBlock = async (
-  blockNumber: number,
-): Promise<UserBalance[]> => {
-  let result: UserBalance[] = [];
-  const pools = await getAllPools()
-  const izumiData = await getAllLiquidities(blockNumber) as { address: string, amount: string }[]
+const fetchGraphQLData = async <T>(subgraphUrl: string, query: string): Promise<T> => {
+  let response;
+  let data;
+  let retry = true;
+  let retryCount = 0;
+  const maxRetries = 5;
 
-  let skip = 0;
-  const pageSize = 1000
-  let fetchNext = true;
-  while (fetchNext) {
-    const query = `
-      query MyQuery(
-        $skip: Int = ${skip},
-        $first: Int = ${pageSize},
-        $number: Int = ${blockNumber}
-      ) {
-        userPositions(where: {validate: true}, first: $first, skip: $skip,  block: {number: $number}) {
-          id
-          balances {
-            balance
-            id
-            token
-          }
-          positions {
-            pool
-            id
-            supplied
-            token
-          }
-          validate
-        }
-      }`
+  while (retry && retryCount < maxRetries) {
+    try {
+      response = await fetch(subgraphUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query }),
+      });
 
-    const response = await fetch('https://graph.zklink.io/subgraphs/name/lxp-points-distribution', {
-      method: 'POST',
-      body: JSON.stringify({ query }),
-      headers: { 'Content-Type': 'application/json' },
-    });
+      if (!response.ok) {
+        retryCount++;
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
-    const { data } = await response.json();
-    const { userPositions } = data as UserPositions
+      data = await response.json();
+      if (data.errors) {
+        retryCount++;
+        throw new Error(`GraphQL error: ${JSON.stringify(data.errors)}`);
+      }
 
-    const res = userPositions.map(data => {
-      const userAddress = data.id
-      const ethBalance = data.balances.reduce((prev, cur) => {
-        if ([ethAddress, wETHAddress].includes(getAddress(cur.token))) {
-          return prev + BigInt(cur.balance)
-        }
-        return prev
-      }, BigInt(0))
-
-      const poolEthBalance = data.positions.reduce((prev, cur) => {
-        if ([ethAddress, wETHAddress].includes(getAddress(cur.token))) {
-          const pool = pools.find(pool => pool.id === cur.pool)
-          if (!pool) return prev
-          return prev + BigInt(cur.supplied) * BigInt(pool.balance) / BigInt(pool.totalSupplied)
-        }
-        return prev
-      }, BigInt(0))
-
-      const ezEthBalance = BigInt((data.balances.find((balance) => ezETHAddress === getAddress(balance.token)))?.balance ?? '0')
-
-      const poolEzEthBalance = data.positions.reduce((prev, cur) => {
-        if (ezETHAddress === getAddress(cur.token)) {
-          const pool = pools.find(pool => pool.id === cur.pool)
-          if (!pool) return prev
-          return prev + BigInt(cur.supplied) * BigInt(pool.balance) / BigInt(pool.totalSupplied)
-        }
-        return prev
-      }, BigInt(0))
-
-      return [{
-        user_address: userAddress,
-        token_address: ethAddress,
-        token_balance: (poolEthBalance + ethBalance),
-        token_symbol: "ETH"
-      },
-      {
-        user_address: userAddress,
-        token_address: ezETHAddress,
-        token_balance: (ezEthBalance + poolEzEthBalance),
-        token_symbol: "ezETH"
-      }].filter(i => i.token_balance > BigInt(0)).map((data) => ({
-        ...data,
-        token_balance: data.token_balance.toString()
-      }))
-    })
-
-    result.push(...res.flat())
-
-    if (userPositions.length < pageSize) {
-      console.log(`The last data from ${skip} to ${skip + pageSize}`)
-      fetchNext = false;
-    } else {
-      console.log(`The data from ${skip} to ${skip + pageSize}`)
-      skip += pageSize
+      retry = false;
+    } catch (error) {
+      console.error('Fetch error:', error);
+      console.log('Retrying in 5 seconds...');
+      await delay(10000);
+      retryCount++;
     }
   }
 
-  result = result.map(item => {
-    const izumi = izumiData.find(d => d.address === item.user_address)
-    if (!izumi) return item
-    return { ...item, token_balance: (BigInt((item.token_balance)) + BigInt(izumi.amount)).toString() }
-  }).sort((a, b) => Number(a.token_balance) - Number(b.token_balance))
-  const totalETH = result.filter(i => i.token_address === ethAddress).reduce((prev, cur) => prev + (Number(cur.token_balance) / 1e18), (0))
-  const totalEzETH = result.filter(i => i.token_address === ezETHAddress).reduce((prev, cur) => prev + (Number(cur.token_balance) / 1e18), (0))
-  console.log('Total ETH:', totalETH, ' Total ezETH:', totalEzETH);
+  if (retryCount >= maxRetries) {
+    console.error("Maximum retry limit reached");
+  }
 
-  return result;
+  return data;
 };
+
+const getUserBalance = async (blockNumber: number, tokenWhiteList: string[]) => {
+  const pageSize = 1000;
+  const maxConcurrency = 10;
+
+  const queryFunction: QueryFunction<UserPosition["userPositions"]> = async (skip, pageSize) => {
+    const query = `
+      query MyQuery(
+        $first: Int = ${pageSize},
+        $skip: Int = ${skip}, 
+        $number: Int = ${blockNumber}, 
+        $token_in: [Bytes!] = ${JSON.stringify(tokenWhiteList)},
+        ) {
+        userPositions(first: $first, skip: $skip, block: {number: $number}) {
+          id
+          balances(where: {token_in: $token_in}) {
+            balance
+            token
+          }
+        }
+      }
+    `;
+    console.log(`The data from ${skip} to ${skip + pageSize}`)
+    const { data } = await fetchGraphQLData<{ data: UserPosition }>('https://graph.zklink.io/subgraphs/name/lxp-points', query);
+    const result = data.userPositions
+    return result
+  };
+
+  const result = await fetchInParallel(queryFunction, pageSize, maxConcurrency);
+
+  return result
+    .map(item => {
+      const userAddress = item.id;
+      return item.balances.map(position => ({
+        balance: BigInt(position.balance),
+        tokenAddress: position.token,
+        userAddress: userAddress
+      }))
+    })
+    .flat()
+    .filter(i => tokenWhiteList.includes(i.tokenAddress.toLowerCase()))
+    .map(i => ({
+      balance: i.balance,
+      tokenAddress: addressMap.get(i.tokenAddress.toLowerCase())?.toLowerCase()!,
+      userAddress: i.userAddress.toLowerCase(),
+    }))
+};
+
+const getLPInfo = async (blockNumber: number): Promise<{ lpMap: LPMap, poolAddress: string[] }> => {
+  const result = (await Promise.all([
+    getUserTVLDataInAgx(blockNumber),
+    getUserTVLDataInInterport(blockNumber),
+    getUserBalanceInIzumi(blockNumber),
+    getUserTVLDataInLayerbank(blockNumber),
+    getUserTVLDataInLinkswap(blockNumber),
+    getUserTVLDataInNative(blockNumber),
+    getUserTVLDataInNovaswap(blockNumber),
+    getUserTVLDataInShoebill(blockNumber),
+    getUserTVLDataInWagmi(blockNumber),
+    getUserTVLDataInZkdx(blockNumber),
+  ])).flat() as UserBalance[]
+
+  const filteredData = result
+    .filter(i => i.balance > 0n && tokenWhiteList.includes(i.tokenAddress.toLowerCase()))
+    .map(item => ({
+      ...item,
+      tokenAddress: addressMap.get(item.tokenAddress.toLowerCase())!
+    }));
+
+  const lpMap = filteredData.reduce((result, item) => {
+    const key = item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase()
+    const resultItem = result.get(key)
+    if (resultItem) {
+      resultItem.balance = resultItem.balance + item.balance
+    } else {
+      result.set(key, {
+        tokenAddress: item.tokenAddress.toLowerCase(),
+        userAddress: item.userAddress.toLowerCase(),
+        balance: item.balance
+      })
+    }
+    return result
+  }, new Map())
+  const poolAddress = [...new Set(filteredData.map(i => i.poolAddress.toLowerCase()))]
+  return { lpMap, poolAddress }
+}
+
+export const getUserBalanceSnapshotAtBlock = async (blockNumber: number) => {
+  const [userBalancePosition, lpInfo] = await Promise.all(
+    [
+      getUserBalance(blockNumber, tokenWhiteList),
+      getLPInfo(blockNumber)
+    ])
+
+  const userTokenPositionMap = userBalancePosition.reduce((map, item) => {
+    if (!lpInfo.poolAddress.includes(item.userAddress.toLowerCase())) {
+      map.set(item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase(), item)
+    }
+    return map
+  }, new Map<string, { balance: bigint; tokenAddress: string; userAddress: string; }>())
+
+
+  lpInfo.lpMap.forEach((val, key) => {
+    const balancePosition = userTokenPositionMap.get(key)
+    if (balancePosition) {
+      balancePosition.balance = balancePosition.balance + val.balance
+    } else {
+      userTokenPositionMap.set(key, val)
+    }
+  })
+  return userTokenPositionMap.values()
+}
 
 export const getTimestampAtBlock = async (blockNumber: number) => {
   const provider = new JsonRpcProvider('https://rpc.zklink.io')
