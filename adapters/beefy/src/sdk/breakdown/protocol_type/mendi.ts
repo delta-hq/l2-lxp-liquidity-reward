@@ -24,6 +24,7 @@ export const getMendiVaultBreakdown = async (
     vault,
     blockNumber,
     vaultTotalSupply,
+    isLiquidityEligible: true,
     balances: [
       {
         tokenAddress: vault.undelying_lp_address.toLocaleLowerCase() as Hex,
