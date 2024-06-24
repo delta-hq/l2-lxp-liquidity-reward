@@ -1,10 +1,10 @@
 import {client} from "./utils/client";
-import {searchStartBlock, stablecoinFarmAddress, vaultsAddresses, zeroAddress} from "./utils/constants";
-import {vaultAbi} from "./utils/vault-abi"
+import {farmPid, stablecoinFarmAddress, vaultsAddresses, zeroAddress} from "./utils/constants";
 import fs from "fs";
-import { write } from "fast-csv";
+import {write} from "fast-csv";
 import csv from 'csv-parser';
-
+import {erc20Abi} from "viem";
+import {farmAbi} from "./utils/abis";
 
 interface BlockData {
     blockNumber: number;
@@ -21,46 +21,40 @@ type OutputDataSchemaRow = {
     usd_price: number; //assign 0 if not available
 };
 
-// const getBlockTimestamp = async (blockNumber: bigint) => {
-//     const data = await client.getBlock({
-//         blockNumber: blockNumber
-//     })
-//     return Number(data.timestamp);
-// }
+type UserInfo = {
+    result: [bigint, bigint, bigint]
+}
 
-const collectTransferEvents = async (events: any[], token_symbol: string, block_timestamp: number) => {
-    const csvRows: OutputDataSchemaRow[] = [];
-    for (let i = 0; i < events.length; i++) {
-        const {
-            args: {from: senderAddress_address, to: receiver_address, amount: token_balance},
-            blockNumber,
-            address: token_address
-        } = events[i]
-        const timestamp = block_timestamp
-        if(senderAddress_address !== stablecoinFarmAddress && senderAddress_address !== zeroAddress) {
-            csvRows.push({
-                block_number: Number(blockNumber),
-                timestamp,
-                user_address: senderAddress_address,
-                token_address,
-                token_balance: -BigInt(token_balance),
-                token_symbol,
-                usd_price: 0
-            })
+type BalanceOf = {
+    result: bigint
+}
+
+let holdersRetrieved = false;
+const holders: Set<`0x${string}`> = new Set();
+
+const getAllHolders = async (block: number) => {
+    if (!holdersRetrieved) {
+        for (const vault of vaultsAddresses) {
+            const logs = await client.getContractEvents({
+                address: vault.address,
+                abi: erc20Abi,
+                eventName: "Transfer",
+                fromBlock: vault.start_block,
+                toBlock: BigInt(block),
+            });
+
+            logs.forEach((log) => {
+                if (log.args.from && ![stablecoinFarmAddress, zeroAddress].includes(log.args.from))
+                    holders.add(log.args.from);
+                if (log.args.to && ![stablecoinFarmAddress, zeroAddress].includes(log.args.to))
+                    holders.add(log.args.to);
+            });
         }
-        if (receiver_address !== stablecoinFarmAddress && receiver_address !== zeroAddress) {
-            csvRows.push({
-                block_number: Number(blockNumber),
-                timestamp,
-                user_address: receiver_address,
-                token_address,
-                token_balance: BigInt(token_balance),
-                token_symbol,
-                usd_price: 0
-            })
-        }
+
+        holdersRetrieved = true;
     }
-    return csvRows;
+
+    return holders;
 }
 
 export const getUserTVLByBlock = async (
@@ -68,76 +62,103 @@ export const getUserTVLByBlock = async (
 ): Promise<OutputDataSchemaRow[]> => {
     const {blockNumber, blockTimestamp} = blocks
     const allCsvRows: OutputDataSchemaRow[] = [];
+
+    const holders = await getAllHolders(blockNumber);
+
     for (let i = 0; i < vaultsAddresses.length; i++) {
         const {address, token_symbol} = vaultsAddresses[i];
-        let currentStartingBlock = searchStartBlock;
-        while (currentStartingBlock < blockNumber) {
-            const endBlock = currentStartingBlock + 799 > blockNumber ? blockNumber : currentStartingBlock + 799
-            const transferEvents = await client.getContractEvents({
-                address,
-                abi: vaultAbi,
-                eventName: "Transfer",
-                fromBlock: BigInt(currentStartingBlock),
-                toBlock: BigInt(endBlock),
+        const balanceReads: any[] = [];
+        const farmReads: any[] = [];
+
+        holders.forEach((holder) => {
+            balanceReads.push({
+                abi: erc20Abi,
+                functionName: "balanceOf",
+                address: address,
+                args: [holder],
+                blockNumber,
             });
-            const transferCsvRows = await collectTransferEvents(transferEvents, token_symbol, blockTimestamp);
-            allCsvRows.push(...transferCsvRows)
-            currentStartingBlock = endBlock
+            farmReads.push({
+                abi: farmAbi,
+                functionName: "userInfo",
+                address: stablecoinFarmAddress,
+                args: [farmPid[address], holder],
+                blockNumber,
+
+            })
+        });
+
+        const balances: BalanceOf[] = await client.multicall({contracts: balanceReads}) as BalanceOf[];
+        const usersInfo: UserInfo[] = await client.multicall({contracts: farmReads}) as UserInfo[];
+
+        for (let j = 0; j < Array.from(holders).length; j++) {
+            const farmBalance = usersInfo[j].result[0];
+            const userBalance = balances[j].result;
+
+            if (balances[j].result || farmBalance)
+                allCsvRows.push({
+                    block_number: blockNumber,
+                    timestamp: blockTimestamp,
+                    user_address: Array.from(holders)[j].toLowerCase(),
+                    token_address: address.toLowerCase(),
+                    token_symbol: token_symbol,
+                    token_balance: userBalance + farmBalance,
+                    usd_price: 0,
+                });
         }
     }
+
     return allCsvRows
 }
 
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
     const blocks: BlockData[] = [];
-  
+
     await new Promise<void>((resolve, reject) => {
-      fs.createReadStream(filePath)
-        .pipe(csv()) // Specify the separator as '\t' for TSV files
-        .on('data', (row) => {
-          const blockNumber = parseInt(row.number, 10);
-          const blockTimestamp = parseInt(row.timestamp, 10);
-          if (!isNaN(blockNumber) && blockTimestamp) {
-            blocks.push({ blockNumber: blockNumber, blockTimestamp });
-          }
-        })
-        .on('end', () => {
-          resolve();
-        })
-        .on('error', (err) => {
-          reject(err);
-        });
+        fs.createReadStream(filePath)
+            .pipe(csv()) // Specify the separator as '\t' for TSV files
+            .on('data', (row) => {
+                const blockNumber = parseInt(row.number, 10);
+                const blockTimestamp = parseInt(row.timestamp, 10);
+                if (!isNaN(blockNumber) && blockTimestamp) {
+                    blocks.push({blockNumber: blockNumber, blockTimestamp});
+                }
+            })
+            .on('end', () => {
+                resolve();
+            })
+            .on('error', (err) => {
+                reject(err);
+            });
     });
-  
+
     return blocks;
-  };
-  
-  
-  readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
-    console.log(blocks);
+};
+
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-  
+
     for (const block of blocks) {
         try {
             const result = await getUserTVLByBlock(block);
-            for(let i = 0; i < result.length; i++){
-              allCsvRows.push(result[i])
-            }
+
+            allCsvRows.push(...result)
         } catch (error) {
             console.error(`An error occurred for block ${block}:`, error);
         }
     }
-    await new Promise((resolve, reject) => {
-      const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-      write(allCsvRows, { headers: true })
-          .pipe(ws)
-          .on("finish", () => {
-          console.log(`CSV file has been written.`);
-          resolve;
-          });
+
+    await new Promise((resolve) => {
+        const ws = fs.createWriteStream(`outputData.csv`, {flags: 'w'});
+        write(allCsvRows, {headers: true})
+            .pipe(ws)
+            .on("finish", () => {
+                console.log(`CSV file has been written.`);
+                resolve;
+            });
     });
-  }).catch((err) => {
+}).catch((err) => {
     console.error('Error reading CSV file:', err);
-  });
-  
+});
