@@ -11,7 +11,7 @@ export const fetchGraphQLData = async (query: string): Promise<Response> => {
 
   while (retry && retryCount < maxRetries) {
     try {
-      const response = await fetch("http://3.114.68.110:8000/subgraphs/name/linkswap-points", {
+      const response = await fetch("https://graph.zklink.io/subgraphs/name/linkswap-points", {
         method: "POST",
         body: JSON.stringify({ query }),
         headers: { "Content-Type": "application/json" },
