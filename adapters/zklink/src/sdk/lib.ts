@@ -212,7 +212,8 @@ const getLPInfo = async (blockNumber: number): Promise<{ lpMap: LPMap, poolAddre
   return { lpMap, poolAddress }
 }
 
-export const getUserBalanceSnapshotAtBlock = async (blockNumber: number) => {
+export const getUserBalanceSnapshotAtBlock = async (lineaBlockNumber: number) => {
+  const blockNumber = Number(await mapLineaBlockToNovaBlock(lineaBlockNumber))
   const [userBalancePosition, lpInfo] = await Promise.all(
     [
       getUserBalance(blockNumber, tokenWhiteList),
@@ -238,8 +239,21 @@ export const getUserBalanceSnapshotAtBlock = async (blockNumber: number) => {
   return userTokenPositionMap.values()
 }
 
-export const getTimestampAtBlock = async (blockNumber: number) => {
-  const provider = new JsonRpcProvider('https://rpc.zklink.io')
+export const mapLineaBlockToNovaBlock = async (blockNumber: number) => {
+  const provider = new JsonRpcProvider('https://rpc.linea.build')
   const block = await provider.getBlock(blockNumber)
-  return Number(block?.timestamp);
+  const query = `query BlockInfo($timestamp_lte: BigInt = ${block?.timestamp}) {
+    blocks(
+      where: {timestamp_lte: $timestamp_lte}
+      first: 1
+      orderBy: timestamp
+      orderDirection: desc
+    ) {
+      number
+      timestamp
+    }
+  }
+`
+  const { data } = await fetchGraphQLData<{ data: { blocks: { number: string }[] } }>('https://graph.zklink.io/subgraphs/name/nova-blocks', query)
+  return data.blocks[0].number
 };
