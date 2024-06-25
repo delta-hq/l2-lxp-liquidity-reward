@@ -37,6 +37,13 @@ export interface VaultInfo {
     id: string;
     owner: string;
     debt: string;
+    collateralAmount: string;
+    collateralValue: string;
+    collateral: {
+        symbol: string;
+        id: string;
+        decimals: string
+    };
 }
 
 export interface PayBackToken {
@@ -57,7 +64,7 @@ type OutputDataSchemaRow = {
 
 
 const SUBGRAPH_QUERY_URL =
-    "https://api.goldsky.com/api/public/project_clwvughgzvxku01xigwdkgqw5/subgraphs/qidao-linea/1.3/gn";
+    "https://api.goldsky.com/api/public/project_clwvughgzvxku01xigwdkgqw5/subgraphs/qidao-linea/1.4/gn";
 
 const PAGE_SIZE = 1_000
 
@@ -98,11 +105,21 @@ const getBorrowRepaidData = async (
       id
       owner
       debt
+      collateralAmount
+      collateral {
+        symbol
+        id
+      }
     }
     newVault {
       id
       owner
-      debt
+      debt 
+      collateralAmount
+      collateral {
+        symbol
+        id
+      }
     }
   }
   liquidateVaults(
@@ -118,6 +135,11 @@ const getBorrowRepaidData = async (
       owner
       id
       debt
+      collateralAmount
+      collateral {
+        symbol
+        id
+      }
     }
   }
   payBackTokens(
@@ -134,6 +156,11 @@ const getBorrowRepaidData = async (
       id
       owner
       debt
+      collateralAmount
+      collateral {
+        symbol
+        id
+      }
     }
   }
   borrowTokens(
@@ -149,6 +176,11 @@ const getBorrowRepaidData = async (
       id
       owner
       debt
+      collateralAmount
+      collateral {
+        symbol
+        id
+      }
     }
   }
 }`;
@@ -168,7 +200,7 @@ const getBorrowRepaidData = async (
         const newRiskyVaultsByOwner = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'newVault.owner')
         const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, riskyVaultsByOwner, newRiskyVaultsByOwner)
         // const sorted = _.orderBy(merged, 'blockNumber', 'asc')
-        console.dir(merged, {depth: null})
+        // console.dir(merged, {depth: null})
         const vInfo: ({vaultInfo: VaultInfo} | BoughtRiskyDebtVault)[] = Object.values(merged).flatMap( (e) => {
             const res = _.maxBy(e, 'blockNumber')
             return res ? [res] : []
@@ -179,9 +211,9 @@ const getBorrowRepaidData = async (
                 block_number: blockNumber,
                 timestamp: blockTimestamp,
                 user_address: vault.owner.toLowerCase(),
-                token_address: MAI_ADDRESS,
-                token_balance: BigInt(vault.debt),
-                token_symbol: "MAI",
+                token_address: vault.collateral.id,
+                token_balance: BigInt(vault.collateralAmount),
+                token_symbol: vault.collateral.symbol,
                 usd_price: 0,
             };
         }
@@ -194,7 +226,9 @@ const getBorrowRepaidData = async (
         }
         if (responseJson.data.borrowTokens.length == PAGE_SIZE ||
             responseJson.data.liquidateVaults.length == PAGE_SIZE ||
-            responseJson.data.payBackTokens.length == PAGE_SIZE) {
+            responseJson.data.payBackTokens.length == PAGE_SIZE ||
+            responseJson.data.boughtRiskyDebtVaults.length == PAGE_SIZE
+        ) {
             const lastRecord = responseJson.data[k][responseJson.data[k].length - 1] as any
             csvRows.push(...await getBorrowRepaidData(blockNumber, blockTimestamp, lastRecord.id))
         }
