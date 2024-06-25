@@ -75,8 +75,7 @@ export const getUserTVLByBlock = async (
       }
 
       investorTokenBalances[position.user_address][balance.tokenAddress] +=
-        (BigInt(position.token_address) * balance.vaultBalance) /
-        breakdown.vaultTotalSupply;
+        (position.balance * balance.vaultBalance) / breakdown.vaultTotalSupply;
     }
   }
 
