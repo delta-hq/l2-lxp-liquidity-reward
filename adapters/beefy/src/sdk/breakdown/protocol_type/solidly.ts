@@ -38,6 +38,7 @@ export const getSolidlyVaultBreakdown = async (
     vault,
     blockNumber,
     vaultTotalSupply,
+    isLiquidityEligible: true,
     balances: [
       {
         tokenAddress: t0.toLocaleLowerCase() as Hex,

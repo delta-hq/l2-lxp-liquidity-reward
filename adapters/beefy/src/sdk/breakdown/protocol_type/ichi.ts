@@ -46,6 +46,7 @@ export const getGammaVaultBreakdown = async (
     vault,
     blockNumber,
     vaultTotalSupply,
+    isLiquidityEligible: true,
     balances: [
       {
         tokenAddress: token0.toLocaleLowerCase() as Hex,

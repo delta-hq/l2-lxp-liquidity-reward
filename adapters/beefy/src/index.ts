@@ -6,7 +6,7 @@ import { getVaultBreakdowns } from "./sdk/breakdown/getVaultBreakdown";
 import { uniq } from "lodash";
 import { BeefyVaultBreakdown } from "./sdk/breakdown/types";
 import { Hex } from "viem";
-import { getVaultShareTokenBalances } from "./sdk/vault/getVaultShareTokenBalances";
+import { getTokenBalances } from "./sdk/vault/getTokenBalances";
 
 interface BlockData {
   blockNumber: number;
@@ -30,11 +30,11 @@ export const getUserTVLByBlock = async (
 
   const [vaultConfigs, investorPositions] = await Promise.all([
     getBeefyVaultConfig("linea"),
-    getVaultShareTokenBalances(BigInt(blockNumber)),
+    getTokenBalances(BigInt(blockNumber)),
   ]);
 
   const vaultAddressWithActivePosition = uniq(
-    investorPositions.map((pos) => pos.vault_address.toLowerCase())
+    investorPositions.map((pos) => pos.token_address)
   );
   const vaults = vaultConfigs.filter((vault) =>
     vaultAddressWithActivePosition.includes(vault.vault_address)
@@ -53,9 +53,14 @@ export const getUserTVLByBlock = async (
     Record<Hex /* token */, bigint /* amount */>
   > = {};
   for (const position of investorPositions) {
-    const breakdown = breakdownByVaultAddress[position.vault_address];
+    const breakdown = breakdownByVaultAddress[position.token_address];
     if (!breakdown) {
       // some test vaults were never available in the api
+      continue;
+    }
+
+    if (breakdown.isLiquidityEligible === false) {
+      // skip non-eligible vaults
       continue;
     }
 
@@ -70,7 +75,7 @@ export const getUserTVLByBlock = async (
       }
 
       investorTokenBalances[position.user_address][balance.tokenAddress] +=
-        (BigInt(position.shares_balance) * balance.vaultBalance) /
+        (BigInt(position.token_address) * balance.vaultBalance) /
         breakdown.vaultTotalSupply;
     }
   }
