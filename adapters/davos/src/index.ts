@@ -51,7 +51,6 @@ const post = async (url: string, data: any) => {
         },
         body: JSON.stringify(data),
     });
-    console.log(await response.clone().json())
     return await response.json();
 };
 
