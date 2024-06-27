@@ -222,7 +222,13 @@ export const getUserBalanceSnapshotAtBlock = async (lineaBlockNumber: number) =>
 
   const userTokenPositionMap = userBalancePosition.reduce((map, item) => {
     if (!lpInfo.poolAddress.includes(item.userAddress.toLowerCase())) {
-      map.set(item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase(), item)
+      const key = item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase()
+      const existItem = map.get(key)
+      if (existItem) {
+        existItem.balance += item.balance
+      } else {
+        map.set(key, item)
+      }
     }
     return map
   }, new Map<string, { balance: bigint; tokenAddress: string; userAddress: string; }>())
