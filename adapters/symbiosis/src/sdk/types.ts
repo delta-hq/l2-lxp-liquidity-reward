@@ -3,7 +3,7 @@ export interface BlockData {
   blockTimestamp: number;
 }
 
-export type OutputSchemaRow = {
+export type OutputDataSchemaRow = {
   block_number: number;
   timestamp: number;
   user_address: string;

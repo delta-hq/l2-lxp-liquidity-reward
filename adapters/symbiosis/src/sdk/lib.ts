@@ -1,5 +1,5 @@
 import { SUBGRAPH_URL_VESIS } from "./config";
-import { OutputSchemaRow, BlockData, UserDeposit } from "./types";
+import { OutputDataSchemaRow, BlockData, UserDeposit } from "./types";
 
 const SIS_TOKEN_LINEA_ADDRESS = "0x6EF95B6f3b0F39508e3E04054Be96D5eE39eDE0d";
 const SIS_TOKEN_SYMBOL = "SIS";
@@ -7,7 +7,7 @@ const SIS_TOKEN_SYMBOL = "SIS";
 export const getUserTVLByBlock = async ({
   blockNumber,
   blockTimestamp,
-}: BlockData): Promise<OutputSchemaRow[]> => {
+}: BlockData): Promise<OutputDataSchemaRow[]> => {
   let skip = 0;
   const allDeposits = [];
   const PAGE_SIZE = 1000;
@@ -40,7 +40,7 @@ export const getUserTVLByBlock = async ({
       throw new Error("Failed to fetch deposited users");
     }
 
-    const deposits: OutputSchemaRow[] = result.data.deposits.map(
+    const deposits: OutputDataSchemaRow[] = result.data.deposits.map(
       ({ provider, value }: UserDeposit) => ({
         block_number: blockNumber,
         timestamp: blockTimestamp,
@@ -70,7 +70,7 @@ export const getUserTVLByBlock = async ({
     };
 
     return acc;
-  }, {} as Record<string, OutputSchemaRow>);
+  }, {} as Record<string, OutputDataSchemaRow>);
 
   return Object.values(mergedDepositsMap);
 };
