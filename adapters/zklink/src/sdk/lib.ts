@@ -11,6 +11,7 @@ import { getUserTVLData as getUserTVLDataInWagmi } from '../protocols/wagmi'
 import { getUserTVLData as getUserTVLDataInZkdx } from '../protocols/zkdx'
 import type { UserPosition, LPMap, UserBalance } from './types'
 
+const SPECIAL_ADDRESS = '0xEDeE7052eC016A507E65D6BbffCa535076B227DE'
 
 const addresses = [
   {
@@ -138,7 +139,7 @@ const getUserBalance = async (blockNumber: number, tokenWhiteList: string[]) => 
         $number: Int = ${blockNumber}, 
         $token_in: [Bytes!] = ${JSON.stringify(tokenWhiteList)},
         ) {
-        userPositions(first: $first, skip: $skip, block: {number: $number}) {
+        userPositions(first: $first, skip: $skip, block: {number: $number}, where: {id_not: ${JSON.stringify(SPECIAL_ADDRESS)}}) {
           id
           balances(where: {token_in: $token_in}) {
             balance
@@ -154,6 +155,8 @@ const getUserBalance = async (blockNumber: number, tokenWhiteList: string[]) => 
   };
 
   const result = await fetchInParallel(queryFunction, pageSize, maxConcurrency);
+  const provider = new JsonRpcProvider('https://rpc.zklink.io')
+  const specialAddressBalance = await provider.getBalance(SPECIAL_ADDRESS)
 
   return result
     .map(item => {
@@ -166,6 +169,11 @@ const getUserBalance = async (blockNumber: number, tokenWhiteList: string[]) => 
     })
     .flat()
     .filter(i => tokenWhiteList.includes(i.tokenAddress.toLowerCase()))
+    .concat({
+      balance: specialAddressBalance,
+      tokenAddress: "0x0000000000000000000000000000000000000000",
+      userAddress: SPECIAL_ADDRESS
+    })
     .map(i => ({
       balance: i.balance,
       tokenAddress: addressMap.get(i.tokenAddress.toLowerCase())?.toLowerCase()!,
@@ -222,7 +230,13 @@ export const getUserBalanceSnapshotAtBlock = async (lineaBlockNumber: number) =>
 
   const userTokenPositionMap = userBalancePosition.reduce((map, item) => {
     if (!lpInfo.poolAddress.includes(item.userAddress.toLowerCase())) {
-      map.set(item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase(), item)
+      const key = item.userAddress.toLowerCase() + item.tokenAddress.toLowerCase()
+      const existItem = map.get(key)
+      if (existItem) {
+        existItem.balance += item.balance
+      } else {
+        map.set(key, item)
+      }
     }
     return map
   }, new Map<string, { balance: bigint; tokenAddress: string; userAddress: string; }>())

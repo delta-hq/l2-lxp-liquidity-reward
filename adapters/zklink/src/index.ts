@@ -35,6 +35,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
         user_address: snapshot.userAddress,
         token_address: snapshot.tokenAddress,
         token_balance: BigInt(snapshot.balance),
+        token_symbol: '',
+        usd_price: 0
       };
       csvRows.push(csvRow);
     }
