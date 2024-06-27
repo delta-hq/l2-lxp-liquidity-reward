@@ -45,8 +45,8 @@ export const getUserTVLByBlock = async ({
         block_number: blockNumber,
         timestamp: blockTimestamp,
         user_address: provider,
-        token_balance: BigInt(value),
         token_address: SIS_TOKEN_LINEA_ADDRESS,
+        token_balance: BigInt(value),
         token_symbol: SIS_TOKEN_SYMBOL,
       })
     );
@@ -72,7 +72,5 @@ export const getUserTVLByBlock = async ({
     return acc;
   }, {} as Record<string, OutputSchemaRow>);
 
-  const mergedDeposits = Object.values(mergedDepositsMap);
-
-  return mergedDeposits;
+  return Object.values(mergedDepositsMap);
 };
