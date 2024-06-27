@@ -1,7 +1,7 @@
 import { SUBGRAPH_URL_VESIS } from "./config";
 import { OutputDataSchemaRow, BlockData, UserDeposit } from "./types";
 
-const SIS_TOKEN_LINEA_ADDRESS = "0x6EF95B6f3b0F39508e3E04054Be96D5eE39eDE0d";
+const SIS_TOKEN_LINEA_ADDRESS = "0x6EF95B6f3b0F39508e3E04054Be96D5eE39eDE0d".toLowerCase();
 const SIS_TOKEN_SYMBOL = "SIS";
 
 export const getUserTVLByBlock = async ({
@@ -44,10 +44,11 @@ export const getUserTVLByBlock = async ({
       ({ provider, value }: UserDeposit) => ({
         block_number: blockNumber,
         timestamp: blockTimestamp,
-        user_address: provider,
+        user_address: provider.toLowerCase(),
         token_address: SIS_TOKEN_LINEA_ADDRESS,
         token_balance: BigInt(value),
         token_symbol: SIS_TOKEN_SYMBOL,
+        usd_price: 0
       })
     );
     allDeposits.push(...deposits);
