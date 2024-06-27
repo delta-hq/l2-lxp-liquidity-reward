@@ -3,5 +3,5 @@ import { linea } from "viem/chains";
 
 export const client = createPublicClient({
     chain: linea,
-    transport: http("https://linea.decubate.com"),
+    transport: http("https://rpc.linea.build"),
 });
