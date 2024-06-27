@@ -7,10 +7,10 @@ type Address = `0x${string}`;
 
 export const vaultsAddresses: { address: Address, underlying_symbol: string, start_block: bigint, underlying: Address }[] = [
     {
-        address: iUSDT, underlying_symbol: "USDC", start_block: 4007125n, underlying: "0xa219439258ca9da29e9cc4ce5596924745e12b93"
+        address: iUSDT, underlying_symbol: "USDC", start_block: 3041467n, underlying: "0xa219439258ca9da29e9cc4ce5596924745e12b93"
     },
     {
-        address: iUSDC, underlying_symbol: "USDT", start_block: 4007125n, underlying: "0x176211869ca2b568f2a7d4ee941e073a821ee1ff"
+        address: iUSDC, underlying_symbol: "USDT", start_block: 3041467n, underlying: "0x176211869ca2b568f2a7d4ee941e073a821ee1ff"
     }
 ];
 
