@@ -1,56 +1,45 @@
 import { Hex } from "viem";
 import { BEEFY_SUBGRAPH_URL, SUBGRAPH_PAGE_SIZE } from "../../config";
 
-type ShareTokenBalance = {
+type TokenBalance = {
   user_address: Hex;
-  vault_address: Hex;
-  shares_balance: bigint;
+  token_address: Hex;
+  balance: bigint;
 };
 
 type QueryResult = {
-  investorPositions: {
-    investor: {
+  tokenBalances: {
+    account: {
       id: Hex;
     };
-    vault: {
-      sharesToken: {
-        id: Hex;
-      };
-      underlyingToken: {
-        id: Hex;
-        symbol: string;
-      };
+    token: {
+      id: Hex;
     };
-    rawSharesBalance: string;
+    amount: string;
   }[];
 };
 
-export const getVaultShareTokenBalances = async (
+export const getTokenBalances = async (
   blockNumber: bigint
-): Promise<ShareTokenBalance[]> => {
-  let allPositions: ShareTokenBalance[] = [];
+): Promise<TokenBalance[]> => {
+  let allPositions: TokenBalance[] = [];
   let skip = 0;
   while (true) {
     const query = `
       query LineaUser($blockNumber: Int!, $skip: Int!, $first: Int!) {
-        investorPositions(
+        tokenBalances(
           block: {number: $blockNumber}
           first: $first
-          where: { rawSharesBalance_gt: 0 }
+          where: { amount_gt: 0 }
           skip: $skip
         ) {
-          investor {
+          account {
             id
           }
-          vault {
-            sharesToken {
-              id
-            }
-            underlyingToken {
-              id
-            }
+          token {
+            id
           }
-          rawSharesBalance
+          amount
         }
       }
     `;
@@ -80,17 +69,16 @@ export const getVaultShareTokenBalances = async (
     }
 
     allPositions = allPositions.concat(
-      res.data.investorPositions.map(
-        (position): ShareTokenBalance => ({
-          shares_balance: BigInt(position.rawSharesBalance),
-          user_address: position.investor.id.toLocaleLowerCase() as Hex,
-          vault_address:
-            position.vault.sharesToken.id.toLocaleLowerCase() as Hex,
+      res.data.tokenBalances.map(
+        (position): TokenBalance => ({
+          balance: BigInt(position.amount),
+          user_address: position.account.id.toLocaleLowerCase() as Hex,
+          token_address: position.token.id.toLocaleLowerCase() as Hex,
         })
       )
     );
 
-    if (res.data.investorPositions.length < SUBGRAPH_PAGE_SIZE) {
+    if (res.data.tokenBalances.length < SUBGRAPH_PAGE_SIZE) {
       break;
     }
 
