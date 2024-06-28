@@ -66,7 +66,7 @@ export const getUserTVLByBlock = async (
     const holders = await getAllHolders(blockNumber);
 
     for (let i = 0; i < vaultsAddresses.length; i++) {
-        const {address, token_symbol} = vaultsAddresses[i];
+        const {address, underlying_symbol, underlying} = vaultsAddresses[i];
         const balanceReads: any[] = [];
         const farmReads: any[] = [];
 
@@ -100,8 +100,8 @@ export const getUserTVLByBlock = async (
                     block_number: blockNumber,
                     timestamp: blockTimestamp,
                     user_address: Array.from(holders)[j].toLowerCase(),
-                    token_address: address.toLowerCase(),
-                    token_symbol: token_symbol,
+                    token_address: underlying.toLowerCase(),
+                    token_symbol: underlying_symbol,
                     token_balance: userBalance + farmBalance,
                     usd_price: 0,
                 });
