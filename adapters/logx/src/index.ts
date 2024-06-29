@@ -1,7 +1,6 @@
 import fetch from 'node-fetch';
-import { createWriteStream, existsSync } from 'fs';
-import { writeToStream } from 'fast-csv';
-
+import * as fs from 'fs';
+import { parse, writeToStream } from 'fast-csv';
 
 type OutputDataSchemaRow = {
   block_number: number;
@@ -31,21 +30,21 @@ const post = async (url: string, data: any): Promise<any> => {
   return await response.json();
 };
 
-const getPoolData = async (blockNumber: number, skipPage: number, blockTimestamp?: number,): Promise<OutputDataSchemaRow[]> => {
+const getPoolData = async (blockNumber: number, skipPage: number, blockTimestamp?: number): Promise<OutputDataSchemaRow[]> => {
   const LOGX_POOL_QUERY = `
     query LiquidityQuery {
       addLiquidities(
-            skip: ${skipPage}
-            first: ${PAGE_SIZE}, 
-            where: { block_number: ${blockNumber}},
-        ) {
-            id
-            account
-            token
-            amount
-            llpSupply
-            timestamp_
-        }
+        skip: ${skipPage}
+        first: ${PAGE_SIZE}, 
+        where: { block_number: ${blockNumber}},
+      ) {
+        id
+        account
+        token
+        amount
+        llpSupply
+        timestamp_
+      }
     }
   `;
   const csvRows: OutputDataSchemaRow[] = [];
@@ -77,30 +76,50 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   return csvRows;
 };
 
-const fetchAndWriteToCsv = async (filePath: string, blockNumber: number) => {
-  const blockTimestamp = Math.floor(Date.now() / 1000); // Example timestamp (current time)
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
 
-  try {
-    const csvRows = await getPoolData(blockNumber, 0, blockTimestamp);
-
-    // Check if the file already exists
-    const fileExists = existsSync(filePath);
-
-    // Create a write stream in append mode if the file exists, otherwise create a new file
-    const ws = createWriteStream(filePath, { flags: 'a' });
-
-    writeToStream(ws, csvRows, { headers: !fileExists, includeEndRowDelimiter: true }) // Include headers only if the file does not exist
-      .on('finish', () => {
-        console.log(`CSV file '${filePath}' has been written successfully.`);
-      });
-
-  } catch (error) {
-    console.error('Error fetching data:', error);
-  }
+  return new Promise((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(parse({ headers: true }))
+      .on('error', error => reject(error))
+      .on('data', (row: any) => {
+        const blockNumber = parseInt(row.block_number, 10);
+        const blockTimestamp = parseInt(row.timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => resolve(blocks));
+  });
 };
 
-// Example usage:
-const outputFile = 'outputData.csv';
-//Example blocknumber - 1226739
-//
-fetchAndWriteToCsv(outputFile, 1226739);
+const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
+  const allCsvRows: OutputDataSchemaRow[] = [];
+
+  for (const block of blocks) {
+    try {
+      const result = await getUserTVLByBlock(block);
+      allCsvRows.push(...result);
+    } catch (error) {
+      console.error(`An error occurred for block ${block.blockNumber}:`, error);
+    }
+  }
+
+  const fileExists = fs.existsSync(filePath);
+  const ws = fs.createWriteStream(filePath, { flags: 'a' });
+
+  writeToStream(ws, allCsvRows, { headers: !fileExists, includeEndRowDelimiter: true })
+    .on('finish', () => {
+      console.log(`CSV file '${filePath}' has been written successfully.`);
+    });
+};
+
+const inputFilePath = 'Test/inputData.csv';
+const outputFilePath = 'Test/outputData.csv';
+
+readBlocksFromCSV(inputFilePath).then(async (blocks) => {
+  await fetchAndWriteToCsv(outputFilePath, blocks);
+}).catch((err) => {
+  console.error('Error reading CSV file:', err);
+});
