@@ -1,7 +1,6 @@
-import { PoolInformation, getPoolInformationFromLpToken } from "./cartographer";
 import { LpAccountBalanceHourly, SubgraphResult } from "./types";
 import { linea } from "viem/chains";
-import { createPublicClient, http, parseUnits } from "viem";
+import { createPublicClient, http } from "viem";
 
 export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/connext/stableswap-analytics-linea-0.0.1/gn";
 export const LINEA_CHAIN_ID = 59144;
