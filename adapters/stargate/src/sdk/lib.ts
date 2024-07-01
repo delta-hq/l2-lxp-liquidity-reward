@@ -1,19 +1,31 @@
+import { Readable } from "stream";
 import { SUBGRAPH_URL, client } from "./config";
 import { Position } from "./types";
 
-export const getUserBalancesAtBlock = async (blockNumber: number) => {
-  const result: Position[] = [];
+const WHITELISTED_TOKEN_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
 
-  let skip = 0;
-  let fetchNext = true;
+export const getTimestampAtBlock = async (blockNumber: number) => {
+  const block = await client.getBlock({
+    blockNumber: BigInt(blockNumber),
+  });
+  return Number(block.timestamp * 1000n);
+};
 
-  while (fetchNext) {
+export class PositionsStream extends Readable {
+  skip: string;
+
+  constructor(private block: { blockNumber: number; blockTimestamp: number }) {
+    super({ objectMode: true });
+    this.skip = "0";
+  }
+
+  async _read() {
     const query = `
       query {
         farmPositions(
           first: 1000,
-          where: { id_gt: ${JSON.stringify(skip)}, balance_gt: 0 },
-          block: { number: ${blockNumber} },
+          where: { id_gt: ${JSON.stringify(this.skip)}, balance_gt: 0 },
+          block: { number: ${this.block.blockNumber} },
           orderBy: id
         ) {
             id
@@ -32,21 +44,25 @@ export const getUserBalancesAtBlock = async (blockNumber: number) => {
 
     const { data } = await response.json();
     const { farmPositions } = data;
+    const { blockNumber, blockTimestamp } = this.block;
 
-    result.push(...farmPositions);
-    if (farmPositions.length < 1000) {
-      fetchNext = false;
+    const rows = farmPositions.map((position: Position) =>
+      [
+        blockNumber,
+        blockTimestamp,
+        position.user,
+        WHITELISTED_TOKEN_ADDRESS,
+        BigInt(position.balance),
+        "",
+        0,
+      ].join(",")
+    );
+
+    if (rows.length) {
+      this.push(rows.join("\n"));
+      this.skip = farmPositions.at(-1).id;
     } else {
-      skip = farmPositions.at(-1).id;
+      this.push(null);
     }
   }
-
-  return result;
-};
-
-export const getTimestampAtBlock = async (blockNumber: number) => {
-  const block = await client.getBlock({
-    blockNumber: BigInt(blockNumber),
-  });
-  return Number(block.timestamp * 1000n);
-};
+}
