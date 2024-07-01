@@ -1,0 +1,30 @@
+{
+    "name": "LogX",
+    "version": "1.0.0",
+    "description": "",
+    "main": "index.js",
+    "type": "commonjs",
+    "scripts": {
+        "start": "node dist/index.js",
+        "compile": "tsc",
+        "watch": "tsc -w",
+        "clear": "rm -rf dist",
+        "test": "node "
+    },
+    "keywords": [],
+    "author": "",
+    "license": "UNLICENSED",
+    "dependencies": {
+        "@babel/core": "^7.24.7",
+        "@babel/node": "^7.24.7",
+        "@babel/preset-env": "^7.24.7",
+        "csv-parser": "^3.0.0",
+        "fast-csv": "^5.0.1",
+        "fs": "^0.0.1-security",
+        "node-fetch": "^2.7.0"
+    },
+    "devDependencies": {
+        "@types/node": "^20.11.17",
+        "typescript": "^5.3.3"
+    }
+}
