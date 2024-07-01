@@ -8,6 +8,8 @@ type OutputDataSchemaRow = {
   user_address: string;
   token_address: string;
   token_balance: number;
+  token_symbol:string;
+  usd_price:number;
 };
 
 interface BlockData {
@@ -57,6 +59,8 @@ const getPoolData = async (blockNumber: number, skipPage: number, blockTimestamp
       user_address: item.account,
       token_address: item.token,
       token_balance: item.amount,
+      token_symbol:'USDC',
+      usd_price:0
     });
   }
 
