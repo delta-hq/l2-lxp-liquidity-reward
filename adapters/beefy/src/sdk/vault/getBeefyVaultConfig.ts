@@ -25,7 +25,14 @@ export type BeefyProtocolType =
   | "solidly"
   | "beefy_clm";
 
-type ApiPlatformId = "gamma" | "ichi" | "lynex" | "mendi" | "nile" | "beefy"; // and more but we don't use those on linea
+type ApiPlatformId =
+  | "gamma"
+  | "ichi"
+  | "lynex"
+  | "mendi"
+  | "nile"
+  | "velodrome"
+  | "beefy"; // and more but we don't use those on linea
 
 type ApiVault = {
   id: string;
@@ -52,6 +59,7 @@ const protocol_map: Record<ApiPlatformId, BeefyProtocolType> = {
   lynex: "solidly",
   mendi: "mendi",
   nile: "solidly",
+  velodrome: "solidly",
   beefy: "beefy_clm",
 };
 
