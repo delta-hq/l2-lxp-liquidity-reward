@@ -33,11 +33,42 @@ export const getUserTVLByBlock = async (
     getTokenBalances(BigInt(blockNumber)),
   ]);
 
+  // merge investor positions for clm and reward pools
+  const vaultRewardPoolMap: Record<string, string> = {};
+  for (const vault of vaultConfigs) {
+    vaultRewardPoolMap[vault.vault_address] = vault.vault_address;
+    for (const pool of vault.reward_pools) {
+      vaultRewardPoolMap[pool.reward_pool_address] = vault.vault_address;
+    }
+  }
+
+  const mergedInvestorPositionsByInvestorAndClmAddress: Record<
+    string,
+    (typeof investorPositions)[0]
+  > = {};
+  for (const position of investorPositions) {
+    const vaultAddress = vaultRewardPoolMap[position.token_address];
+    const key = `${position.user_address}_${vaultAddress}`;
+    if (!mergedInvestorPositionsByInvestorAndClmAddress[key]) {
+      mergedInvestorPositionsByInvestorAndClmAddress[key] = position;
+    } else {
+      mergedInvestorPositionsByInvestorAndClmAddress[key].balance +=
+        position.balance;
+    }
+  }
+  const mergedPositions = Object.values(
+    mergedInvestorPositionsByInvestorAndClmAddress
+  );
+
   const vaultAddressWithActivePosition = uniq(
     investorPositions.map((pos) => pos.token_address)
   );
-  const vaults = vaultConfigs.filter((vault) =>
-    vaultAddressWithActivePosition.includes(vault.vault_address)
+  const vaults = vaultConfigs.filter(
+    (vault) =>
+      vaultAddressWithActivePosition.includes(vault.vault_address) ||
+      vault.reward_pools.some((pool) =>
+        vaultAddressWithActivePosition.includes(pool.reward_pool_address)
+      )
   );
   // get breakdowns for all vaults
   const breakdowns = await getVaultBreakdowns(BigInt(blockNumber), vaults);
@@ -52,7 +83,7 @@ export const getUserTVLByBlock = async (
     Hex /* investor */,
     Record<Hex /* token */, bigint /* amount */>
   > = {};
-  for (const position of investorPositions) {
+  for (const position of mergedPositions) {
     const breakdown = breakdownByVaultAddress[position.token_address];
     if (!breakdown) {
       // some test vaults were never available in the api
@@ -68,14 +99,22 @@ export const getUserTVLByBlock = async (
       investorTokenBalances[position.user_address] = {};
     }
 
-    for (const balance of breakdown.balances) {
-      if (!investorTokenBalances[position.user_address][balance.tokenAddress]) {
-        investorTokenBalances[position.user_address][balance.tokenAddress] =
-          BigInt(0);
+    for (const breakdownBalance of breakdown.balances) {
+      if (
+        !investorTokenBalances[position.user_address][
+          breakdownBalance.tokenAddress
+        ]
+      ) {
+        investorTokenBalances[position.user_address][
+          breakdownBalance.tokenAddress
+        ] = BigInt(0);
       }
 
-      investorTokenBalances[position.user_address][balance.tokenAddress] +=
-        (position.balance * balance.vaultBalance) / breakdown.vaultTotalSupply;
+      investorTokenBalances[position.user_address][
+        breakdownBalance.tokenAddress
+      ] +=
+        (position.balance * breakdownBalance.vaultBalance) /
+        breakdown.vaultTotalSupply;
     }
   }
 
