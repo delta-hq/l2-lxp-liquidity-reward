@@ -7,6 +7,7 @@ export type BeefyVault = {
   vault_address: Hex;
   undelying_lp_address: Hex;
   strategy_address: Hex;
+  vault_token_symbol: string;
   chain: string;
   protocol_type: BeefyProtocolType;
   reward_pools: BeefyRewardPool[];
@@ -39,6 +40,7 @@ type ApiVault = {
   status: "active" | "eol";
   earnedTokenAddress: Hex;
   chain: string;
+  earnedToken: string; // cow token symbol
   platformId: ApiPlatformId;
   tokenAddress: Hex;
   strategy: Hex;
@@ -105,6 +107,7 @@ export const getBeefyVaultConfig = memoize(
           id: vault.id,
           vault_address: vault.earnedTokenAddress.toLocaleLowerCase() as Hex,
           chain: vault.chain,
+          vault_token_symbol: vault.earnedToken,
           protocol_type,
           strategy_address: vault.strategy.toLocaleLowerCase() as Hex,
           undelying_lp_address: vault.tokenAddress.toLocaleLowerCase() as Hex,
