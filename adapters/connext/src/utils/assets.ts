@@ -1,8 +1,8 @@
-import { createPublicClient, http, parseUnits } from "viem";
-import { linea } from "viem/chains";
+import { parseUnits } from "viem";
 import { getPoolInformationFromLpToken, poolInfo } from "./cartographer";
 import { LINEA_CHAIN_ID, CONNEXT_LINEA_ADDRESS } from "./subgraph";
-import { LpAccountBalanceHourly, RouterEventResponse } from "./types";
+import { LpAccountBalanceHourly } from "./types";
+import { getClient } from "./rpc";
 
 type CompositeBalanceHourly = LpAccountBalanceHourly & {
     underlyingTokens: string[];
@@ -43,7 +43,7 @@ export const getCompositeBalances = async (amms: LpAccountBalanceHourly[]): Prom
     }
 
     // get contract interface
-    const client = createPublicClient({ chain: linea, transport: http() });
+    const client = getClient();
 
     // get composite balances for amms (underlying tokens and balances)
     const balances = await Promise.all(amms.map(async ({ token, amount, block }) => {

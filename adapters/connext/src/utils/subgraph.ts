@@ -1,6 +1,5 @@
+import { getClient } from "./rpc";
 import { LpAccountBalanceHourly, SubgraphResult } from "./types";
-import { linea } from "viem/chains";
-import { createPublicClient, http } from "viem";
 
 export const CONNEXT_SUBGRAPH_QUERY_URL = "https://api.goldsky.com/api/public/project_clssc64y57n5r010yeoly05up/subgraphs/connext/stableswap-analytics-linea-0.0.1/gn";
 export const LINEA_CHAIN_ID = 59144;
@@ -146,7 +145,7 @@ const appendSubgraphData = (data: LpAccountBalanceHourly[], existing: Map<string
 }
 
 export const getBlock = async (blockNumber: number) => {
-    const client = createPublicClient({ chain: linea, transport: http() });
+    const client = getClient();
     const block = await client.getBlock({ blockNumber: BigInt(blockNumber) });
     return block;
 }
