@@ -88,7 +88,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
       .pipe(parse({ headers: true }))
       .on('error', error => reject(error))
       .on('data', (row: any) => {
-        const blockNumber = parseInt(row.block_number, 10);
+        const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
         if (!isNaN(blockNumber) && blockTimestamp) {
           blocks.push({ blockNumber, blockTimestamp });
