@@ -1,4 +1,5 @@
 export const BEEFY_VAULT_API = "https://api.beefy.finance/harvestable-vaults";
+export const BEEFY_GOV_API = "https://api.beefy.finance/gov-vaults";
 
 // subgraph source: https://github.com/beefyfinance/l2-lxp-liquidity-subgraph
 export const BEEFY_SUBGRAPH_URL =
