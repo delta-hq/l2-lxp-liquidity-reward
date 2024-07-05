@@ -111,12 +111,33 @@ const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
   }
 
   const fileExists = fs.existsSync(filePath);
-  const ws = fs.createWriteStream(filePath, { flags: 'a' });
 
-  writeToStream(ws, allCsvRows, { headers: !fileExists, includeEndRowDelimiter: true })
-    .on('finish', () => {
-      console.log(`CSV file '${filePath}' has been written successfully.`);
-    });
+  if (fileExists) {
+    const firstLine = fs.readFileSync(filePath, 'utf8').split('\n')[0];
+    const hasHeaders = firstLine.includes('block_number,timestamp,user_address,token_address,token_balance,token_symbol,usd_price');
+    
+    if (!hasHeaders) {
+      // Rewrite the file with headers
+      fs.writeFileSync(filePath, '');
+      const ws = fs.createWriteStream(filePath, { flags: 'w' });
+      writeToStream(ws, allCsvRows, { headers: true, includeEndRowDelimiter: true })
+        .on('finish', () => {
+          console.log(`CSV file '${filePath}' has been rewritten successfully with headers.`);
+        });
+    } else {
+      const ws = fs.createWriteStream(filePath, { flags: 'a' });
+      writeToStream(ws, allCsvRows, { headers: false, includeEndRowDelimiter: true })
+        .on('finish', () => {
+          console.log(`CSV file '${filePath}' has been appended successfully.`);
+        });
+    }
+  } else {
+    const ws = fs.createWriteStream(filePath, { flags: 'w' });
+    writeToStream(ws, allCsvRows, { headers: true, includeEndRowDelimiter: true })
+      .on('finish', () => {
+        console.log(`CSV file '${filePath}' has been written successfully with headers.`);
+      });
+  }
 };
 
 const inputFilePath = 'Test/inputData.csv';
