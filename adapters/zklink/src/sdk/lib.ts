@@ -12,6 +12,7 @@ import { getUserTVLData as getUserTVLDataInZkdx } from '../protocols/zkdx'
 import type { UserPosition, LPMap, UserBalance } from './types'
 
 const SPECIAL_ADDRESS = '0xEDeE7052eC016A507E65D6BbffCa535076B227DE'
+const nativeVaultAddress = '0x4ac97e2727b0e92ae32f5796b97b7f98dc47f059'
 
 const addresses = [
   {
@@ -216,7 +217,7 @@ const getLPInfo = async (blockNumber: number): Promise<{ lpMap: LPMap, poolAddre
     }
     return result
   }, new Map())
-  const poolAddress = [...new Set(filteredData.map(i => i.poolAddress.toLowerCase()))]
+  const poolAddress = [...new Set(filteredData.map(i => i.poolAddress.toLowerCase()))].concat(nativeVaultAddress)
   return { lpMap, poolAddress }
 }
 
