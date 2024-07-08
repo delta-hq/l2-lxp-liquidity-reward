@@ -1,8 +1,6 @@
-import BigNumber from "bignumber.js";
-import { CHAINS, PROTOCOLS, AMM_TYPES } from "./sdk/config";
+import { AMM_TYPES, CHAINS, PROTOCOLS } from "./sdk/config";
 import {
   getLPValueByUserAndPoolFromPositions,
-  getPositionAtBlock,
   getPositionDetailsFromPosition,
   getPositionsForAddressByPoolAtBlock,
   getTokenPriceFromPositions,
@@ -11,12 +9,11 @@ import {
   return this.toString();
 };
 
-import { promisify } from "util";
-import stream from "stream";
 import csv from "csv-parser";
-import fs from "fs";
-import { format } from "fast-csv";
 import { write } from "fast-csv";
+import fs from "fs";
+import stream from "stream";
+import { promisify } from "util";
 
 //Uncomment the following lines to test the getPositionAtBlock function
 
@@ -135,5 +132,3 @@ const getData = async () => {
 getData().then(() => {
   console.log("Done");
 });
-// getPrice(new BigNumber('1579427897588720602142863095414958'), 6, 18); //Uniswap
-// getPrice(new BigNumber('3968729022398277600000000'), 18, 6); //SupSwap
