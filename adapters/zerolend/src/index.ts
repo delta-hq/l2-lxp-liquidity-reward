@@ -1,7 +1,10 @@
 import { write } from "fast-csv";
 import fs from "fs";
 import csv from "csv-parser";
-import { BlockData, getUserTVLByBlock } from "./sdk";
+import { BlockData } from "./sdk/types";
+import { getUserTVLByBlock } from "./sdk/tvl";
+import { getUserStakeByBlock } from "./sdk/stake";
+import { getUserLPByBlock } from "./sdk/lp";
 
 // const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 //   const blocks: BlockData[] = [];
@@ -98,10 +101,21 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
 
   for (const block of blocks) {
     try {
-      const result = await getUserTVLByBlock(block);
-      for (let i = 0; i < result.length; i++) {
-        allCsvRows.push(result[i])
+      const resultTvl = await getUserTVLByBlock(block);
+      for (let i = 0; i < resultTvl.length; i++) {
+        allCsvRows.push(resultTvl[i])
       }
+
+      const resultStake = await getUserStakeByBlock(block);
+      for (let i = 0; i < resultStake.length; i++) {
+        allCsvRows.push(resultStake[i])
+      }
+
+      const resultLp = await getUserLPByBlock(block);
+      for (let i = 0; i < resultLp.length; i++) {
+        allCsvRows.push(resultLp[i])
+      }
+
     } catch (error) {
       console.error(`An error occurred for block ${block}:`, error);
     }
