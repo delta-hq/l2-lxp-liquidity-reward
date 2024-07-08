@@ -1,7 +1,7 @@
-import BigNumber from "bignumber.js";
-import { AMM_TYPES, CHAINS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
-import moment from "moment";
 import axios from "axios"; // Referencing when fetch cannot take effect when using proxies
+import BigNumber from "bignumber.js";
+import moment from "moment";
+import { AMM_TYPES, CHAINS, PROTOCOLS, SUBGRAPH_URLS } from "./config";
 
 export interface Position {
   id: string;
@@ -62,6 +62,12 @@ export interface PositionWithUSDValue extends Position {
   token1AmountsInWei: bigint;
   token0DecimalValue: number;
   token1DecimalValue: number;
+}
+
+export interface UserTokenBalanceInfo {
+  tokenBalance: bigint;
+  tokenSymbol: string;
+  usdPrice: number;
 }
 
 export const getPositionsForAddressByPoolAtBlock = async (
@@ -322,9 +328,9 @@ export const getTokenPriceFromPositions = async (
   return positions;
 };
 
-export const getPositionDetailsFromPosition = async (
+export const getPositionDetailsFromPosition = (
   position: Position
-): Promise<PositionWithUSDValue> => {
+): PositionWithUSDValue => {
   if (position.pair.type !== "CLASSICAL") {
     const totalSupply = new BigNumber(position.lpToken.totalSupply).div(
       10 ** Number(position.lpToken.decimals)
@@ -380,28 +386,42 @@ export const getPositionDetailsFromPosition = async (
 
 export const getLPValueByUserAndPoolFromPositions = async (
   positions: Position[]
-): Promise<Map<string, Map<string, BigNumber>>> => {
-  let result = new Map<string, Map<string, BigNumber>>();
+): Promise<Map<string, Map<string, UserTokenBalanceInfo>>> => {
+  let result = new Map<string, Map<string, UserTokenBalanceInfo>>();
   for (let i = 0; i < positions.length; i++) {
     let position = positions[i];
-    let poolId = position.pair.id;
+
+    let positionWithUSDValue = await getPositionDetailsFromPosition(position);
+    if (positionWithUSDValue.token0DecimalValue == 0 || positionWithUSDValue.token1DecimalValue == 0) {
+      continue
+    }
+
+    let tokenXAddress = position.pair.baseToken.id;
+    let tokenYAddress = position.pair.quoteToken.id;
     let owner = position.user.id;
+    if (owner == '0x0000000000000000000000000000000000000000') continue;
+
     let userPositions = result.get(owner);
     if (userPositions === undefined) {
-      userPositions = new Map<string, BigNumber>();
+      userPositions = new Map<string, UserTokenBalanceInfo>();
       result.set(owner, userPositions);
     }
-    let poolPositions = userPositions.get(poolId);
-    if (poolPositions === undefined) {
-      poolPositions = BigNumber(0);
+
+    let tokenXAmount = userPositions.get(tokenXAddress);
+    if (tokenXAmount === undefined) {
+      tokenXAmount = { tokenBalance: BigInt(0), tokenSymbol: position.pair.baseToken.symbol, usdPrice: 0 };
     }
-    let positionWithUSDValue = await getPositionDetailsFromPosition(position);
-    poolPositions = poolPositions.plus(
-      BigNumber(positionWithUSDValue.token0USDValue).plus(
-        positionWithUSDValue.token1USDValue
-      )
-    );
-    userPositions.set(poolId, poolPositions);
+
+    let tokenYAmount = userPositions.get(tokenYAddress);
+    if (tokenYAmount === undefined) {
+      tokenYAmount = { tokenBalance: BigInt(0), tokenSymbol: position.pair.quoteToken.symbol, usdPrice: 0 };
+    }
+
+    tokenXAmount.tokenBalance = tokenXAmount.tokenBalance + positionWithUSDValue.token0AmountsInWei;
+    tokenYAmount.tokenBalance = tokenYAmount.tokenBalance + positionWithUSDValue.token1AmountsInWei;
+
+    userPositions.set(tokenXAddress, tokenXAmount);
+    userPositions.set(tokenYAddress, tokenYAmount);
   }
   return result;
 };
