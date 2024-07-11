@@ -12,3 +12,7 @@ export const client = createPublicClient({
   chain: linea,
   transport: http("https://rpc.linea.build"),
 });
+
+export const PROBLEM_POOLS = {
+  '0x8dabf94c7bdd771e448a4ae4794cd71f9f3d7a0d': 0,
+} as any;

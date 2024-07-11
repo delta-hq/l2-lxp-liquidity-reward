@@ -7,7 +7,7 @@ import {
   MulticallParameters,
   PublicClient,
 } from "viem";
-import { client } from "./config";
+import { client, PROBLEM_POOLS } from "./config";
 import lensABI from "./abis/PairAPIABI.json";
 import veLYNXAbi from "./abis/veLYNX.json";
 
@@ -68,8 +68,9 @@ export const fetchUserPools = async (
   userPools: string[]
 ): Promise<LensResponseWithBlock[]> => {
   const publicClient = client;
+  const validPools = userPools.filter((pool) => PROBLEM_POOLS[pool] === undefined || PROBLEM_POOLS[pool] > blockNumber);
 
-  const calls = userPools.map((pool: string) => {
+  const calls = validPools.map((pool: string) => {
     return {
       address: LENS_ADDRESS,
       name: "getPair",
