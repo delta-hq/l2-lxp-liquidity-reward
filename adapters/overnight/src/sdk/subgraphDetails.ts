@@ -192,51 +192,56 @@ export const getRebaseForUsersByPoolAtBlock = async ({
                                 to
                             }
                         }`;
+
+                        try {
+                            let response = await fetch(url, {
+                                method: "POST",
+                                body: JSON.stringify({ query }),
+                                headers: { "Content-Type": "application/json" },
+                            });
+                            let data = await response.json();
             
-                        let response = await fetch(url, {
-                            method: "POST",
-                            body: JSON.stringify({ query }),
-                            headers: { "Content-Type": "application/json" },
-                        });
-                        let data = await response.json();
-        
-                        if (skip > 1000) {
-                            console.log(`Batch ${i}-${j}:`, " skip > 1000: ", skip)
-                        }
-        
-                        let positions = data.data.transfers;
-                        for (let k = 0; k < positions.length; k++) {
-                            let position = positions[k];
-                            const fromAddress = position.from.toLowerCase();
-                            const toAddress = position.to.toLowerCase();
-        
-                            // redeem
-                            if (fromAddress === ZERO_ADD) {
-                                const data = usersMinted.get(toAddress);
-                                usersMinted.set(toAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
-                                continue;
+                            if (skip > 1000) {
+                                console.log(`Batch ${i}-${j}:`, " skip > 1000: ", skip)
                             }
-        
-                            // mint
-                            if (toAddress === ZERO_ADD) {
-                                const data = usersRedeemed.get(fromAddress);
-                                usersRedeemed.set(fromAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
-                                continue;
+            
+                            let positions = data.data.transfers;
+                            for (let k = 0; k < positions.length; k++) {
+                                let position = positions[k];
+                                const fromAddress = position.from.toLowerCase();
+                                const toAddress = position.to.toLowerCase();
+            
+                                // redeem
+                                if (fromAddress === ZERO_ADD) {
+                                    const data = usersMinted.get(toAddress);
+                                    usersMinted.set(toAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
+                                    continue;
+                                }
+            
+                                // mint
+                                if (toAddress === ZERO_ADD) {
+                                    const data = usersRedeemed.get(fromAddress);
+                                    usersRedeemed.set(fromAddress, data ? new BN(data).plus(position.value).toFixed(0) : position.value);
+                                    continue;
+                                }
+            
+                                // transfer between accounts
+                                if (![toAddress, fromAddress].includes(ZERO_ADD)) {
+                                    const dataFrom = usersRedeemed.get(fromAddress);
+                                    const dataTo = usersMinted.get(toAddress);
+                                    usersRedeemed.set(fromAddress, dataFrom ? new BN(dataFrom).plus(position.value).toFixed(0) : position.value);
+                                    usersMinted.set(toAddress, dataTo ? new BN(dataTo).plus(position.value).toFixed(0) : position.value);
+                                    continue;
+                                }
                             }
-        
-                            // transfer between accounts
-                            if (![toAddress, fromAddress].includes(ZERO_ADD)) {
-                                const dataFrom = usersRedeemed.get(fromAddress);
-                                const dataTo = usersMinted.get(toAddress);
-                                usersRedeemed.set(fromAddress, dataFrom ? new BN(dataFrom).plus(position.value).toFixed(0) : position.value);
-                                usersMinted.set(toAddress, dataTo ? new BN(dataTo).plus(position.value).toFixed(0) : position.value);
-                                continue;
+                            if(positions.length < 1000){
+                                fetchNext = false;
+                            }else{
+                                skip += 1000;
                             }
-                        }
-                        if(positions.length < 1000){
-                            fetchNext = false;
-                        }else{
-                            skip += 1000;
+                        } catch(e) {
+                            console.log(e);
+                            continue;
                         }
                     }
                 }
