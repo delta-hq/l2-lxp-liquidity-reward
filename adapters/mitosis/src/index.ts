@@ -7,7 +7,7 @@ const assetWhitelist = [
   'miuniETH',
 ];
 
-const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.1.0/gn";
+const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.1.1/gn";
 
 const makeBalancesQuery = (blockNumber: number, next = "") => `query {
   tokenBalances(
