@@ -17,7 +17,8 @@
     "dependencies": {
         "@connext/nxtp-utils": "2.4.1",
         "fast-csv": "5.0.1",
-        "csv-parser": "^3.0.0",
+        "csv-parser": "3.0.0",
+        "dotenv": "16.4.5",
         "viem": "2.8.16"
     },
     "devDependencies": {
