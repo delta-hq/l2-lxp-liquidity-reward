@@ -19,6 +19,9 @@ const makeBalancesQuery = (blockNumber: number, next = "") => `query {
       id
       symbol
     }
+    account {
+      id
+    }
     value
     id
   }
@@ -33,6 +36,9 @@ interface TokenBalance {
   token: {
     id: string;
     symbol: string;
+  };
+  account: {
+    id: string;
   };
   value: string;
   id: string;
@@ -69,7 +75,7 @@ const toOutput = ({ blockNumber, blockTimestamp }: BlockData, { tokenBalances }:
   tokenBalances.map((v) => ({
     block_number: blockNumber,
     timestamp: blockTimestamp,
-    user_address: v.id,
+    user_address: v.account.id,
     token_address: v.token.id,
     token_balance: BigInt(v.value),
     token_symbol: v.token.symbol,
