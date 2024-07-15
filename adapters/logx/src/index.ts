@@ -140,7 +140,7 @@ const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
   }
 };
 
-const inputFilePath = 'hourly_block.csv';
+const inputFilePath = 'hourly_blocks.csv';
 const outputFilePath = 'outputData.csv';
 
 readBlocksFromCSV(inputFilePath).then(async (blocks) => {
