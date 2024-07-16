@@ -109,7 +109,7 @@ const aggregateData = async (blockNumber: number, type: 'add' | 'remove'): Promi
 };
 
 const getUserTVLByBlock = async (block: BlockData) => {
-  const { blockNumber } = block;
+  const { blockNumber, blockTimestamp } = block;
 
   const accountBalances: { [key: string]: number } = {};
 
@@ -133,7 +133,7 @@ const getUserTVLByBlock = async (block: BlockData) => {
     .filter(account => accountBalances[account] > 0)  // Filter out zero or negative balances
     .map(account => ({
       block_number: blockNumber,
-      timestamp: Date.now(),  // Using current timestamp; adjust if you have a specific timestamp for the end block
+      timestamp: blockTimestamp,  // Using current timestamp; adjust if you have a specific timestamp for the end block
       user_address: account,
       token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
       token_balance: accountBalances[account],
