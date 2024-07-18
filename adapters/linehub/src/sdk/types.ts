@@ -24,9 +24,3 @@ export type UserPosition = {
         balance: bigint,
     }
 }
-
-export type UserLiquidity = {
-    user: string;
-    asset: string;
-    amount: bigint;
-}
