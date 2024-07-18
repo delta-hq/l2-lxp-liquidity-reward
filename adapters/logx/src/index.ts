@@ -8,8 +8,8 @@ type OutputDataSchemaRow = {
   user_address: string;
   token_address: string;
   token_balance: number;
-  token_symbol:string;
-  usd_price:number;
+  token_symbol: string;
+  usd_price: number;
 };
 
 interface BlockData {
@@ -20,69 +20,132 @@ interface BlockData {
 const LOGX_SUBGRAPH_QUERY_URL = 'https://api.goldsky.com/api/public/project_clxspa1gpqpvl01w65jr93p57/subgraphs/LlpManager-linea/1.0.2/gn';
 const PAGE_SIZE = 1000;
 
-const post = async (url: string, data: any): Promise<any> => {
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Accept: 'application/json',
-    },
-    body: JSON.stringify(data),
-  });
-  return await response.json();
+const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+const post = async (url: string, data: any, retries = 5): Promise<any> => {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json',
+      },
+      body: JSON.stringify(data),
+    });
+    if (!response.ok) {
+      if (response.status === 429 && retries > 0) {
+        const retryAfter = response.headers.get('Retry-After');
+        const delay = retryAfter ? parseInt(retryAfter) * 1000 : 1000 * Math.pow(2, 5 - retries);
+        console.warn(`Rate limited. Retrying after ${delay / 1000} seconds...`);
+        await sleep(delay);
+        return post(url, data, retries - 1);
+      }
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error(`Error posting data:`, error);
+    throw error;
+  }
 };
 
-const getPoolData = async (blockNumber: number, skipPage: number, blockTimestamp?: number): Promise<OutputDataSchemaRow[]> => {
-  const LOGX_POOL_QUERY = `
+const getLiquidityData = async (blockNumber: number, skipPage: number, type: 'add' | 'remove'): Promise<any[]> => {
+  const query = type === 'add' ? `
     query LiquidityQuery {
       addLiquidities(
-        skip: ${skipPage}
-        first: ${PAGE_SIZE}, 
-        where: { block_number: ${blockNumber}},
+        skip: ${skipPage},
+        first: ${PAGE_SIZE},
+        where: { block_number_lte: ${blockNumber} },
       ) {
         id
         account
         token
         amount
-        llpSupply
+        timestamp_
+      }
+    }
+  ` : `
+    query LiquidityQuery {
+      removeLiquidities(
+        skip: ${skipPage},
+        first: ${PAGE_SIZE},
+        where: { block_number_lte: ${blockNumber} },
+      ) {
+        id
+        account
+        token
+        amountOut
         timestamp_
       }
     }
   `;
-  const csvRows: OutputDataSchemaRow[] = [];
-  const responseJson = await post(LOGX_SUBGRAPH_QUERY_URL, { query: LOGX_POOL_QUERY });
 
-  for (const item of responseJson.data.addLiquidities) {
-    csvRows.push({
-      block_number: blockNumber,
-      timestamp: item.timestamp_,
-      user_address: item.account,
-      token_address: item.token,
-      token_balance: item.amount,
-      token_symbol:'USDC',
-      usd_price:0
-    });
+  try {
+    const responseJson = await post(LOGX_SUBGRAPH_QUERY_URL, { query });
+    if (!responseJson.data) {
+      throw new Error(`Unexpected response format: ${JSON.stringify(responseJson)}`);
+    }
+    return type === 'add' ? responseJson.data.addLiquidities : responseJson.data.removeLiquidities;
+  } catch (error) {
+    console.error(`Error fetching ${type} liquidities for block ${blockNumber} at skip page ${skipPage}:`, error);
+    return [];
   }
-
-  // Check if there are more records to fetch recursively
-  if (responseJson.data.addLiquidities.length === PAGE_SIZE) {
-    const nextPageRows = await getPoolData(blockNumber, skipPage + PAGE_SIZE, blockTimestamp);
-    csvRows.push(...nextPageRows);
-  }
-
-  return csvRows;
 };
 
-export const getUserTVLByBlock = async (blocks: BlockData) => {
-  const { blockNumber, blockTimestamp } = blocks;
-  // Retrieve data using block number and timestamp
-  const csvRows = await getPoolData(blockNumber, 0, blockTimestamp);
+const aggregateData = async (blockNumber: number, type: 'add' | 'remove'): Promise<any[]> => {
+  let skipPage = 0;
+  let allData: any[] = [];
+
+  while (true) {
+    const data = await getLiquidityData(blockNumber, skipPage, type);
+    allData = allData.concat(data);
+    if (data.length < PAGE_SIZE) {
+      break;
+    }
+    skipPage += PAGE_SIZE;
+  }
+
+  return allData;
+};
+
+const getUserTVLByBlock = async (block: BlockData) => {
+  const { blockNumber, blockTimestamp } = block;
+
+  const accountBalances: { [key: string]: number } = {};
+
+  const addLiquidities = await aggregateData(blockNumber, 'add');
+  const removeLiquidities = await aggregateData(blockNumber, 'remove');
+
+  console.log('Add Liquidities:', addLiquidities);
+  console.log('Remove Liquidities:', removeLiquidities);
+
+  addLiquidities.forEach((item: any) => {
+    accountBalances[item.account] = (accountBalances[item.account] || 0) + parseFloat(item.amount);
+  });
+
+  removeLiquidities.forEach((item: any) => {
+    accountBalances[item.account] = (accountBalances[item.account] || 0) - parseFloat(item.amountOut);
+  });
+
+  console.log('Account Balances:', accountBalances);
+
+  const csvRows: OutputDataSchemaRow[] = Object.keys(accountBalances)
+    .filter(account => accountBalances[account] > 0)  // Filter out zero or negative balances
+    .map(account => ({
+      block_number: blockNumber,
+      timestamp: blockTimestamp,  // Using current timestamp; adjust if you have a specific timestamp for the end block
+      user_address: account,
+      token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
+      token_balance: accountBalances[account],
+      token_symbol: 'USDC',
+      usd_price: 0
+    }));
+
   return csvRows;
 };
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
-
   return new Promise((resolve, reject) => {
     fs.createReadStream(filePath)
       .pipe(parse({ headers: true }))
@@ -102,43 +165,26 @@ const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
   const allCsvRows: OutputDataSchemaRow[] = [];
 
   for (const block of blocks) {
-    try {
-      const result = await getUserTVLByBlock(block);
-      allCsvRows.push(...result);
-    } catch (error) {
-      console.error(`An error occurred for block ${block.blockNumber}:`, error);
-    }
+    const result = await getUserTVLByBlock(block);
+    allCsvRows.push(...result);
   }
 
-  const fileExists = fs.existsSync(filePath);
+  let fileExists = fs.existsSync(filePath);
+  let fileEmpty = true;
 
   if (fileExists) {
-    const firstLine = fs.readFileSync(filePath, 'utf8').split('\n')[0];
-    const hasHeaders = firstLine.includes('block_number,timestamp,user_address,token_address,token_balance,token_symbol,usd_price');
-    
-    if (!hasHeaders) {
-      // Rewrite the file with headers
-      fs.writeFileSync(filePath, '');
-      const ws = fs.createWriteStream(filePath, { flags: 'w' });
-      writeToStream(ws, allCsvRows, { headers: true, includeEndRowDelimiter: true })
-        .on('finish', () => {
-          console.log(`CSV file '${filePath}' has been rewritten successfully with headers.`);
-        });
-    } else {
-      const ws = fs.createWriteStream(filePath, { flags: 'a' });
-      writeToStream(ws, allCsvRows, { headers: false, includeEndRowDelimiter: true })
-        .on('finish', () => {
-          console.log(`CSV file '${filePath}' has been appended successfully.`);
-        });
-    }
-  } else {
-    const ws = fs.createWriteStream(filePath, { flags: 'w' });
-    writeToStream(ws, allCsvRows, { headers: true, includeEndRowDelimiter: true })
-      .on('finish', () => {
-        console.log(`CSV file '${filePath}' has been written successfully with headers.`);
-      });
+    const stats = fs.statSync(filePath);
+    fileEmpty = stats.size === 0;
   }
+
+  const ws = fs.createWriteStream(filePath, { flags: 'a' });
+  
+  writeToStream(ws, allCsvRows, { headers: fileEmpty, includeEndRowDelimiter: true })
+    .on('finish', () => {
+      console.log(`CSV file '${filePath}' has been written successfully.`);
+    });
 };
+
 
 const inputFilePath = 'hourly_blocks.csv';
 const outputFilePath = 'outputData.csv';
