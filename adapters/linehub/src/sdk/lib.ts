@@ -1,5 +1,5 @@
-import { V2_SUBGRAPH_URL, V3_SUBGRAPH_URL, client } from "./config"
-import { UserPosition } from "./types"
+import { TRADE_SUBGRAPH_URL, V2_SUBGRAPH_URL, V3_SUBGRAPH_URL, client } from "./config"
+import { UserLiquidity, UserPosition } from "./types"
 
 type V2Position = {
     balance: string,
@@ -99,6 +99,49 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
     }
 
     return result
+}
+
+export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: number): Promise<UserLiquidity[]> => {
+    let blockQuery = blockNumber !== 0 ? ` block: {number: ${blockNumber}}` : ``;
+
+    let skip = 0;
+    let fetchNext = true;
+    let result: any[] = [];
+    let _stores: any[] = [];
+    while (fetchNext) {
+        let query = `{
+            liquidities(where: {period: "user" amountDelta_gt: 1 } ${blockQuery} orderBy: createTimestamp, first:1000,skip:${skip}) {
+                user
+                asset
+                amountDelta
+            }
+        }`;
+
+        // console.log(query)
+
+        let response = await fetch(TRADE_SUBGRAPH_URL, {
+            method: "POST",
+            body: JSON.stringify({ query }),
+            headers: { "Content-Type": "application/json" },
+        });
+        const { data: { liquidities, stores } } = await response.json();
+        _stores = stores
+        result = result.concat(liquidities)
+
+        if (liquidities.length < 1000) {
+            fetchNext = false;
+        } else {
+            skip += 1000;
+        }
+    }
+    return result.map(r => {
+        return {
+            user: r.user,
+            asset: r.asset,
+            // user pool share is equal to user pool balance divided by the total balance. 
+            amount: BigInt(r.amountDelta),
+        }
+    });
 }
 
 type V3Position = {
