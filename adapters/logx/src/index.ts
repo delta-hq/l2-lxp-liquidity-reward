@@ -8,7 +8,7 @@ type OutputDataSchemaRow = {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: string; // Change to string to accommodate large numbers
+  token_balance: number; // Change to number to store token balance as a number
   token_symbol: string;
   usd_price: number;
 };
@@ -136,15 +136,15 @@ const getUserTVLByBlock = async (block: BlockData) => {
     .filter(account => accountBalances[account] > BigInt(0))  // Filter out zero or negative balances
     .map(account => {
       // Convert to number in USDC format after multiplying by price
-      const balanceInUsdc = BigInt(Math.floor(Number(accountBalances[account]) / 10**12 * llpPrice));
+      const balanceInUsdc = Number(accountBalances[account]) / 10**12 * llpPrice;
       return {
         block_number: blockNumber,
         timestamp: blockTimestamp,
         user_address: account,
         token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
-        token_balance: balanceInUsdc.toString(),  // Convert to string for large number handling
+        token_balance: Math.floor(balanceInUsdc),  // Convert to number for large number handling
         token_symbol: 'USDC',
-        usd_price: 0
+        usd_price: llpPrice
       };
     });
 
@@ -191,7 +191,6 @@ const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
       console.log(`CSV file '${filePath}' has been written successfully.`);
     });
 };
-
 
 const inputFilePath = 'hourly_blocks.csv';
 const outputFilePath = 'outputData.csv';
