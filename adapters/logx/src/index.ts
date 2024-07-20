@@ -1,13 +1,14 @@
 import fetch from 'node-fetch';
 import * as fs from 'fs';
 import { parse, writeToStream } from 'fast-csv';
+import { getLlpPrice } from './constants';
 
 type OutputDataSchemaRow = {
   block_number: number;
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: number;
+  token_balance: string; // Change to string to accommodate large numbers
   token_symbol: string;
   usd_price: number;
 };
@@ -61,6 +62,7 @@ const getLiquidityData = async (blockNumber: number, skipPage: number, type: 'ad
         account
         token
         amount
+        mintAmount
         timestamp_
       }
     }
@@ -75,6 +77,7 @@ const getLiquidityData = async (blockNumber: number, skipPage: number, type: 'ad
         account
         token
         amountOut
+        llpAmount
         timestamp_
       }
     }
@@ -110,8 +113,8 @@ const aggregateData = async (blockNumber: number, type: 'add' | 'remove'): Promi
 
 const getUserTVLByBlock = async (block: BlockData) => {
   const { blockNumber, blockTimestamp } = block;
-
-  const accountBalances: { [key: string]: number } = {};
+  const llpPrice = await getLlpPrice();
+  const accountBalances: { [key: string]: bigint } = {};
 
   const addLiquidities = await aggregateData(blockNumber, 'add');
   const removeLiquidities = await aggregateData(blockNumber, 'remove');
@@ -120,26 +123,30 @@ const getUserTVLByBlock = async (block: BlockData) => {
   console.log('Remove Liquidities:', removeLiquidities);
 
   addLiquidities.forEach((item: any) => {
-    accountBalances[item.account] = (accountBalances[item.account] || 0) + parseFloat(item.amount);
+    accountBalances[item.account] = (accountBalances[item.account] || BigInt(0)) + BigInt(item.mintAmount);
   });
 
   removeLiquidities.forEach((item: any) => {
-    accountBalances[item.account] = (accountBalances[item.account] || 0) - parseFloat(item.amountOut);
+    accountBalances[item.account] = (accountBalances[item.account] || BigInt(0)) - BigInt(item.llpAmount);
   });
 
   console.log('Account Balances:', accountBalances);
-
+  
   const csvRows: OutputDataSchemaRow[] = Object.keys(accountBalances)
-    .filter(account => accountBalances[account] > 0)  // Filter out zero or negative balances
-    .map(account => ({
-      block_number: blockNumber,
-      timestamp: blockTimestamp,  // Using current timestamp; adjust if you have a specific timestamp for the end block
-      user_address: account,
-      token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
-      token_balance: accountBalances[account],
-      token_symbol: 'USDC',
-      usd_price: 0
-    }));
+    .filter(account => accountBalances[account] > BigInt(0))  // Filter out zero or negative balances
+    .map(account => {
+      // Convert to number in USDC format after multiplying by price
+      const balanceInUsdc = BigInt(Math.floor(Number(accountBalances[account]) / 10**12 * llpPrice));
+      return {
+        block_number: blockNumber,
+        timestamp: blockTimestamp,
+        user_address: account,
+        token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
+        token_balance: balanceInUsdc.toString(),  // Convert to string for large number handling
+        token_symbol: 'USDC',
+        usd_price: 0
+      };
+    });
 
   return csvRows;
 };
