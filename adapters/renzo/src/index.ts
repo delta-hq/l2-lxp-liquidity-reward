@@ -36,7 +36,7 @@ const querySize = 500000;
 const EZ_ETH_ADDRESS = "0x2416092f143378750bb29b79eD961ab195CcEea5";
 const TOKEN_SYMBOL = "EZETH";
 const RENZO_INDEXER_INTERFACE =
-  "https://app.sentio.xyz/api/v1/analytics/renzo/ezeth-points-linea/sql/execute";
+  "https://app.sentio.xyz/api/v1/analytics/renzo/ezeth-points-newdb-linea/sql/execute";
 const API_KEY = process.env.RENZO_API_KEY || "";
 
 export const getUserTVLByBlock = async (
