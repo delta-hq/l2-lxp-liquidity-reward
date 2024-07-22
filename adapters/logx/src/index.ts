@@ -8,9 +8,9 @@ type OutputDataSchemaRow = {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: number; // Change to number to store token balance as a number
-  token_symbol: string;
-  usd_price: number;
+  token_balance: bigint; // Store as BigInt in USDC format
+  token_symbol: string; // Should be empty string if not available
+  usd_price: number; // Assign 0 if not available
 };
 
 interface BlockData {
@@ -114,6 +114,7 @@ const aggregateData = async (blockNumber: number, type: 'add' | 'remove'): Promi
 const getUserTVLByBlock = async (block: BlockData) => {
   const { blockNumber, blockTimestamp } = block;
   const llpPrice = await getLlpPrice();
+  const llpPriceBigInt = BigInt(Math.floor(llpPrice * 10**6)); // Convert llpPrice to BigInt in 6 decimal places
   const accountBalances: { [key: string]: bigint } = {};
 
   const addLiquidities = await aggregateData(blockNumber, 'add');
@@ -131,20 +132,19 @@ const getUserTVLByBlock = async (block: BlockData) => {
   });
 
   console.log('Account Balances:', accountBalances);
-  
+
   const csvRows: OutputDataSchemaRow[] = Object.keys(accountBalances)
     .filter(account => accountBalances[account] > BigInt(0))  // Filter out zero or negative balances
     .map(account => {
-      // Convert to number in USDC format after multiplying by price
-      const balanceInUsdc = Number(accountBalances[account]) / 10**12 * llpPrice;
+      const balanceInUsdc = (accountBalances[account] * llpPriceBigInt) / BigInt(10**18);
       return {
         block_number: blockNumber,
         timestamp: blockTimestamp,
         user_address: account,
         token_address: '0x176211869ca2b568f2a7d4ee941e073a821ee1ff',  // Placeholder as token_address is not provided in this context
-        token_balance: Math.floor(balanceInUsdc),  // Convert to number for large number handling
-        token_symbol: 'USDC',
-        usd_price: llpPrice
+        token_balance: balanceInUsdc,
+        token_symbol: 'USDC',  // Should be an empty string if not available
+        usd_price: 0 // Assign 0 if not available
       };
     });
 
@@ -185,7 +185,7 @@ const fetchAndWriteToCsv = async (filePath: string, blocks: BlockData[]) => {
   }
 
   const ws = fs.createWriteStream(filePath, { flags: 'a' });
-  
+
   writeToStream(ws, allCsvRows, { headers: fileEmpty, includeEndRowDelimiter: true })
     .on('finish', () => {
       console.log(`CSV file '${filePath}' has been written successfully.`);
