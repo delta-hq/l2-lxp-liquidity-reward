@@ -60,6 +60,7 @@ export class PositionsStream extends Readable {
 
     if (rows.length) {
       this.push(rows.join("\n"));
+      this.push("\n");
       this.skip = farmPositions.at(-1).id;
     } else {
       this.push(null);
