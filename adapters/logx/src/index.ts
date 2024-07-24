@@ -120,8 +120,8 @@ const getUserTVLByBlock = async (block: BlockData) => {
   const addLiquidities = await aggregateData(blockNumber, 'add');
   const removeLiquidities = await aggregateData(blockNumber, 'remove');
 
-  console.log('Add Liquidities:', addLiquidities);
-  console.log('Remove Liquidities:', removeLiquidities);
+  // console.log('Add Liquidities:', addLiquidities);
+  // console.log('Remove Liquidities:', removeLiquidities);
 
   addLiquidities.forEach((item: any) => {
     accountBalances[item.account] = (accountBalances[item.account] || BigInt(0)) + BigInt(item.mintAmount);
@@ -131,7 +131,7 @@ const getUserTVLByBlock = async (block: BlockData) => {
     accountBalances[item.account] = (accountBalances[item.account] || BigInt(0)) - BigInt(item.llpAmount);
   });
 
-  console.log('Account Balances:', accountBalances);
+  // console.log('Account Balances:', accountBalances);
 
   const csvRows: OutputDataSchemaRow[] = Object.keys(accountBalances)
     .filter(account => accountBalances[account] > BigInt(0))  // Filter out zero or negative balances
