@@ -3,7 +3,7 @@ import fs from 'fs';
 import { write } from 'fast-csv';
 
 import { BlockData, OutputSchemaRow } from './sdk/types';
-import { getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
+import { getTradeLiquidityForAddressByPoolAtBlock, getV2UserPositionsAtBlock, getV3UserPositionsAtBlock } from './sdk/lib';
 
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
@@ -58,9 +58,10 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: BlockData[]) => {
 export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockData): Promise<OutputSchemaRow[]> => {
     const result: OutputSchemaRow[] = []
 
-    const [v2Positions, v3Positions] = await Promise.all([
+    const [v2Positions, v3Positions, tradeLiquidities] = await Promise.all([
         getV2UserPositionsAtBlock(blockNumber),
-        getV3UserPositionsAtBlock(blockNumber)
+        getV3UserPositionsAtBlock(blockNumber),
+        getTradeLiquidityForAddressByPoolAtBlock(blockNumber)
     ])
 
     // combine v2 & v3 
@@ -78,6 +79,14 @@ export const getUserTVLByBlock = async ({ blockNumber, blockTimestamp }: BlockDa
             balances[position.user][position.token1.address] =
                 (balances?.[position.user]?.[position.token1.address] ?? 0n)
                 + position.token1.balance
+    }
+    for (const position of tradeLiquidities) {
+        balances[position.user] = balances[position.user] || {}
+
+        if (position.amount > 0n)
+            balances[position.user][position.asset] =
+                (balances?.[position.user]?.[position.asset] ?? 0n)
+                + position.amount
     }
     for (const [user, tokenBalances] of Object.entries(balances)) {
         for (const [token, balance] of Object.entries(tokenBalances)) {

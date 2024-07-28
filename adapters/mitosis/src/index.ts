@@ -2,17 +2,26 @@ import fs from 'fs';
 import { write } from "fast-csv";
 import csv from "csv-parser";
 
-const TOKEN_ADDRESS = "0x3478de5e82431676c87113001bbeeb359cb5eaa5";
-const TOKEN_SYMBOL = 'miweETH';
+const assetWhitelist = [
+  'miweETH',
+  'miuniETH',
+];
 
-const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.0.0/gn";
+const GRAPHQL_ENDPOINT = "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.1.1/gn";
 
-const makeQuery = (blockNumber: number, next = "") => `query {
+const makeBalancesQuery = (blockNumber: number, next = "") => `query {
   tokenBalances(
     block: {number: ${blockNumber}},
     first: 1000,
     where: { id_gt: "${next}" }
   ) {
+    token {
+      id
+      symbol
+    }
+    account {
+      id
+    }
     value
     id
   }
@@ -24,6 +33,13 @@ interface BlockData {
 }
 
 interface TokenBalance {
+  token: {
+    id: string;
+    symbol: string;
+  };
+  account: {
+    id: string;
+  };
   value: string;
   id: string;
 }
@@ -59,19 +75,19 @@ const toOutput = ({ blockNumber, blockTimestamp }: BlockData, { tokenBalances }:
   tokenBalances.map((v) => ({
     block_number: blockNumber,
     timestamp: blockTimestamp,
-    user_address: v.id,
-    token_address: TOKEN_ADDRESS,
+    user_address: v.account.id,
+    token_address: v.token.id,
     token_balance: BigInt(v.value),
-    token_symbol: TOKEN_SYMBOL,
+    token_symbol: v.token.symbol,
     usd_price: 0
-  }))
+  })).filter((v) => assetWhitelist.includes(v.token_symbol));
 
 export const getUserTVLByBlock = async (blocks: BlockData): Promise<OutputDataSchemaRow[]> => {
   let next = "";
   let output: OutputDataSchemaRow[] = [];
 
   while (true) {
-    const { data: resp } = await post<TokenBalancesResponse>(GRAPHQL_ENDPOINT, makeQuery(blocks.blockNumber, next));
+    const { data: resp } = await post<TokenBalancesResponse>(GRAPHQL_ENDPOINT, makeBalancesQuery(blocks.blockNumber, next));
     if (resp.tokenBalances.length === 0) break;
 
     output = output.concat(toOutput(blocks, resp));
