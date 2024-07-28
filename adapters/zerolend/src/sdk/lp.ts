@@ -22,12 +22,12 @@ export const getUserLPByBlock = async (
 
   do {
     const query = `{
-        tokenBalances(
-            where: {id_gt: "${lastAddress}", balance_omni_lp_gt: "0"}
-            first: ${first}
-        ) {
-            id
-            balance_omni_lp
+      tokenBalances(
+        where: {id_gt: "${lastAddress}", balance_omni_lp_gt: "0"}
+        first: ${first}
+      ) {
+        id
+        balance_omni_lp
         }
       }`;
 
@@ -46,7 +46,7 @@ export const getUserLPByBlock = async (
         timestamp,
         user_address: data.id,
         token_address: tokenAddress,
-        token_balance: Number(data.balance_omni_lp),
+        token_balance: Math.floor(Number(data.balance_omni_lp) / 1e18),
         token_symbol: symbol,
         usd_price: 0,
       });
@@ -55,9 +55,9 @@ export const getUserLPByBlock = async (
     });
 
     console.log(
-      `Processed ${rows.length} rows. Last address is ${lastAddress}`
+      `Processed ${rows.length} rows for DLP stakers. Last address is ${lastAddress}`
     );
   } while (true);
 
-  return rows;
+  return rows.filter((r) => r.token_balance > 1);
 };

@@ -38,25 +38,17 @@ readBlocksFromCSV("hourly_blocks.csv")
   .then(async (blocks: BlockData[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-    const batchSize = 1000; // Size of batch to trigger writing to the file
-    let i = 0;
 
     for (const block of blocks) {
       try {
-        // const resultTvl = await getUserTVLByBlock(block);
-        // for (let i = 0; i < resultTvl.length; i++) {
-        //   allCsvRows.push(resultTvl[i]);
-        // }
+        const resultTvl = await getUserTVLByBlock(block);
+        allCsvRows.push(...resultTvl);
 
-        // const resultStake = await getUserStakeByBlock(block);
-        // for (let i = 0; i < resultStake.length; i++) {
-        //   allCsvRows.push(resultStake[i]);
-        // }
+        const resultStake = await getUserStakeByBlock(block);
+        allCsvRows.push(...resultStake);
 
         const resultLp = await getUserLPByBlock(block);
-        for (let i = 0; i < resultLp.length; i++) {
-          allCsvRows.push(resultLp[i]);
-        }
+        allCsvRows.push(...resultLp);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
