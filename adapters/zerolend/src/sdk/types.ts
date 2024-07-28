@@ -1,47 +1,46 @@
 export interface IOmniStakingResponse {
-    data: {
-        tokenBalances: IOmniStakingData[];
-    };
+  data: {
+    tokenBalances: IOmniStakingData[];
+  };
 }
 
 export interface IOmniStakingData {
-    id: string,
-    balance_omni: string
-    balance_omni_lp: string
-
+  id: string;
+  balance_omni: string;
+  balance_omni_lp: string;
 }
 
 export type OutputDataSchemaRow = {
-    block_number: number;
-    timestamp: number;
-    user_address: string;
-    token_address: string;
-    token_balance: number;
-    token_symbol: string;
-    usd_price: number;
+  block_number: number;
+  timestamp: number;
+  user_address: string;
+  token_address: string;
+  token_balance: number;
+  token_symbol: string;
+  usd_price: number;
 };
 
 export interface BlockData {
-    blockNumber: number;
-    blockTimestamp: number;
+  blockNumber: number;
+  blockTimestamp: number;
 }
 
 export interface ITVLResponse {
-    data: {
-        userReserves: ITVLData[];
-    };
+  data: {
+    userReserves: ITVLData[];
+  };
 }
 
 export interface ITVLData {
-    user: {
-        id: string;
-    };
-    currentTotalDebt: string;
-    currentATokenBalance: string;
-    reserve: {
-        underlyingAsset: string;
-        symbol: string;
-        name: string;
-    };
-    liquidityRate: "0";
+  user: {
+    id: string;
+  };
+  currentTotalDebt: string;
+  currentATokenBalance: string;
+  reserve: {
+    underlyingAsset: string;
+    symbol: string;
+    name: string;
+  };
+  liquidityRate: "0";
 }

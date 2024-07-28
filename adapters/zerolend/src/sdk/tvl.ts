@@ -1,5 +1,9 @@
-import { BlockData, ITVLData, ITVLResponse, OutputDataSchemaRow } from "./types";
-
+import {
+  BlockData,
+  ITVLData,
+  ITVLResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
