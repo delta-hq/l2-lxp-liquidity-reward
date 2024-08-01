@@ -1,7 +1,7 @@
 import csv from 'csv-parser';
 import {write} from "fast-csv";
 import fs from "fs";
-import _ from 'lodash';
+import _, { Dictionary } from 'lodash';
 
 interface BlockData {
     blockNumber: number;
@@ -17,6 +17,8 @@ export interface Data {
     liquidateVaults: {vaultInfo: VaultInfo}[];
     payBackTokens: PayBackToken[];
     borrowTokens: BorrowToken[];
+    depositCollaterals: {vaultInfo: VaultInfo}[];
+    withdrawCollaterals: {vaultInfo: VaultInfo}[];
 }
 
 interface BoughtRiskyDebtVault {
@@ -64,11 +66,9 @@ type OutputDataSchemaRow = {
 
 
 const SUBGRAPH_QUERY_URL =
-    "https://api.goldsky.com/api/public/project_clwvughgzvxku01xigwdkgqw5/subgraphs/qidao-linea/1.4/gn";
+    "https://api.goldsky.com/api/public/project_clz8u0ol7j9rs01vc1vbe5nvd/subgraphs/qidao-linea/1.6/gn"
 
 const PAGE_SIZE = 1_000
-
-const MAI_ADDRESS = "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a"
 
 const post = async <T>(url: string, data: any): Promise<T> => {
     const response = await fetch(url, {
@@ -183,22 +183,73 @@ const getBorrowRepaidData = async (
       }
     }
   }
+  
+  depositCollaterals(
+    orderBy: blockNumber
+    orderDirection: desc
+    where: {id_gt: "${lastId}"},
+    block: {number: ${blockNumber}}
+  ) {
+    __typename
+    blockNumber
+    amount
+    vaultInfo {
+      id
+      owner
+      debt
+      collateralAmount
+      collateralValue
+      collateral {
+        symbol
+        id
+        decimals
+      }
+    }
+  }
+  withdrawCollaterals(
+    orderBy: blockNumber
+    orderDirection: desc
+    where: {id_gt: "${lastId}"},
+    block: {number: ${blockNumber}}
+  ) {
+    __typename
+    blockNumber
+    amount
+    vaultInfo {
+      id
+      owner
+      debt
+      collateralAmount
+      collateralValue
+      collateral {
+        symbol
+        id
+        decimals
+      }
+    }
+  }
 }`;
     const csvRows: OutputDataSchemaRow[] = [];
     const responseJson = await post<GQLResp>(SUBGRAPH_QUERY_URL, {
         query: BORROW_PAYBACK_QUERY,
     });
-    const k = 'borrowTokens'
+
     if (!responseJson.data) {
         console.error('No data found for block:', blockNumber)
+        // console.dir(responseJson)
     } else {
         const {liquidateVaults, borrowTokens, payBackTokens} = responseJson.data
+        //Add transfer vault
         const grpedBorrows = _.groupBy(borrowTokens, 'vaultInfo.owner')
         const grpedLiquidates = _.groupBy(liquidateVaults, 'vaultInfo.owner')
         const grpedPaybacks = _.groupBy(payBackTokens, 'vaultInfo.owner')
+        const grpedDeposits = _.groupBy(responseJson.data.depositCollaterals, 'vaultInfo.owner')
+        const grpedWithdraws = _.groupBy(responseJson.data.withdrawCollaterals, 'vaultInfo.owner')
         const riskyVaultsByOwner = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'riskyVault.owner')
         const newRiskyVaultsByOwner = _.groupBy(responseJson.data.boughtRiskyDebtVaults, 'newVault.owner')
-        const merged = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, riskyVaultsByOwner, newRiskyVaultsByOwner)
+        const merged: Dictionary<BorrowToken[]> & Dictionary<{
+            vaultInfo: VaultInfo
+        }[]> & Dictionary<BoughtRiskyDebtVault[]> = _.merge(grpedBorrows, grpedLiquidates, grpedPaybacks, grpedDeposits, grpedWithdraws, riskyVaultsByOwner, newRiskyVaultsByOwner)
         // const sorted = _.orderBy(merged, 'blockNumber', 'asc')
         // console.dir(merged, {depth: null})
         const vInfo: ({vaultInfo: VaultInfo} | BoughtRiskyDebtVault)[] = Object.values(merged).flatMap( (e) => {
@@ -227,8 +278,32 @@ const getBorrowRepaidData = async (
         if (responseJson.data.borrowTokens.length == PAGE_SIZE ||
             responseJson.data.liquidateVaults.length == PAGE_SIZE ||
             responseJson.data.payBackTokens.length == PAGE_SIZE ||
-            responseJson.data.boughtRiskyDebtVaults.length == PAGE_SIZE
+            responseJson.data.boughtRiskyDebtVaults.length == PAGE_SIZE ||
+            responseJson.data.depositCollaterals.length == PAGE_SIZE ||
+            responseJson.data.withdrawCollaterals.length == PAGE_SIZE
         ) {
+            let k:
+                'borrowTokens' | 'liquidateVaults' |
+                'payBackTokens' | 'boughtRiskyDebtVaults'|
+                'withdrawCollaterals' | 'depositCollaterals' = 'borrowTokens'
+            switch (true){
+                case responseJson.data.liquidateVaults.length == PAGE_SIZE:
+                    k = 'liquidateVaults'
+                    break
+                case responseJson.data.payBackTokens.length == PAGE_SIZE:
+                    k = 'payBackTokens'
+                    break
+                case responseJson.data.boughtRiskyDebtVaults.length == PAGE_SIZE:
+                    k = 'boughtRiskyDebtVaults'
+                    break
+                case responseJson.data.depositCollaterals.length == PAGE_SIZE:
+                    k = 'depositCollaterals'
+                    break
+                case responseJson.data.withdrawCollaterals.length == PAGE_SIZE:
+                    k = 'withdrawCollaterals'
+                    break
+
+            }
             const lastRecord = responseJson.data[k][responseJson.data[k].length - 1] as any
             csvRows.push(...await getBorrowRepaidData(blockNumber, blockTimestamp, lastRecord.id))
         }
@@ -304,6 +379,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
                 reject(err);
             });
     });
+    console.log(`Read ${blocks.length} blocks from CSV file.`);
 
     return blocks;
 };
@@ -328,7 +404,7 @@ readBlocksFromCSV('./hourly_blocks.csv').then(async (blocks: any[]) => {
             .pipe(ws)
             .on("finish", () => {
                 console.log(`CSV file has been written.`);
-                resolve;
+                resolve(null);
             });
     });
 
