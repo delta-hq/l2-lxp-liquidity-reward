@@ -98,26 +98,46 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
 readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
-  const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+  const allCsvRows: any[] = [];
+  const pageSize = 10; // Size of batch to trigger writing to the file
 
-  for (const block of blocks) {
+  // Write the CSV output to a file
+  const writeCsv = function (data: any[], first: boolean): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: first ? 'w' : 'a' });
+      write(data, { headers: first ? true : false })
+        .pipe(ws)
+        .on("finish", () => {
+          console.log(`CSV file has been written.`);
+          resolve();
+        })
+        .on('error', (err) => {
+          reject(err);
+        });
+
+      // Clear the accumulated CSV rows
+      allCsvRows.length = 0;
+    });
+  }
+
+  for (let i = 0; i < blocks.length; i++) {
     try {
-      const result = await getUserTVLByBlock(block);
+      const result = await getUserTVLByBlock(blocks[i]);
+
       // Accumulate CSV rows for all blocks
       allCsvRows.push(...result);
+
+      console.log(`Processed block ${i}`);
+
+      // Write to file when batch size is reached or at the end of loop
+      if (i % pageSize === 0 || i === blocks.length - 1) {
+        await writeCsv(allCsvRows, i === pageSize);
+      }
     } catch (error) {
-      console.error(`An error occurred for block ${block}:`, error);
+      console.error(`An error occurred for block ${blocks[i]}:`, error);
     }
   }
-  await new Promise((resolve, reject) => {
-    const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
-    write(allCsvRows, { headers: true })
-      .pipe(ws)
-      .on("finish", () => {
-        console.log(`CSV file has been written.`);
-        resolve;
-      });
+})
+  .catch((err) => {
+    console.error('Error reading CSV file:', err);
   });
-}).catch((err) => {
-  console.error('Error reading CSV file:', err);
-});
