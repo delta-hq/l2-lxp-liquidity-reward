@@ -1,0 +1,25 @@
+{
+  "name": "dyson-finance",
+  "version": "1.0.0",
+  "description": "Accessible & Profitable Dex for All",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node dist/index.js",
+    "dev": "ts-node src/index.ts",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist"
+  },
+  "author": "eng@dyson.finance",
+  "license": "ISC",
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "fast-csv": "^5.0.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.12.6",
+    "ts-node": "10.9.2",
+    "typescript": "^5.4.4"
+  }
+}
