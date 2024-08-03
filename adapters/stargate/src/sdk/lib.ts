@@ -1,5 +1,5 @@
 import { Readable } from "stream";
-import { SUBGRAPH_URL, client } from "./config";
+import { client } from "./config";
 import { Position } from "./types";
 
 const WHITELISTED_TOKEN_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
@@ -14,7 +14,10 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
 export class PositionsStream extends Readable {
   skip: string;
 
-  constructor(private block: { blockNumber: number; blockTimestamp: number }) {
+  constructor(
+    private block: { blockNumber: number; blockTimestamp: number },
+    private subgraphUrl: string
+  ) {
     super({ objectMode: true });
     this.skip = "0";
   }
@@ -36,7 +39,7 @@ export class PositionsStream extends Readable {
         }
       }`;
 
-    const response = await fetch(SUBGRAPH_URL, {
+    const response = await fetch(this.subgraphUrl, {
       method: "POST",
       body: JSON.stringify({ query }),
       headers: { "Content-Type": "application/json" },
@@ -60,6 +63,7 @@ export class PositionsStream extends Readable {
 
     if (rows.length) {
       this.push(rows.join("\n"));
+      this.push("\n");
       this.skip = farmPositions.at(-1).id;
     } else {
       this.push(null);
