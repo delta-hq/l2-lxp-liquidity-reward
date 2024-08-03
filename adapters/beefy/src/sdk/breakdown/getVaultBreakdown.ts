@@ -4,7 +4,10 @@ import { BeefyViemClient, getViemClient } from "../viemClient";
 import { getSolidlyVaultBreakdown } from "./protocol_type/solidly";
 import { getGammaVaultBreakdown } from "./protocol_type/gamma";
 import { getMendiVaultBreakdown } from "./protocol_type/mendi";
-import { getBeefyClmVaultBreakdown } from "./protocol_type/beefy_clm";
+import {
+  getBeefyClmManagerBreakdown,
+  getBeefyClmVaultBreakdown,
+} from "./protocol_type/beefy_clm";
 
 type BreakdownMethod = (
   client: BeefyViemClient,
@@ -17,7 +20,8 @@ const breakdownMethods: Record<BeefyProtocolType, BreakdownMethod> = {
   mendi: getMendiVaultBreakdown,
   gamma: getGammaVaultBreakdown,
   ichi: getGammaVaultBreakdown,
-  beefy_clm: getBeefyClmVaultBreakdown,
+  beefy_clm: getBeefyClmManagerBreakdown,
+  beefy_clm_vault: getBeefyClmVaultBreakdown,
 };
 
 export const getVaultBreakdowns = async (
