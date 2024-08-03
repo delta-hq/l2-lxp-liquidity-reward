@@ -48,12 +48,8 @@ const getAccountData = async (
           totalSupply,
           tvl0,
           tvl1,
-          tvlUSD,
         },
         shares,
-        initialToken0,
-        initialToken1,
-        initialUSD,
       }
     }
   }`;
