@@ -150,9 +150,7 @@ export const getBeefyVaultConfig = memoize(
       fetch(BEEFY_COW_VAULT_API + `/${chain}`)
         .then((res) => res.json())
         .then((res) =>
-          (res as ApiClmManager[])
-            .filter((vault) => vault.chain === chain)
-            .filter((vault) => vault.type === "cowcentrated")
+          (res as ApiClmManager[]).filter((vault) => vault.chain === chain)
         ),
       fetch(BEEFY_MOO_VAULT_API + `/${chain}`)
         .then((res) => res.json())
@@ -199,7 +197,10 @@ export const getBeefyVaultConfig = memoize(
         vault.tokenAddress.toLocaleLowerCase() as Hex;
       const vault_address = vault.earnedTokenAddress.toLocaleLowerCase() as Hex;
 
-      let protocol_type = protocol_map[vault.platformId];
+      let protocol_type =
+        vault.type === "cowcentrated"
+          ? "beefy_clm"
+          : protocol_map[vault.platformId];
       if (!protocol_type) {
         throw new Error(`Unknown platformId ${vault.platformId}`);
       }
