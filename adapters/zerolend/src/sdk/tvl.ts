@@ -1,37 +1,9 @@
-interface IResponse {
-  data: {
-    userReserves: IData[];
-  };
-}
-
-interface IData {
-  user: {
-    id: string;
-  };
-  currentTotalDebt: string;
-  currentATokenBalance: string;
-  reserve: {
-    underlyingAsset: string;
-    symbol: string;
-    name: string;
-  };
-  liquidityRate: "0";
-}
-
-type OutputDataSchemaRow = {
-  block_number: number;
-  timestamp: number;
-  user_address: string;
-  token_address: string;
-  token_balance: number;
-  token_symbol: string;
-  usd_price: number;
-};
-
-export interface BlockData {
-  blockNumber: number;
-  blockTimestamp: number;
-}
+import {
+  BlockData,
+  ITVLData,
+  ITVLResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
@@ -71,11 +43,11 @@ export const getUserTVLByBlock = async (
       body: JSON.stringify({ query }),
       headers: { "Content-Type": "application/json" },
     });
-    const batch: IResponse = await response.json();
+    const batch: ITVLResponse = await response.json();
 
     if (!batch.data || batch.data.userReserves.length == 0) break;
 
-    batch.data.userReserves.forEach((data: IData) => {
+    batch.data.userReserves.forEach((data: ITVLData) => {
       const balance =
         BigInt(data.currentATokenBalance) - BigInt(data.currentTotalDebt);
 
