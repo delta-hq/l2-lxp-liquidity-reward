@@ -4,7 +4,6 @@ import { write } from "fast-csv";
 import { PAGE_SIZE, PROTOCOLS, SUBGRAPH_URLS } from "./config";
 import { AccountBalances, BlockData, OutputDataSchemaRow } from "./types";
 
-
 const post = async (url: string, data: any): Promise<any> => {
   const response = await fetch(url, {
     method: "POST",
@@ -48,6 +47,11 @@ const getAccountData = async (
           totalSupply,
           tvl0,
           tvl1,
+          tick,
+          baseLower,
+          baseUpper,
+          limitLower,
+          limitUpper,
         },
         shares,
       }
@@ -61,6 +65,18 @@ const getAccountData = async (
   let accountHoldings: AccountBalances = {};
   for (const account of responseJson.data.accounts) {
     for (const hypeShare of account.hypervisorShares) {
+      const isBaseInRange =
+        hypeShare.hypervisor.tick >= hypeShare.hypervisor.baseLower &&
+        hypeShare.hypervisor.tick <= hypeShare.hypervisor.baseUpper;
+      const isLimitInRange =
+        hypeShare.hypervisor.tick >= hypeShare.hypervisor.limitLower &&
+        hypeShare.hypervisor.tick <= hypeShare.hypervisor.limitUpper;
+
+      // Exclude position if not in range
+      if (!isBaseInRange && !isLimitInRange) {
+        continue;
+      }
+
       accountHoldings[account.id] ??= {};
 
       const shareOfPool = hypeShare.shares / hypeShare.hypervisor.totalSupply;
