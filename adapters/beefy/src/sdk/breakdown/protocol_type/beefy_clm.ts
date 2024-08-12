@@ -73,19 +73,28 @@ export const getBeefyClmVaultBreakdown = async (
     abi: BeefyVaultV7Abi,
   });
 
-  const [balance, totalSupply] = await Promise.all([
-    vaultContract.read.balance({ blockNumber }),
-    vaultContract.read.totalSupply({ blockNumber }),
-  ]);
+  const underlyingContract = getContract({
+    client,
+    address: vault.undelying_lp_address,
+    abi: BeefyVaultConcLiqAbi,
+  });
+
+  const [underlyingBalance, vaultTotalSupply, underlyingTotalSypply] =
+    await Promise.all([
+      vaultContract.read.balance({ blockNumber }),
+      vaultContract.read.totalSupply({ blockNumber }),
+      underlyingContract.read.totalSupply({ blockNumber }),
+    ]);
 
   return {
     vault,
     blockNumber,
-    vaultTotalSupply: totalSupply,
+    vaultTotalSupply: vaultTotalSupply,
     isLiquidityEligible: underlyingClmBreakdown.isLiquidityEligible,
     balances: underlyingClmBreakdown.balances.map((tokenBalance) => ({
       tokenAddress: tokenBalance.tokenAddress,
-      vaultBalance: (balance * tokenBalance.vaultBalance) / totalSupply,
+      vaultBalance:
+        (underlyingBalance * tokenBalance.vaultBalance) / underlyingTotalSypply,
     })),
   };
 };
