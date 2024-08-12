@@ -47,7 +47,7 @@ export const SNAPSHOTS_BLOCKS = [
 
 export const CHUNKS_SPLIT = 30;
 export const BLOCK_STEP = 10000;
-export const LINEA_RPC = "https://lb.drpc.org/ogrpc?network=linea&dkey=AsCWb9aYukugqNphr9pEGw5L893HadYR7ooVbrjxQOzW"
+export const LINEA_RPC = `https://lb.drpc.org/ogrpc?network=linea&dkey=${process.env.OVERNIGHT_RPC}`
 export const LP_LYNEX_SYMBOL = "oLYNX";
 export const LP_LYNEX = "0x63349BA5E1F71252eCD56E8F950D1A518B400b60"
 
