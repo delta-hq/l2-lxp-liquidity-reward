@@ -4,8 +4,9 @@ import { BeefyViemClient } from "../../viemClient";
 import { BeefyVaultBreakdown } from "../types";
 import { BeefyVaultConcLiqAbi } from "../../../abi/BeefyVaultConcLiq";
 import { BeefyClmStrategyAbi } from "../../../abi/BeefyClmStrategy";
+import { BeefyVaultV7Abi } from "../../../abi/BeefyVaultV7Abi";
 
-export const getBeefyClmVaultBreakdown = async (
+export const getBeefyClmManagerBreakdown = async (
   client: BeefyViemClient,
   blockNumber: bigint,
   vault: BeefyVault
@@ -48,5 +49,43 @@ export const getBeefyClmVaultBreakdown = async (
         vaultBalance: balances[1],
       },
     ],
+  };
+};
+
+export const getBeefyClmVaultBreakdown = async (
+  client: BeefyViemClient,
+  blockNumber: bigint,
+  vault: BeefyVault
+): Promise<BeefyVaultBreakdown> => {
+  if (vault.protocol_type !== "beefy_clm_vault") {
+    throw new Error(`Invalid protocol type ${vault.protocol_type}`);
+  }
+
+  const underlyingClmBreakdown = await getBeefyClmManagerBreakdown(
+    client,
+    blockNumber,
+    vault.beefy_clm_manager
+  );
+
+  const vaultContract = getContract({
+    client,
+    address: vault.vault_address,
+    abi: BeefyVaultV7Abi,
+  });
+
+  const [balance, totalSupply] = await Promise.all([
+    vaultContract.read.balance({ blockNumber }),
+    vaultContract.read.totalSupply({ blockNumber }),
+  ]);
+
+  return {
+    vault,
+    blockNumber,
+    vaultTotalSupply: totalSupply,
+    isLiquidityEligible: underlyingClmBreakdown.isLiquidityEligible,
+    balances: underlyingClmBreakdown.balances.map((tokenBalance) => ({
+      tokenAddress: tokenBalance.tokenAddress,
+      vaultBalance: (balance * tokenBalance.vaultBalance) / totalSupply,
+    })),
   };
 };
