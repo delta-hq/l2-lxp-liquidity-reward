@@ -43,15 +43,15 @@ readBlocksFromCSV("hourly_blocks.csv")
 
     for (const block of blocks) {
       try {
-        // const resultTvl = await getUserTVLByBlock(block);
-        // for (let i = 0; i < resultTvl.length; i++) {
-        //   allCsvRows.push(resultTvl[i]);
-        // }
+        const resultTvl = await getUserTVLByBlock(block);
+        for (let i = 0; i < resultTvl.length; i++) {
+           allCsvRows.push(resultTvl[i]);
+        }
 
-        // const resultStake = await getUserStakeByBlock(block);
-        // for (let i = 0; i < resultStake.length; i++) {
-        //   allCsvRows.push(resultStake[i]);
-        // }
+        const resultStake = await getUserStakeByBlock(block);
+        for (let i = 0; i < resultStake.length; i++) {
+           allCsvRows.push(resultStake[i]);
+        }
 
         const resultLp = await getUserLPByBlock(block);
         for (let i = 0; i < resultLp.length; i++) {
