@@ -1,10 +1,16 @@
 import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
-import { getRsETHBalance, getRsETHPrice } from "./lib/fetcher";
-import { kelpGAIN, rsETH } from "./lib/utils";
+import {
+  agConvertToAssets,
+  getEtherumBlock,
+  getRsETHBalance,
+  getRsETHPrice
+} from "./lib/fetcher";
+import { rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
 import { ethers } from "ethers";
+import { getAllAgEthHodlers, UserBalanceSubgraphEntry } from "./lib/query";
 interface BlockData {
   blockTimestamp: number;
   blockNumber: number;
@@ -22,21 +28,19 @@ type OutputDataSchemaRow = {
   multiplier: number;
 };
 
-const getMultiplier = (tvlInUSD: BigNumber) => {
+const getMultiplierPercent = (tvlInUSD: BigNumber) => {
   if (tvlInUSD.lt(100_000_000)) {
-    return 1.38;
+    return 138;
   } else if (tvlInUSD.lt(300_000_000)) {
-    return 1.44;
+    return 144;
   } else if (tvlInUSD.lt(500_000_000)) {
-    return 1.5;
+    return 150;
   } else if (tvlInUSD.lt(800_000_000)) {
-    return 1.56;
+    return 156;
   }
-  return 1.56;
+  return 156;
 };
-export const getUserTVLByBlock = async (blocks: BlockData) => {
-  const { blockNumber, blockTimestamp } = blocks;
-
+export const getRsEthTVLInUSD = async (blockNumber: number) => {
   const [rsETHBalanceRaw, rsEthPrice] = await Promise.all([
     getRsETHBalance(blockNumber),
     getRsETHPrice(blockNumber)
@@ -45,20 +49,43 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const rsETHBalance = new BigNumber(ethers.utils.formatEther(rsETHBalanceRaw));
   const tvlInUSD = rsETHBalance.times(rsEthPrice);
 
-  const mul = getMultiplier(tvlInUSD);
-  const csvRows: OutputDataSchemaRow[] = [];
+  return {
+    tvlInUSD,
+    rsEthPrice
+  };
+};
 
-  csvRows.push({
-    block_number: blockNumber,
-    timestamp: blockTimestamp,
-    user_address: kelpGAIN.toLowerCase(),
-    token_address: rsETH.toLowerCase(),
-    token_balance: BigInt(rsETHBalanceRaw.toString()),
-    token_symbol: "rsETH",
-    usd_price: rsEthPrice.toNumber(),
-    tvl_usd: tvlInUSD.toString(),
-    multiplier: mul
+export const getUserTVLByBlock = async (blocks: BlockData) => {
+  const { blockNumber, blockTimestamp } = blocks;
+
+  const ethBlockNumber = await getEtherumBlock(blockTimestamp);
+  const [tvl, agRate, allUser] = await Promise.all([
+    getRsEthTVLInUSD(blockNumber),
+    agConvertToAssets(ethBlockNumber),
+    getAllAgEthHodlers(ethBlockNumber)
+  ]);
+
+  const csvRows: OutputDataSchemaRow[] = [];
+  const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
+  allUser.forEach((item: UserBalanceSubgraphEntry) => {
+    const userBalanceAgEth = item.balance;
+    const userBalaneRsEth =
+      (((BigInt(userBalanceAgEth) * BigInt(agRate)) / BigInt(10 ** 18)) *
+        BigInt(mulPercent)) /
+      100n;
+    csvRows.push({
+      block_number: blockNumber,
+      timestamp: blockTimestamp,
+      user_address: item.id.toLowerCase(),
+      token_address: rsETH.toLowerCase(),
+      token_balance: userBalaneRsEth,
+      token_symbol: "rsETH",
+      usd_price: tvl.rsEthPrice.toNumber(),
+      tvl_usd: tvl.tvlInUSD.toString(),
+      multiplier: Number(mulPercent) / 100
+    });
   });
+
   return csvRows;
 };
 
@@ -86,7 +113,9 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("hourly_blocks.csv")
+readBlocksFromCSV(
+  "/Users/batphonghan/coding/stader_labs/l2-lxp-liquidity-reward/adapters/kelp_gain_linea/test/sample_hourly_blocks.csv"
+)
   .then(async (blocks: any[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
@@ -104,7 +133,10 @@ readBlocksFromCSV("hourly_blocks.csv")
     await new Promise((resolve, reject) => {
       // const randomTime = Math.random() * 1000;
       // setTimeout(resolve, randomTime);
-      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
+      const ws = fs.createWriteStream(
+        `/Users/batphonghan/coding/stader_labs/l2-lxp-liquidity-reward/adapters/kelp_gain_linea/test/sample_outputData.csv`,
+        { flags: "w" }
+      );
       write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {

@@ -1,11 +1,25 @@
-import { ethers, utils } from "ethers";
+import { ethers } from "ethers";
 import BigNumber from "bignumber.js";
 import {
   chainlinkOracleContract,
   KelpOracleContract as kelpOracleContract,
   kelpGAIN,
-  rsETHContract
+  rsETHContract,
+  dater,
+  agETHContract,
+  rsETH
 } from "./utils";
+
+export async function getEtherumBlock(blockTimestampSecs: number) {
+  const blockTimestampInMill = blockTimestampSecs * 1000;
+  const date = new Date(blockTimestampInMill); //
+  // External API
+
+  const res = await dater.getDate(date);
+  let blockNumber = res.block; // Try to get the exact block number
+
+  return blockNumber;
+}
 
 export async function getRsETHBalance(blockNumber: number): Promise<string> {
   let rsETHBalance = await rsETHContract.balanceOf(kelpGAIN, {
@@ -31,6 +45,13 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
+export async function agConvertToAssets(blockNumber: number): Promise<string> {
+  const rate: string = await agETHContract.convertToAssets(BigInt(10 ** 18), {
+    blockTag: blockNumber
+  });
+
+  return rate;
+}
 export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
   const [rsEthRateRaw, ethPriceRaw, ethPriceDec] = await Promise.all([
     kelpOracleContract.rate({
