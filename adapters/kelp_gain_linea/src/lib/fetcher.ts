@@ -7,12 +7,12 @@ import {
   rsETHContract
 } from "./utils";
 
-export async function getRsETHBalance(blockNumber: number): Promise<BigNumber> {
+export async function getRsETHBalance(blockNumber: number): Promise<string> {
   let rsETHBalance = await rsETHContract.balanceOf(kelpGAIN, {
     blockTag: blockNumber
   });
 
-  return new BigNumber(ethers.utils.formatEther(rsETHBalance));
+  return rsETHBalance;
 }
 
 async function getETHPrice(blockNumber: number): Promise<string> {

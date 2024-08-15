@@ -4,6 +4,7 @@ import csv from "csv-parser";
 import { getRsETHBalance, getRsETHPrice } from "./lib/fetcher";
 import { kelpGAIN, rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
+import { ethers } from "ethers";
 interface BlockData {
   blockTimestamp: number;
   blockNumber: number;
@@ -36,11 +37,12 @@ const getMultiplier = (tvlInUSD: BigNumber) => {
 export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
 
-  const [rsETHBalance, rsEthPrice] = await Promise.all([
+  const [rsETHBalanceRaw, rsEthPrice] = await Promise.all([
     getRsETHBalance(blockNumber),
     getRsETHPrice(blockNumber)
   ]);
 
+  const rsETHBalance = new BigNumber(ethers.utils.formatEther(rsETHBalanceRaw));
   const tvlInUSD = rsETHBalance.times(rsEthPrice);
 
   const mul = getMultiplier(tvlInUSD);
@@ -51,7 +53,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     timestamp: blockTimestamp,
     user_address: kelpGAIN,
     token_address: rsETH,
-    token_balance: BigInt(rsETHBalance.toString()),
+    token_balance: BigInt(rsETHBalanceRaw.toString()),
     token_symbol: "rsETH",
     usd_price: rsEthPrice.toNumber(),
     tvl_usd: tvlInUSD.toString(),
