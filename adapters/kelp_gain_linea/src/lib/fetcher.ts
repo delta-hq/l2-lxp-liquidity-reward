@@ -2,7 +2,6 @@ import { ethers, utils } from "ethers";
 import BigNumber from "bignumber.js";
 import {
   chainlinkOracleContract,
-  dater,
   KelpOracleContract as kelpOracleContract,
   kelpGAIN,
   rsETHContract
@@ -17,20 +16,28 @@ export async function getRsETHBalance(blockNumber: number): Promise<BigNumber> {
 }
 
 async function getETHPrice(blockNumber: number): Promise<string> {
-  return chainlinkOracleContract.latestAnswer({
+  const latestAnswer = await chainlinkOracleContract.latestAnswer({
     blockTag: blockNumber
   });
+
+  return latestAnswer;
+}
+
+async function decimals(blockNumber: number): Promise<string> {
+  const decimals = await chainlinkOracleContract.decimals({
+    blockTag: blockNumber
+  });
+
+  return decimals;
 }
 
 export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
   const [rsEthRateRaw, ethPriceRaw, ethPriceDec] = await Promise.all([
-    kelpOracleContract.rsETHPrice({
+    kelpOracleContract.rate({
       blockTag: blockNumber
     }),
     getETHPrice(blockNumber),
-    chainlinkOracleContract.decimals({
-      blockTag: blockNumber
-    })
+    decimals(blockNumber)
   ]);
 
   let rsEthRate = new BigNumber(ethers.utils.formatEther(rsEthRateRaw));
@@ -39,15 +46,4 @@ export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
   );
 
   return rsEthRate.times(ethPrice);
-}
-
-export async function getBlockToRunTheJob(blockTimestampSecs: number) {
-  const blockTimestampInMill = blockTimestampSecs * 1000;
-  const date = new Date(blockTimestampInMill); //
-  // External API
-
-  const res = dater.getDate(date);
-  let blockNumber = res.block; // Try to get the exact block number
-
-  return blockNumber;
 }

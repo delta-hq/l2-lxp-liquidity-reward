@@ -1,11 +1,7 @@
 import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
-import {
-  getBlockToRunTheJob,
-  getRsETHBalance,
-  getRsETHPrice
-} from "./lib/fetcher";
+import { getRsETHBalance, getRsETHPrice } from "./lib/fetcher";
 import { kelpGAIN, rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
 interface BlockData {
@@ -21,6 +17,7 @@ type OutputDataSchemaRow = {
   token_balance: bigint;
   token_symbol: string; // token symbol should be empty string if it is not available
   usd_price: number; // assign 0 if not available
+  tvl_usd: string;
   multiplier: number;
 };
 
@@ -39,11 +36,9 @@ const getMultiplier = (tvlInUSD: BigNumber) => {
 export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
 
-  const ethBlock = await getBlockToRunTheJob(blockTimestamp);
-
   const [rsETHBalance, rsEthPrice] = await Promise.all([
     getRsETHBalance(blockNumber),
-    getRsETHPrice(ethBlock)
+    getRsETHPrice(blockNumber)
   ]);
 
   const tvlInUSD = rsETHBalance.times(rsEthPrice);
@@ -59,6 +54,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     token_balance: BigInt(rsETHBalance.toString()),
     token_symbol: "rsETH",
     usd_price: rsEthPrice.toNumber(),
+    tvl_usd: tvlInUSD.toString(),
     multiplier: mul
   });
   return csvRows;

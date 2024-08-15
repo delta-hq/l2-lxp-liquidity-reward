@@ -19,7 +19,6 @@
     "bignumber.js": "^9.1.2",
     "csv-parser": "^3.0.0",
     "decimal.js-light": "^2.5.1",
-    "ethereum-block-by-date": "^1.4.9",
     "ethers": "^5.7.2",
     "fast-csv": "^5.0.1",
     "graphql": "^16.6.0",
@@ -29,7 +28,6 @@
     "toformat": "^2.0.0"
   },
   "devDependencies": {
-    "@types/ethereum-block-by-date": "^1.4.1",
     "@types/node": "^20.11.17",
     "typescript": "^5.3.3"
   }
