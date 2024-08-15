@@ -34,7 +34,7 @@ const getMultiplier = (tvlInUSD: BigNumber) => {
   } else if (tvlInUSD.lt(800_000_000)) {
     return 1.56;
   }
-  return 2;
+  return 1.56;
 };
 export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
