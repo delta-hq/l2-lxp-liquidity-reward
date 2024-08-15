@@ -51,8 +51,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   csvRows.push({
     block_number: blockNumber,
     timestamp: blockTimestamp,
-    user_address: kelpGAIN,
-    token_address: rsETH,
+    user_address: kelpGAIN.toLowerCase(),
+    token_address: rsETH.toLowerCase(),
     token_balance: BigInt(rsETHBalanceRaw.toString()),
     token_symbol: "rsETH",
     usd_price: rsEthPrice.toNumber(),
