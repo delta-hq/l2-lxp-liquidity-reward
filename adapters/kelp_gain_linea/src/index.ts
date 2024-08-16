@@ -113,9 +113,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV(
-  "/Users/batphonghan/coding/stader_labs/l2-lxp-liquidity-reward/adapters/kelp_gain_linea/test/sample_hourly_blocks.csv"
-)
+readBlocksFromCSV("hourly_blocks.csv")
   .then(async (blocks: any[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
@@ -133,10 +131,7 @@ readBlocksFromCSV(
     await new Promise((resolve, reject) => {
       // const randomTime = Math.random() * 1000;
       // setTimeout(resolve, randomTime);
-      const ws = fs.createWriteStream(
-        `/Users/batphonghan/coding/stader_labs/l2-lxp-liquidity-reward/adapters/kelp_gain_linea/test/sample_outputData.csv`,
-        { flags: "w" }
-      );
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
       write(allCsvRows, { headers: true })
         .pipe(ws)
         .on("finish", () => {
