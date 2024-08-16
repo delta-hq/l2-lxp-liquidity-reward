@@ -1,10 +1,4 @@
-import {
-  BlockData,
-  IOmniStakingData,
-  IOmniStakingResponse,
-  ITVLResponse,
-  OutputDataSchemaRow,
-} from "./types";
+import { BlockData, IOmniStakingData, IOmniStakingResponse, OutputDataSchemaRow } from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-omnistaking/1.0.2/gn";

@@ -25,22 +25,22 @@ export interface BlockData {
   blockTimestamp: number;
 }
 
-export interface ITVLResponse {
-  data: {
-    userReserves: ITVLData[];
-  };
+export interface ILPResponse {
+    data: {
+        userReserves: IUserReserve[];
+    };
 }
 
-export interface ITVLData {
-  user: {
-    id: string;
-  };
-  currentTotalDebt: string;
-  currentATokenBalance: string;
-  reserve: {
-    underlyingAsset: string;
-    symbol: string;
-    name: string;
-  };
-  liquidityRate: "0";
+export interface IUserReserve {
+    user: {
+        id: string;
+    };
+    currentTotalDebt: string;
+    currentATokenBalance: string;
+    reserve: {
+        underlyingAsset: string;
+        symbol: string;
+        name: string;
+    };
+    liquidityRate: "0";
 }
