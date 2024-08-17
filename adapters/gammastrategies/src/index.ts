@@ -166,6 +166,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
   //    Retrieve data using block number and timestamp
 
+  // Exclude Nile as all positions already reflected in nile adapter
   const protocolData: AccountBalances[] = await Promise.all([
     getAccountData(PROTOCOLS.UNISWAP),
     getAccountData(PROTOCOLS.LYNEX),
