@@ -54,6 +54,7 @@ const getAccountData = async (
           limitUpper,
         },
         shares,
+        sharesStaked,
       }
     }
   }`;
@@ -77,9 +78,15 @@ const getAccountData = async (
         continue;
       }
 
+      // Staked lynex positions are already accounted for by lynex adapter, exclude them here
+      const shares = hypeShare.shares - hypeShare.sharesStaked
+      if (shares <= 0) {
+        continue;
+      }
+
       accountHoldings[account.id] ??= {};
 
-      const shareOfPool = hypeShare.shares / hypeShare.hypervisor.totalSupply;
+      const shareOfPool = shares / hypeShare.hypervisor.totalSupply;
       const tvl0Share = Math.round(shareOfPool * hypeShare.hypervisor.tvl0);
       const tvl1Share = Math.round(shareOfPool * hypeShare.hypervisor.tvl1);
 
