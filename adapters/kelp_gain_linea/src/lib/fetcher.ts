@@ -3,11 +3,12 @@ import BigNumber from "bignumber.js";
 import {
   chainlinkOracleContract,
   KelpOracleContract as kelpOracleContract,
-  kelpGAIN,
+  kelpGAINLinea,
   rsETHContract,
   dater,
   agETHContract,
-  rsETH
+  rsETH,
+  wrsETHContract
 } from "./utils";
 
 export async function getEtherumBlock(blockTimestampSecs: number) {
@@ -21,12 +22,28 @@ export async function getEtherumBlock(blockTimestampSecs: number) {
   return blockNumber;
 }
 
-export async function getRsETHBalance(blockNumber: number): Promise<string> {
-  let rsETHBalance = await rsETHContract.balanceOf(kelpGAIN, {
+export async function agETHTotalSupply(blockNumber: number): Promise<bigint> {
+  let totalSupply = await agETHContract.totalSupply({
+    blockTag: blockNumber
+  });
+
+  return totalSupply;
+}
+
+export async function getRsETHBalance(blockNumber: number): Promise<bigint> {
+  let rsETHBalance = await rsETHContract.balanceOf(kelpGAINLinea, {
     blockTag: blockNumber
   });
 
   return rsETHBalance;
+}
+
+export async function getWRsETHBalance(blockNumber: number): Promise<bigint> {
+  let wrsETHBalance = await wrsETHContract.balanceOf(kelpGAINLinea, {
+    blockTag: blockNumber
+  });
+
+  return wrsETHBalance;
 }
 
 async function getETHPrice(blockNumber: number): Promise<string> {
@@ -37,6 +54,13 @@ async function getETHPrice(blockNumber: number): Promise<string> {
   return latestAnswer;
 }
 
+async function rsETHRate(blockNumber: number): Promise<string> {
+  const rsETHRate = kelpOracleContract.rate({
+    blockTag: blockNumber
+  });
+  return rsETHRate;
+}
+
 async function decimals(blockNumber: number): Promise<string> {
   const decimals = await chainlinkOracleContract.decimals({
     blockTag: blockNumber
@@ -45,8 +69,8 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
-export async function agConvertToAssets(blockNumber: number): Promise<string> {
-  const rate: string = await agETHContract.convertToAssets(BigInt(10 ** 18), {
+export async function agConvertToAssets(blockNumber: number): Promise<bigint> {
+  const rate = await agETHContract.convertToAssets(BigInt(10 ** 18), {
     blockTag: blockNumber
   });
 
@@ -54,9 +78,7 @@ export async function agConvertToAssets(blockNumber: number): Promise<string> {
 }
 export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
   const [rsEthRateRaw, ethPriceRaw, ethPriceDec] = await Promise.all([
-    kelpOracleContract.rate({
-      blockTag: blockNumber
-    }),
+    rsETHRate(blockNumber),
     getETHPrice(blockNumber),
     decimals(blockNumber)
   ]);
