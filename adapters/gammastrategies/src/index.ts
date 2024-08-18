@@ -171,7 +171,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     getAccountData(PROTOCOLS.UNISWAP),
     getAccountData(PROTOCOLS.LYNEX),
     getAccountData(PROTOCOLS.LINEHUB),
-    getAccountData(PROTOCOLS.NILE),
   ]);
 
   const allProtocolHoldings: AccountBalances = {};
