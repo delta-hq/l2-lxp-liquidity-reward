@@ -168,9 +168,9 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
   // Exclude Nile as all positions already reflected in nile adapter
   const protocolData: AccountBalances[] = await Promise.all([
-    getAccountData(PROTOCOLS.UNISWAP),
+    // getAccountData(PROTOCOLS.UNISWAP),
     getAccountData(PROTOCOLS.LYNEX),
-    getAccountData(PROTOCOLS.LINEHUB),
+    // getAccountData(PROTOCOLS.LINEHUB),
   ]);
 
   const allProtocolHoldings: AccountBalances = {};
