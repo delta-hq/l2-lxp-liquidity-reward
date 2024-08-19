@@ -2,9 +2,9 @@ import { BlockData, IUserReserve, ILPResponse, OutputDataSchemaRow } from "./typ
 
 
 const queryURL =
-  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
+  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea-foxy/1.0.0/gn";
 
-export const getUserTVLByBlock = async (
+export const getUserTVLFoxyByBlock = async (
   blocks: BlockData
 ): Promise<OutputDataSchemaRow[]> => {
   const timestamp = blocks.blockTimestamp;
@@ -16,9 +16,8 @@ export const getUserTVLByBlock = async (
   do {
     const query = `{
       userReserves(
-        block: {number: ${blocks.blockNumber}}
-        where: {and: [{or: [{currentTotalDebt_gt: 0}, {currentATokenBalance_gt: 0}]}, {user_gt: "${lastAddress}"}]}
         first: ${first}
+        where: {user_gt: "${lastAddress}"}
       ) {
         user {
           id
@@ -40,7 +39,8 @@ export const getUserTVLByBlock = async (
       headers: { "Content-Type": "application/json" },
     });
     const batch: ILPResponse = await response.json();
-
+    console.log(batch);
+    
     if (!batch.data || batch.data.userReserves.length == 0) break;
 
     batch.data.userReserves.forEach((data: IUserReserve) => {

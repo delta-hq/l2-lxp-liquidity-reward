@@ -5,6 +5,7 @@ import { BlockData } from "./sdk/types";
 import { getUserTVLByBlock } from "./sdk/tvl";
 import { getUserStakeByBlock } from "./sdk/stake";
 import { getUserLPByBlock } from "./sdk/lp";
+import {getUserTVLFoxyByBlock} from './sdk/foxy'
 
 module.exports = {
   getUserTVLByBlock,
@@ -57,10 +58,15 @@ readBlocksFromCSV("hourly_blocks.csv")
         for (let i = 0; i < resultLp.length; i++) {
           allCsvRows.push(resultLp[i]);
         }
+    
+        const resultFoxy= await getUserTVLFoxyByBlock(block)
+        for (let i = 0; i < resultFoxy.length; i++) {
+          allCsvRows.push(resultFoxy[i])
+        }
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
-    }
+    } 
     await new Promise((resolve, reject) => {
       const ws = fs.createWriteStream(`outputData.csv`, { flags: "w" });
       write(allCsvRows, { headers: true })
@@ -69,6 +75,7 @@ readBlocksFromCSV("hourly_blocks.csv")
           console.log(`CSV file has been written.`);
           resolve;
         });
+    
     });
   })
   .catch((err) => {
