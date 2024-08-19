@@ -19,22 +19,11 @@ const API_KEY = process.env.RENZO_API_KEY || ''
 const QUERY_SIZE = 500000
 const getSQLQuery = (blockNumber: number) => `
 SELECT
-  id, ezETHBalance
-FROM
-  AccountSnapshot t1
-  JOIN (
-    SELECT
-      id,
-      max(__genBlockNumber__) as block
-    FROM
-      AccountSnapshot
-    WHERE
-      __genBlockNumber__ <= ${blockNumber}
-    GROUP BY id
-  ) t2
-  ON
-    t1.id = t2.id AND
-    t1.__genBlockNumber__ = t2.block
+  id,
+  argMax(ezETHBalance, __genBlockNumber__) as ezETHBalance
+FROM AccountSnapshot_raw
+WHERE __genBlockNumber__ <= ${blockNumber}
+GROUP BY id
 `
 
 export const getUserTVLByBlock = async (block: BlockData): Promise<OutputDataRow[]> => {
