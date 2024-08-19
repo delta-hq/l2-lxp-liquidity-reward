@@ -38,7 +38,7 @@ readBlocksFromCSV(path.resolve(__dirname, "../hourly_blocks.csv"))
   .then(async (blocks) => {
     const streams = blocks.flatMap((block) => [
       new PositionsStream(block, POSITIONS_V1_SUBGRAPH_URL),
-      new PositionsStream(block, POSITIONS_V2_SUBGRAPH_URL),
+      // new PositionsStream(block, POSITIONS_V2_SUBGRAPH_URL),
     ]);
 
     mergeStreams(streams);
