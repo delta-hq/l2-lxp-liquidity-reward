@@ -5,6 +5,7 @@ import { BlockData } from "./sdk/types";
 import { getUserTVLByBlock } from "./sdk/tvl";
 import { getUserStakeByBlock } from "./sdk/stake";
 import { getUserLPByBlock } from "./sdk/lp";
+import { getUserTVLFoxyByBlock } from "./sdk/foxy";
 
 module.exports = {
   getUserTVLByBlock,

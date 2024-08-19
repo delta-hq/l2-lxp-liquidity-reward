@@ -1,14 +1,9 @@
-import {
-  BlockData,
-  IOmniStakingData,
-  IOmniStakingResponse,
-  OutputDataSchemaRow,
-} from "./types";
+import { BlockData, IOmniStakingData, IOmniStakingResponse, OutputDataSchemaRow } from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-omnistaking/1.0.2/gn";
 
-const tokenAddress = "0x78354f8DcCB269a615A7e0a24f9B0718FDC3C7A7"; //do we need to convert the case
+const tokenAddress = "0x78354f8dccb269a615a7e0a24f9b0718fdc3c7a7"; //do we need to convert the case
 const symbol = "ZERO";
 
 export const getUserLPByBlock = async (
