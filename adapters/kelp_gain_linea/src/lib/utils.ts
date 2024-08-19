@@ -22,7 +22,8 @@ const rsEthAbi = [
 
 const agEthAbi = [
   "function convertToAssets(uint256 shares) public view returns (uint256)",
-  "function totalSupply() public view returns (uint256)"
+  "function totalSupply() public view returns (uint256)",
+  "function balanceOf(address account) public view returns (uint256)"
 ];
 
 const kelpOracleAbi = ["function rate() public view returns (uint256)"];

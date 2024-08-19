@@ -7,8 +7,8 @@ import {
   rsETHContract,
   dater,
   agETHContract,
-  rsETH,
-  wrsETHContract
+  wrsETHContract,
+  agETH
 } from "./utils";
 
 export async function getEtherumBlock(blockTimestampSecs: number) {
@@ -22,8 +22,26 @@ export async function getEtherumBlock(blockTimestampSecs: number) {
   return blockNumber;
 }
 
-export async function agETHTotalSupply(blockNumber: number): Promise<bigint> {
+// Total supply - total agETH in the contract
+export async function agETHTotalLiquid(blockNumber: number): Promise<bigint> {
+  const [totalSupply, locked] = await Promise.all([
+    agETHTotalSupply(blockNumber),
+    agETHTotalLocked(blockNumber)
+  ]);
+
+  return totalSupply - locked;
+}
+
+async function agETHTotalSupply(blockNumber: number): Promise<bigint> {
   let totalSupply = await agETHContract.totalSupply({
+    blockTag: blockNumber
+  });
+
+  return totalSupply;
+}
+
+async function agETHTotalLocked(blockNumber: number): Promise<bigint> {
+  let totalSupply = await agETHContract.balanceOf(agETH, {
     blockTag: blockNumber
   });
 
