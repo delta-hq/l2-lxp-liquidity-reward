@@ -1,0 +1,23 @@
+{
+  "name": "zypher-restaking",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "node dist/index.js",
+    "compile": "tsc",
+    "watch": "tsc -w",
+    "clear": "rm -rf dist",
+    "test": "if [ ! -f hourly_blocks.csv ]; then ln -s test/sample.hourly_blocks.csv hourly_blocks.csv; fi && npm run compile && npm run start"
+  },
+  "license": "UNLICENSED",
+  "dependencies": {
+    "fast-csv": "^5.0.1",
+    "csv-parser": "^3.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.17",
+    "typescript": "^5.3.3"
+  }
+}
