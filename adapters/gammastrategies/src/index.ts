@@ -184,7 +184,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
           allProtocolHoldings[userAddress][tokenAddress].balance +=
             token.balance;
         } else {
-          console.log(`${userAddress} ${tokenAddress} ${allProtocolHoldings[userAddress][tokenAddress].balance}`)
           allProtocolHoldings[userAddress][tokenAddress] = {
             symbol: token.symbol,
             balance: token.balance,
