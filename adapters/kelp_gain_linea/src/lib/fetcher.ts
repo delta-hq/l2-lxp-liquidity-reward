@@ -41,11 +41,11 @@ async function agETHTotalSupply(blockNumber: number): Promise<bigint> {
 }
 
 async function agETHTotalLocked(blockNumber: number): Promise<bigint> {
-  let totalSupply = await agETHContract.balanceOf(agETH, {
+  let lockedAmount = await agETHContract.balanceOf(agETH, {
     blockTag: blockNumber
   });
 
-  return totalSupply;
+  return lockedAmount;
 }
 
 export async function getRsETHBalance(blockNumber: number): Promise<bigint> {
