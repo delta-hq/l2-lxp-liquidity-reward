@@ -1,4 +1,9 @@
-import { BlockData, IOmniStakingData, IOmniStakingResponse, OutputDataSchemaRow } from "./types";
+import {
+  BlockData,
+  IOmniStakingData,
+  IOmniStakingResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-omnistaking/1.0.2/gn";
@@ -15,6 +20,7 @@ export const getUserLPByBlock = async (
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
 
+  console.log("working on LP stakers data");
   do {
     const query = `{
       tokenBalances(
@@ -23,8 +29,8 @@ export const getUserLPByBlock = async (
       ) {
         id
         balance_omni_lp
-        }
-      }`;
+      }
+    }`;
 
     const response = await fetch(queryURL, {
       method: "POST",

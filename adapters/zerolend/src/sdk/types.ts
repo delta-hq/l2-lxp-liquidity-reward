@@ -26,21 +26,21 @@ export interface BlockData {
 }
 
 export interface ILPResponse {
-    data: {
-        userReserves: IUserReserve[];
-    };
+  data: {
+    userReserves: IUserReserve[];
+  };
 }
 
 export interface IUserReserve {
-    user: {
-        id: string;
-    };
-    currentTotalDebt: string;
-    currentATokenBalance: string;
-    reserve: {
-        underlyingAsset: string;
-        symbol: string;
-        name: string;
-    };
-    liquidityRate: "0";
+  user: {
+    id: string;
+  };
+  currentTotalDebt: string;
+  currentATokenBalance: string;
+  reserve: {
+    underlyingAsset: string;
+    symbol: string;
+    name: string;
+  };
+  liquidityRate: "0";
 }

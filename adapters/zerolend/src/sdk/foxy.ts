@@ -1,5 +1,9 @@
-import { BlockData, IUserReserve, ILPResponse, OutputDataSchemaRow } from "./types";
-
+import {
+  BlockData,
+  IUserReserve,
+  ILPResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea-foxy/1.0.0/gn";
@@ -13,6 +17,12 @@ export const getUserTVLFoxyByBlock = async (
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
 
+  const remapFoxy = (addr: string) =>
+    addr == "0x5fbdf89403270a1846f5ae7d113a989f850d1566"
+      ? "0x000000000000000000000000000000000000foxy"
+      : addr;
+
+  console.log("working on foxy data");
   do {
     const query = `{
       userReserves(
@@ -39,8 +49,7 @@ export const getUserTVLFoxyByBlock = async (
       headers: { "Content-Type": "application/json" },
     });
     const batch: ILPResponse = await response.json();
-    console.log(batch);
-    
+
     if (!batch.data || batch.data.userReserves.length == 0) break;
 
     batch.data.userReserves.forEach((data: IUserReserve) => {
@@ -52,7 +61,7 @@ export const getUserTVLFoxyByBlock = async (
           block_number: blocks.blockNumber,
           timestamp,
           user_address: data.user.id,
-          token_address: data.reserve.underlyingAsset,
+          token_address: remapFoxy(data.reserve.underlyingAsset),
           token_balance: Number(balance),
           token_symbol: data.reserve.symbol,
           usd_price: 0,

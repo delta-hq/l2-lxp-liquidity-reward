@@ -1,4 +1,9 @@
-import { BlockData, IOmniStakingData, IOmniStakingResponse, OutputDataSchemaRow } from "./types";
+import {
+  BlockData,
+  IOmniStakingData,
+  IOmniStakingResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-omnistaking/1.0.2/gn";
@@ -14,7 +19,7 @@ export const getUserStakeByBlock = async (
   const rows: OutputDataSchemaRow[] = [];
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
-
+  console.log("working on ZERO stakers data");
   do {
     const query = `{
       tokenBalances(

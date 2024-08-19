@@ -42,14 +42,17 @@ readBlocksFromCSV("hourly_blocks.csv")
 
     for (const block of blocks) {
       try {
-        const resultTvl = await getUserTVLByBlock(block);
-        allCsvRows.push(...resultTvl);
+        const resultTvlFoxy = await getUserTVLFoxyByBlock(block);
+        allCsvRows.push(...resultTvlFoxy);
 
         const resultStake = await getUserStakeByBlock(block);
         allCsvRows.push(...resultStake);
 
         const resultLp = await getUserLPByBlock(block);
         allCsvRows.push(...resultLp);
+
+        const resultTvlLegacy = await getUserTVLByBlock(block);
+        allCsvRows.push(...resultTvlLegacy);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
