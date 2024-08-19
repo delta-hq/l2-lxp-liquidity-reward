@@ -93,7 +93,7 @@ const getAccountData = async (
       const token0Address: string = hypeShare.hypervisor.pool.token0.id;
       const token1Address: string = hypeShare.hypervisor.pool.token1.id;
 
-      if (token0Address in accountHoldings) {
+      if (token0Address in accountHoldings[account.id]) {
         accountHoldings[account.id][token0Address].balance += tvl0Share;
       } else {
         accountHoldings[account.id][token0Address] = {
@@ -102,7 +102,7 @@ const getAccountData = async (
         };
       }
 
-      if (token1Address in accountHoldings) {
+      if (token1Address in accountHoldings[account.id]) {
         accountHoldings[account.id][token1Address].balance += tvl1Share;
       } else {
         accountHoldings[account.id][token1Address] = {
