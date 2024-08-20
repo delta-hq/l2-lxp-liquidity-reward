@@ -62,7 +62,7 @@ export const getUserTVLFoxyByBlock = async (
           timestamp,
           user_address: data.user.id,
           token_address: remapFoxy(data.reserve.underlyingAsset),
-          token_balance: Number(balance),
+          token_balance: BigInt(balance),
           token_symbol: data.reserve.symbol,
           usd_price: 0,
         });

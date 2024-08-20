@@ -8,7 +8,7 @@ import {
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
 
-export const getUserTVLByBlock = async (
+export const getUserTVLLegacyByBlock = async (
   blocks: BlockData
 ): Promise<OutputDataSchemaRow[]> => {
   const timestamp = blocks.blockTimestamp;
@@ -58,7 +58,7 @@ export const getUserTVLByBlock = async (
           timestamp,
           user_address: data.user.id,
           token_address: data.reserve.underlyingAsset,
-          token_balance: Number(balance),
+          token_balance: BigInt(balance),
           token_symbol: data.reserve.symbol,
           usd_price: 0,
         });

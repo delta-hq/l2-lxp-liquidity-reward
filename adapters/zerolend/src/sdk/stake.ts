@@ -49,7 +49,7 @@ export const getUserStakeByBlock = async (
         timestamp,
         user_address: data.id,
         token_address: tokenAddress,
-        token_balance: Math.floor(Number(data.balance_omni) / 1e18),
+        token_balance: BigInt(data.balance_omni),
         token_symbol: symbol,
         usd_price: 0,
       });

@@ -1,15 +1,11 @@
 import { write } from "fast-csv";
 import fs from "fs";
 import csv from "csv-parser";
-import { BlockData } from "./sdk/types";
-import { getUserTVLByBlock } from "./sdk/tvl";
+import { BlockData, OutputDataSchemaRow } from "./sdk/types";
+import { getUserTVLLegacyByBlock } from "./sdk/tvl";
 import { getUserStakeByBlock } from "./sdk/stake";
 import { getUserLPByBlock } from "./sdk/lp";
 import { getUserTVLFoxyByBlock } from "./sdk/foxy";
-
-module.exports = {
-  getUserTVLByBlock,
-};
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -38,21 +34,13 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV("hourly_blocks.csv")
   .then(async (blocks: BlockData[]) => {
     console.log(blocks);
-    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+    let allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
 
     for (const block of blocks) {
       try {
-        const resultTvlFoxy = await getUserTVLFoxyByBlock(block);
-        allCsvRows.push(...resultTvlFoxy);
-
-        const resultStake = await getUserStakeByBlock(block);
-        allCsvRows.push(...resultStake);
-
-        const resultLp = await getUserLPByBlock(block);
-        allCsvRows.push(...resultLp);
-
-        const resultTvlLegacy = await getUserTVLByBlock(block);
-        allCsvRows.push(...resultTvlLegacy);
+        const data = await getUserTVLByBlock(block);
+        allCsvRows = allCsvRows.concat(data);
+        console.log(data);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
@@ -70,3 +58,25 @@ readBlocksFromCSV("hourly_blocks.csv")
   .catch((err) => {
     console.error("Error reading CSV file:", err);
   });
+
+const getUserTVLByBlock = async (block: BlockData): Promise<any> => {
+  let allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
+
+  const resultTvlFoxy = await getUserTVLFoxyByBlock(block);
+  allCsvRows = allCsvRows.concat(resultTvlFoxy);
+
+  const resultStake = await getUserStakeByBlock(block);
+  allCsvRows = allCsvRows.concat(resultStake);
+
+  const resultLp = await getUserLPByBlock(block);
+  allCsvRows = allCsvRows.concat(resultLp);
+
+  const resultTvlLegacy = await getUserTVLLegacyByBlock(block);
+  allCsvRows = allCsvRows.concat(resultTvlLegacy);
+
+  return allCsvRows;
+};
+
+module.exports = {
+  getUserTVLByBlock,
+};

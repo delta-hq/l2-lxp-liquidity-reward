@@ -15,7 +15,7 @@ export type OutputDataSchemaRow = {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: number;
+  token_balance: bigint;
   token_symbol: string;
   usd_price: number;
 };
