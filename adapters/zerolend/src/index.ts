@@ -40,7 +40,6 @@ readBlocksFromCSV("hourly_blocks.csv")
       try {
         const data = await getUserTVLByBlock(block);
         allCsvRows = allCsvRows.concat(data);
-        console.log(data);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
