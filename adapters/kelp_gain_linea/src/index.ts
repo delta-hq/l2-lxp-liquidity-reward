@@ -26,7 +26,6 @@ type OutputDataSchemaRow = {
   token_balance: bigint;
   token_symbol: string; // token symbol should be empty string if it is not available
   usd_price: number; // assign 0 if not available
-  tvl_usd: string;
 };
 
 const getMultiplierPercent = (tvlInUSD: BigNumber) => {
@@ -106,8 +105,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       token_address: rsETH.toLowerCase(),
       token_balance: lineaUserBalance,
       token_symbol: "rsETH",
-      usd_price: tvl.rsEthPrice.toNumber(),
-      tvl_usd: tvl.tvlInUSD.toString()
+      usd_price: tvl.rsEthPrice.toNumber()
     });
   });
 
