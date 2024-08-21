@@ -1,3 +1,6 @@
+import csv from 'csv-parser';
+import { write } from 'fast-csv';
+import fs from 'fs';
 import { AMM_TYPES, CHAINS, PROTOCOLS } from "./sdk/config";
 import {
   getLPValueByUserAndPoolFromPositions,
@@ -5,50 +8,17 @@ import {
   getPositionsForAddressByPoolAtBlock,
   getTokenPriceFromPositions,
 } from "./sdk/subgraphDetails";
+
 (BigInt.prototype as any).toJSON = function () {
   return this.toString();
 };
-
-import stream from "stream";
-import { promisify } from "util";
-
-//Uncomment the following lines to test the getPositionAtBlock function
-
-// const position = getPositionAtBlock(
-//         0, // block number 0 for latest block
-//         2, // position id
-//         CHAINS.MODE, // chain id
-//         PROTOCOLS.SUPSWAP, // protocol
-//         AMM_TYPES.UNISWAPV3 // amm type
-//     );
-// position.then((position) => {
-//     // print response
-//     const result = getPositionDetailsFromPosition(position);
-//     console.log(`${JSON.stringify(result,null, 4)}
-//     `)
-// });
-
-interface LPValueDetails {
-  pool: string;
-  lpValue: string;
-}
-
-interface UserLPData {
-  totalLP: string;
-  pools: LPValueDetails[];
-}
-
-// Define an object type that can be indexed with string keys, where each key points to a UserLPData object
-interface OutputData {
-  [key: string]: UserLPData;
-}
 
 interface BlockData {
   blockNumber: number;
   blockTimestamp: number;
 }
 
-interface CSVRow {
+interface OutputDataSchemaRow {
   block_number: number;
   timestamp: number;
   user_address: string;
@@ -57,86 +27,6 @@ interface CSVRow {
   token_symbol: string;
   usd_price: number;
 }
-
-const pipeline = promisify(stream.pipeline);
-
-// Assuming you have the following functions and constants already defined
-// getPositionsForAddressByPoolAtBlock, CHAINS, PROTOCOLS, AMM_TYPES, getPositionDetailsFromPosition, getLPValueByUserAndPoolFromPositions, BigNumber
-
-// const readBlocksFromCSV = async (filePath: string): Promise<number[]> => {
-//   const blocks: number[] = [];
-//   await pipeline(
-//     fs.createReadStream(filePath),
-//     csv(),
-//     async function* (source) {
-//       for await (const chunk of source) {
-//         // Assuming each row in the CSV has a column 'block' with the block number
-//         if (chunk.block) blocks.push(parseInt(chunk.block, 10));
-//       }
-//     }
-//   );
-//   return blocks;
-// };
-
-// const getData = async () => {
-//   const snapshotBlocks = [2862898, 2892898]; //await readBlocksFromCSV('src/sdk/mode_chain_daily_blocks.csv');
-
-//   const csvRows: CSVRow[] = [];
-
-//   for (let block of snapshotBlocks) {
-//     const positions = await getPositionsForAddressByPoolAtBlock(
-//       block,
-//       "",
-//       "",
-//       CHAINS.LINEA,
-//       PROTOCOLS.DODOEX,
-//       AMM_TYPES.DODO
-//     );
-
-//     console.log(`Block: ${block}`);
-//     console.log("Positions: ", positions.length);
-
-//     // Assuming this part of the logic remains the same
-//     let positionsWithUSDValue = [];
-//     // Add price to token
-//     await getTokenPriceFromPositions(positions, "linea");
-//     for (let position of positions) {
-//       const res = await getPositionDetailsFromPosition(position);
-//       positionsWithUSDValue.push(res);
-//     }
-//     let lpValueByUsers = await getLPValueByUserAndPoolFromPositions(
-//       positionsWithUSDValue
-//     );
-
-//     lpValueByUsers.forEach((value, key) => {
-//       let positionIndex = 0; // Define how you track position index
-//       value.forEach((lpValue, poolKey) => {
-//         const lpValueStr = lpValue.toString();
-//         // Accumulate CSV row data
-//         csvRows.push({
-//           block_number: block,
-//           user_address: key,
-//           pool: poolKey,
-//           position: positions.length, // Adjust if you have a specific way to identify positions
-//           lpvalue: lpValueStr,
-//         });
-//       });
-//     });
-//   }
-
-//   // Write the CSV output to a file
-//   const ws = fs.createWriteStream("outputData.csv");
-//   write(csvRows, { headers: true })
-//     .pipe(ws)
-//     .on("finish", () => {
-//       console.log("CSV file has been written.");
-//     });
-// };
-
-// getData().then(() => {
-//   console.log("Done");
-// });
-
 
 export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks
@@ -164,7 +54,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     positionsWithUSDValue
   );
 
-  const csvRows: CSVRow[] = [];
+  const csvRows: OutputDataSchemaRow[] = [];
   lpValueByUsers.forEach((value, owner) => {
     value.forEach((tokenBalance, tokenAddress) => {
       csvRows.push({
@@ -181,3 +71,73 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
 
   return csvRows
 }
+
+const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
+  const blocks: BlockData[] = [];
+
+  await new Promise<void>((resolve, reject) => {
+    fs.createReadStream(filePath)
+      .pipe(csv({ separator: '\t' })) // Specify the separator as '\t' for TSV files
+      .on('data', (row) => {
+        const blockNumber = parseInt(row.number, 10);
+        const blockTimestamp = parseInt(row.block_timestamp, 10);
+        if (!isNaN(blockNumber) && blockTimestamp) {
+          blocks.push({ blockNumber: blockNumber, blockTimestamp });
+        }
+      })
+      .on('end', () => {
+        resolve();
+      })
+      .on('error', (err) => {
+        reject(err);
+      });
+  });
+
+  return blocks;
+};
+
+readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
+  console.log(blocks);
+  const allCsvRows: any[] = [];
+  const pageSize = 10; // Size of batch to trigger writing to the file
+
+  // Write the CSV output to a file
+  const writeCsv = function (data: any[], first: boolean): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+      const ws = fs.createWriteStream(`outputData.csv`, { flags: first ? 'w' : 'a' });
+      write(data, { headers: first ? true : false })
+        .pipe(ws)
+        .on("finish", () => {
+          console.log(`CSV file has been written.`);
+          resolve();
+        })
+        .on('error', (err) => {
+          reject(err);
+        });
+
+      // Clear the accumulated CSV rows
+      allCsvRows.length = 0;
+    });
+  }
+
+  for (let i = 0; i < blocks.length; i++) {
+    try {
+      const result = await getUserTVLByBlock(blocks[i]);
+
+      // Accumulate CSV rows for all blocks
+      allCsvRows.push(...result);
+
+      console.log(`Processed block ${i}`);
+
+      // Write to file when batch size is reached or at the end of loop
+      if (i % pageSize === 0 || i === blocks.length - 1) {
+        await writeCsv(allCsvRows, i === pageSize);
+      }
+    } catch (error) {
+      console.error(`An error occurred for block ${blocks[i]}:`, error);
+    }
+  }
+})
+  .catch((err) => {
+    console.error('Error reading CSV file:', err);
+  });
