@@ -2,7 +2,7 @@ import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
 
-const assetWhitelist = ["ultraETH", "ultraETHs"];
+const assetWhitelist = ["ultraETHs"];
 
 const GRAPHQL_ENDPOINT =
   "https://api.goldsky.com/api/public/project_clzblgfi61ub601wncxx3bbit/subgraphs/affine-subgraph/prod/gn";
