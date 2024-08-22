@@ -47,3 +47,4 @@ export const chainlinkOracleContract = new Contract(
   chainlinkOracleAbi,
   providerLinea
 );
+
