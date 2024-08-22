@@ -11,7 +11,7 @@ interface IDwise {
   id: string;
 }
 
-async function subgraphFetchAllById<T extends IDwise>(
+export async function subgraphFetchAllById<T extends IDwise>(
   endpoint: string,
   query: string,
   collection: string,
@@ -40,6 +40,19 @@ async function subgraphFetchAllById<T extends IDwise>(
     }
   }
   return data;
+}
+export async function subgraphFetchOne<T>(
+  endpoint: string,
+  query: string,
+  collection: string,
+  variables: Record<string, unknown>
+): Promise<T> {
+  const resp: { [collection: string]: T } = await request(
+    endpoint,
+    query,
+    variables
+  );
+  return resp[collection];
 }
 
 interface GraphQLQuery {
@@ -85,7 +98,7 @@ export async function getAllAgEthHodlers(blockNumber: number) {
     ...pendleShares.map((e) => {
       return {
         id: e.user,
-        balance: e.share,
+        balance: e.share
       };
     })
   );
@@ -94,10 +107,10 @@ export async function getAllAgEthHodlers(blockNumber: number) {
     ...balancerShares.map((e) => {
       return {
         id: e.userAddress.id,
-        balance: e.balance,
+        balance: e.balance
       };
     })
-  )
+  );
 
   const balanceMap = new Map<string, bigint>();
   for (const balance of [...positions]) {
