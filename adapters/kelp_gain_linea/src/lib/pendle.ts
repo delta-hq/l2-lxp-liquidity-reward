@@ -3,13 +3,14 @@ const PendleURL =
 
 const API_KEY = process.env.SENTIO_API_KEY || "";
 
-export async function fetchAllPendleShare(blockNumber: number) {
+export async function fetchAllPendleShare(timeStamp: number) {
   const dataSize = 20000;
   let page = 0;
 
+  let day = Math.round((timeStamp - 1724122487) / 86400);
   const totalShares = [];
   while (true) {
-    const postData = apiPostData(blockNumber, page, dataSize);
+    const postData = apiPostData(day, page, dataSize);
 
     const responseRaw = await post(PendleURL, postData);
     console.log(`${JSON.stringify(responseRaw)}`);
@@ -30,11 +31,10 @@ export async function fetchAllPendleShare(blockNumber: number) {
   return totalShares;
 }
 
-function apiPostData(blockNumber: number, page: number, dataSize: number) {
-  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - 1702280195) / 86400) as day FROM UserDailyShare WHERE recordedAtBlock = ${blockNumber} LIMIT ${dataSize} OFFSET ${
+function apiPostData(day: number, page: number, dataSize: number) {
+  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - 1724122487) / 86400) as day FROM UserDailyShare WHERE day = ${day} LIMIT ${dataSize} OFFSET ${
     page * dataSize
   }`;
-
   return {
     sqlQuery: {
       sql: queryStr,

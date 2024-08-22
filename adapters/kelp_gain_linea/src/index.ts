@@ -67,7 +67,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     getRsEthTVLInUSD(blockNumber),
     agConvertToAssets(ethBlockNumber),
     agETHTotalLiquid(ethBlockNumber),
-    getAllAgEthHodlers(ethBlockNumber)
+    getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
   ]);
 
   // Total rsETH deposit to mainnet

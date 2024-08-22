@@ -83,7 +83,10 @@ export const USER_BALANCES_QUERY: GraphQLQuery = {
   collection: "userBalances"
 };
 
-export async function getAllAgEthHodlers(blockNumber: number) {
+export async function getAllAgEthHodlers(
+  blockNumber: number,
+  timestamp: number
+) {
   const positions = await subgraphFetchAllById<UserBalanceSubgraphEntry>(
     agETHSubgraph,
     USER_BALANCES_QUERY.query,
@@ -91,7 +94,7 @@ export async function getAllAgEthHodlers(blockNumber: number) {
     { block: blockNumber, lastId: "0x0000000000000000000000000000000000000000" }
   );
 
-  const pendleShares = await fetchAllPendleShare(blockNumber);
+  const pendleShares = await fetchAllPendleShare(timestamp);
   const balancerShares = await fetchAllBalancerShare(blockNumber);
 
   positions.push(
