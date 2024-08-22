@@ -37,3 +37,17 @@ export async function subgraphFetchAllById<T extends IDwise>(
 	}
 	return data;
 }
+
+export async function subgraphFetchOne<T>(
+	endpoint: string,
+	query: string,
+	collection: string,
+	variables: Record<string, unknown>
+): Promise<T> {
+	const resp: { [collection: string]: T } = await request(
+		endpoint,
+		query,
+		variables
+	);
+	return resp[collection];
+}

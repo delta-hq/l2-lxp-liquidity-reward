@@ -85,7 +85,7 @@ export async function getAllAgEthHodlers(blockNumber: number) {
     ...pendleShares.map((e) => {
       return {
         id: e.user,
-        balance: e.share
+        balance: e.share,
       };
     })
   );
