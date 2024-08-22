@@ -1,5 +1,6 @@
 import { request } from "graphql-request";
 import { gql } from "graphql-request";
+import { fetchAllPendleShare } from "./pendle";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
@@ -75,5 +76,30 @@ export async function getAllAgEthHodlers(blockNumber: number) {
     USER_BALANCES_QUERY.collection,
     { block: blockNumber, lastId: "0x0000000000000000000000000000000000000000" }
   );
-  return positions;
+
+  const shares = await fetchAllPendleShare(blockNumber);
+
+  positions.push(
+    ...shares.map((e) => {
+      return {
+        id: e.user,
+        balance: e.share
+      };
+    })
+  );
+
+  const balanceMap = new Map<string, bigint>();
+  for (const balance of [...positions]) {
+    balanceMap.set(
+      balance.id,
+      (balanceMap.get(balance.id) || 0n) + BigInt(balance.balance)
+    );
+  }
+
+  const balances = Array.from(balanceMap, ([id, balance]) => ({
+    id,
+    balance: balance.toString()
+  }));
+
+  return balances;
 }
