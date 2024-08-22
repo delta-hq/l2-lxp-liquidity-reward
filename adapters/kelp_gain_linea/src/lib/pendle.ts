@@ -3,16 +3,7 @@ const PendleURL =
 
 const API_KEY = process.env.SENTIO_API_KEY || "";
 
-type Result = {
-  rows: Row[];
-};
 
-type Row = {
-  user: string;
-  share: string;
-  block_number: string;
-  day: string;
-};
 
 export async function fetchAllPendleShare(blockNumber: number) {
   const dataSize = 20000;
