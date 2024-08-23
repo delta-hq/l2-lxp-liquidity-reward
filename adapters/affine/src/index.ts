@@ -11,7 +11,7 @@ const makeBalancesQuery = (blockNumber: number, next = "") => `query {
   tokenBalances(
     block: {number: ${blockNumber}},
     first: 1000,
-    where: { id_gt: "${next}" }
+    where: { id_gt: "${next}", value_gt: 0 }
   ) {
     token {
       id
