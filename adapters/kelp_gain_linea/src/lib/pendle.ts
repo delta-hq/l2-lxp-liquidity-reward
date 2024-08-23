@@ -1,7 +1,7 @@
 const PendleURL =
   "https://app.sentio.xyz/api/v1/analytics/kelp_analytics/pendle_mainnet_ageth/sql/execute";
 
-const API_KEY = process.env.SENTIO_API_KEY || "";
+const API_KEY = process.env.KELPDAO_SENTIO_API_KEY || "";
 
 export async function fetchAllPendleShare(timeStamp: number) {
   const cur = new Date();
