@@ -2,7 +2,6 @@ import {
   BlockData,
   IOmniStakingData,
   IOmniStakingResponse,
-  ITVLResponse,
   OutputDataSchemaRow,
 } from "./types";
 
@@ -20,17 +19,20 @@ export const getUserStakeByBlock = async (
   const rows: OutputDataSchemaRow[] = [];
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
-
+  console.log("working on ZERO stakers data");
   do {
     const query = `{
-            tokenBalances(
-                where: {id_gt: "${lastAddress}", balance_omni_gt: "0"}
-                first: ${first}
-              ) {
-                id
-                balance_omni
-              }
-      }`;
+      tokenBalances(
+        where: {
+          id_gt: "${lastAddress}",
+          balance_omni_gt: "0"
+        }
+        first: ${first}
+      ) {
+        id
+        balance_omni
+      }
+    }`;
 
     const response = await fetch(queryURL, {
       method: "POST",
@@ -47,7 +49,7 @@ export const getUserStakeByBlock = async (
         timestamp,
         user_address: data.id,
         token_address: tokenAddress,
-        token_balance: Number(data.balance_omni),
+        token_balance: BigInt(data.balance_omni),
         token_symbol: symbol,
         usd_price: 0,
       });
@@ -56,9 +58,9 @@ export const getUserStakeByBlock = async (
     });
 
     console.log(
-      `Processed ${rows.length} rows. Last address is ${lastAddress}`
+      `Processed ${rows.length} rows for single stakers. Last address is ${lastAddress}`
     );
   } while (true);
 
-  return rows;
+  return rows.filter((r) => r.token_balance > 1);
 };

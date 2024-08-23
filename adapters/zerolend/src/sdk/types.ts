@@ -15,7 +15,7 @@ export type OutputDataSchemaRow = {
   timestamp: number;
   user_address: string;
   token_address: string;
-  token_balance: number;
+  token_balance: bigint;
   token_symbol: string;
   usd_price: number;
 };
@@ -25,13 +25,13 @@ export interface BlockData {
   blockTimestamp: number;
 }
 
-export interface ITVLResponse {
+export interface ILPResponse {
   data: {
-    userReserves: ITVLData[];
+    userReserves: IUserReserve[];
   };
 }
 
-export interface ITVLData {
+export interface IUserReserve {
   user: {
     id: string;
   };

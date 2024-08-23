@@ -1,14 +1,11 @@
 import { write } from "fast-csv";
 import fs from "fs";
 import csv from "csv-parser";
-import { BlockData } from "./sdk/types";
-import { getUserTVLByBlock } from "./sdk/tvl";
+import { BlockData, OutputDataSchemaRow } from "./sdk/types";
+import { getUserTVLLegacyByBlock } from "./sdk/tvl";
 import { getUserStakeByBlock } from "./sdk/stake";
 import { getUserLPByBlock } from "./sdk/lp";
-
-module.exports = {
-  getUserTVLByBlock,
-};
+import { getUserTVLFoxyByBlock } from "./sdk/foxy";
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
@@ -37,26 +34,12 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 readBlocksFromCSV("hourly_blocks.csv")
   .then(async (blocks: BlockData[]) => {
     console.log(blocks);
-    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
-    const batchSize = 1000; // Size of batch to trigger writing to the file
-    let i = 0;
+    let allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
 
     for (const block of blocks) {
       try {
-        const resultTvl = await getUserTVLByBlock(block);
-        for (let i = 0; i < resultTvl.length; i++) {
-           allCsvRows.push(resultTvl[i]);
-        }
-
-        const resultStake = await getUserStakeByBlock(block);
-        for (let i = 0; i < resultStake.length; i++) {
-           allCsvRows.push(resultStake[i]);
-        }
-
-        const resultLp = await getUserLPByBlock(block);
-        for (let i = 0; i < resultLp.length; i++) {
-          allCsvRows.push(resultLp[i]);
-        }
+        const data = await getUserTVLByBlock(block);
+        allCsvRows = allCsvRows.concat(data);
       } catch (error) {
         console.error(`An error occurred for block ${block}:`, error);
       }
@@ -74,3 +57,25 @@ readBlocksFromCSV("hourly_blocks.csv")
   .catch((err) => {
     console.error("Error reading CSV file:", err);
   });
+
+const getUserTVLByBlock = async (block: BlockData): Promise<any> => {
+  let allCsvRows: OutputDataSchemaRow[] = []; // Array to accumulate CSV rows for all blocks
+
+  const resultTvlFoxy = await getUserTVLFoxyByBlock(block);
+  allCsvRows = allCsvRows.concat(resultTvlFoxy);
+
+  const resultStake = await getUserStakeByBlock(block);
+  allCsvRows = allCsvRows.concat(resultStake);
+
+  const resultLp = await getUserLPByBlock(block);
+  allCsvRows = allCsvRows.concat(resultLp);
+
+  const resultTvlLegacy = await getUserTVLLegacyByBlock(block);
+  allCsvRows = allCsvRows.concat(resultTvlLegacy);
+
+  return allCsvRows;
+};
+
+module.exports = {
+  getUserTVLByBlock,
+};
