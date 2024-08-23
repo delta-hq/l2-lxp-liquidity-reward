@@ -4,6 +4,11 @@ const PendleURL =
 const API_KEY = process.env.SENTIO_API_KEY || "";
 
 export async function fetchAllPendleShare(timeStamp: number) {
+  const cur = new Date();
+  if (cur.getTime() / 1000 - timeStamp < 3600) {
+    timeStamp = cur.getTime() / 1000 - 3600;
+  }
+
   const dataSize = 20000;
   let page = 0;
 
