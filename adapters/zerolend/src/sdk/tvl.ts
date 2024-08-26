@@ -1,42 +1,14 @@
-interface IResponse {
-  data: {
-    userReserves: IData[];
-  };
-}
-
-interface IData {
-  user: {
-    id: string;
-  };
-  currentTotalDebt: string;
-  currentATokenBalance: string;
-  reserve: {
-    underlyingAsset: string;
-    symbol: string;
-    name: string;
-  };
-  liquidityRate: "0";
-}
-
-type OutputDataSchemaRow = {
-  block_number: number;
-  timestamp: number;
-  user_address: string;
-  token_address: string;
-  token_balance: number;
-  token_symbol: string;
-  usd_price: number;
-};
-
-export interface BlockData {
-  blockNumber: number;
-  blockTimestamp: number;
-}
+import {
+  BlockData,
+  IUserReserve,
+  ILPResponse,
+  OutputDataSchemaRow,
+} from "./types";
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
 
-export const getUserTVLByBlock = async (
+export const getUserTVLLegacyByBlock = async (
   blocks: BlockData
 ): Promise<OutputDataSchemaRow[]> => {
   const timestamp = blocks.blockTimestamp;
@@ -45,6 +17,7 @@ export const getUserTVLByBlock = async (
 
   let lastAddress = "0x0000000000000000000000000000000000000000";
 
+  console.log("working on legacy lending pool data");
   do {
     const query = `{
       userReserves(
@@ -71,11 +44,11 @@ export const getUserTVLByBlock = async (
       body: JSON.stringify({ query }),
       headers: { "Content-Type": "application/json" },
     });
-    const batch: IResponse = await response.json();
+    const batch: ILPResponse = await response.json();
 
     if (!batch.data || batch.data.userReserves.length == 0) break;
 
-    batch.data.userReserves.forEach((data: IData) => {
+    batch.data.userReserves.forEach((data: IUserReserve) => {
       const balance =
         BigInt(data.currentATokenBalance) - BigInt(data.currentTotalDebt);
 
@@ -85,7 +58,7 @@ export const getUserTVLByBlock = async (
           timestamp,
           user_address: data.user.id,
           token_address: data.reserve.underlyingAsset,
-          token_balance: Number(balance),
+          token_balance: BigInt(balance),
           token_symbol: data.reserve.symbol,
           usd_price: 0,
         });
