@@ -5,7 +5,7 @@ import csv from "csv-parser";
 const assetWhitelist = ["miezETH", "miweETH", "miuniETH"];
 
 const GRAPHQL_ENDPOINT =
-  "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.1.2/gn";
+  "https://api.goldsky.com/api/public/project_clxioqhjdzy1901wmgqmp2ygj/subgraphs/mitosis-linea-lxp/1.1.3/gn";
 
 const makeBalancesQuery = (blockNumber: number, next = "") => `query {
   tokenBalances(
