@@ -1,10 +1,10 @@
-type Result = {
-	rows: Row[];
+export type Result = {
+  rows: Row[];
 };
 
-type Row = {
-	user: string;
-	share: string;
-	block_number: string;
-	day: string;
+export type Row = {
+  user: string;
+  share: string;
+  block_number: string;
+  day: string;
 };

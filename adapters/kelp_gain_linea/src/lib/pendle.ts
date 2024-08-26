@@ -1,3 +1,5 @@
+import { Result } from "./models";
+
 const PendleURL =
   "https://app.sentio.xyz/api/v1/analytics/kelp_analytics/pendle_mainnet_ageth/sql/execute";
 
