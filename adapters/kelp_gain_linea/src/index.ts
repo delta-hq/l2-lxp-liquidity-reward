@@ -2,8 +2,8 @@ import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
 import {
-  agConvertToAssets,
   agETHTotalLiquid,
+  convertToShares,
   getEtherumBlock,
   getRsETHBalance,
   getRsETHPrice,
@@ -40,6 +40,7 @@ const getMultiplierPercent = (tvlInUSD: BigNumber) => {
   }
   return 156;
 };
+
 export const getRsEthTVLInUSD = async (blockNumber: number) => {
   const [rsETHBalanceRaw, wrsETHBalanceRaw, rsEthPrice] = await Promise.all([
     getRsETHBalance(blockNumber),
@@ -63,16 +64,21 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
 
   const ethBlockNumber = await getEtherumBlock(blockTimestamp);
-  const [tvl, agRate, agEthTotalSupply, allUser] = await Promise.all([
-    getRsEthTVLInUSD(blockNumber),
-    agConvertToAssets(ethBlockNumber),
-    agETHTotalLiquid(ethBlockNumber),
-    getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
-  ]);
+  const [tvl, agEthPerRsEthRate, agEthTotalSupply, allUser] = await Promise.all(
+    [
+      getRsEthTVLInUSD(blockNumber),
+      convertToShares(ethBlockNumber),
+      agETHTotalLiquid(ethBlockNumber),
+      getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
+    ]
+  );
 
+  console.log(
+    `agEthTotal liquid: ${BigInt(agEthTotalSupply) / BigInt(10 ** 18)}`
+  );
   // Total rsETH deposit to mainnet
   const mainnetTVLInRsETH =
-    BigInt(agEthTotalSupply * agRate) / BigInt(10 ** 18);
+    BigInt(agEthTotalSupply * agEthPerRsEthRate) / BigInt(10 ** 18);
 
   const lineaToMainnetRatio =
     (BigInt(tvl.lineaTVLInRsEth) * BigInt(10 ** 18)) /
@@ -91,7 +97,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   allUser.forEach((item: UserBalanceSubgraphEntry) => {
     const userBalanceAgEth = item.balance;
     const mainnetUserBalanceRsEth =
-      (((BigInt(userBalanceAgEth) * BigInt(agRate)) / BigInt(10 ** 18)) *
+      (((BigInt(userBalanceAgEth) * BigInt(agEthPerRsEthRate)) /
+        BigInt(10 ** 18)) *
         BigInt(mulPercent)) /
       100n;
 

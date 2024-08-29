@@ -48,6 +48,17 @@ async function agETHTotalLocked(blockNumber: number): Promise<bigint> {
   return lockedAmount;
 }
 
+export async function agETHBalancerOf(
+  blockNumber: number,
+  address: string
+): Promise<bigint> {
+  let balance = await agETHContract.balanceOf(address, {
+    blockTag: blockNumber
+  });
+
+  return balance;
+}
+
 export async function getRsETHBalance(blockNumber: number): Promise<bigint> {
   let rsETHBalance = await rsETHContract.balanceOf(kelpGAINLinea, {
     blockTag: blockNumber
@@ -87,13 +98,14 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
-export async function agConvertToAssets(blockNumber: number): Promise<bigint> {
-  const rate = await agETHContract.convertToAssets(BigInt(10 ** 18), {
+export async function convertToShares(blockNumber: number): Promise<bigint> {
+  const rate = await agETHContract.convertToShares(BigInt(10 ** 18), {
     blockTag: blockNumber
   });
 
   return rate;
 }
+
 export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
   const [rsEthRateRaw, ethPriceRaw, ethPriceDec] = await Promise.all([
     rsETHRate(blockNumber),
