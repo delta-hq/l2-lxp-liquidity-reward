@@ -8,6 +8,7 @@ import { agETH, balancerVault, pendleSYAgETH } from "./utils";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
+const Blacklisted = [agETH, balancerVault, pendleSYAgETH];
 export const agETHSubgraph =
   "https://api.studio.thegraph.com/query/70817/ageth-lp/version/latest";
 interface IDwise {
@@ -68,7 +69,6 @@ export type UserBalanceSubgraphEntry = {
   balance: string;
 };
 
-const blacklisted = [agETH, balancerVault, pendleSYAgETH];
 export const USER_BALANCES_QUERY: GraphQLQuery = {
   query: gql`
     query PositionsQuery($block: Int, $lastId: ID!, $blacklisted: [ID!]!) {
@@ -98,7 +98,7 @@ export async function getAllAgEthHodlers(
     {
       block: blockNumber,
       lastId: "0x0000000000000000000000000000000000000000",
-      blacklisted: blacklisted
+      blacklisted: Blacklisted
     }
   );
 
