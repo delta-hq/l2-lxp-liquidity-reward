@@ -2,8 +2,8 @@ import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
 import {
+  agEthToRsEth,
   agETHTotalLiquid,
-  convertToShares,
   getEtherumBlock,
   getRsETHBalance,
   getRsETHPrice,
@@ -67,7 +67,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const [tvl, agEthPerRsEthRate, agEthTotalSupply, allUser] = await Promise.all(
     [
       getRsEthTVLInUSD(blockNumber),
-      convertToShares(ethBlockNumber),
+      agEthToRsEth(ethBlockNumber),
       agETHTotalLiquid(ethBlockNumber),
       getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
     ]

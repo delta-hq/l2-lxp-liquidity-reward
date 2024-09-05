@@ -98,8 +98,9 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
-export async function convertToShares(blockNumber: number): Promise<bigint> {
-  const rate = await agETHContract.convertToShares(BigInt(10 ** 18), {
+// Giving agETH, return rsETH
+export async function agEthToRsEth(blockNumber: number): Promise<bigint> {
+  const rate = await agETHContract.convertToAssets(BigInt(10 ** 18), {
     blockTag: blockNumber
   });
 
