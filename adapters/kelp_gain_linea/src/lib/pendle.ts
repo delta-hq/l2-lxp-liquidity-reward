@@ -3,7 +3,7 @@ import { agETHBalancerOf } from "./fetcher";
 import { pendleSYAgETH } from "./utils";
 
 const PendleURL =
-  "https://app.sentio.xyz/api/v1/analytics/kelp_analytics/pendle_mainnet_ageth/sql/execute";
+  "https://app.sentio.xyz/api/v1/analytics/kelpdao/pendle_mainnet_ageth_v2/sql/execute";
 
 const API_KEY = process.env.KELPDAO_SENTIO_API_KEY || "";
 
@@ -67,7 +67,8 @@ function apiPostData(day: number, page: number, dataSize: number) {
     sqlQuery: {
       sql: queryStr,
       size: dataSize
-    }
+    },
+    version: 2
   };
 }
 
