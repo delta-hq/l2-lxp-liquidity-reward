@@ -7,6 +7,7 @@ const PendleURL =
 
 const API_KEY = process.env.KELPDAO_SENTIO_API_KEY || "";
 
+const EARLIEST_TIME = 1724122800;
 export async function fetchAllPendleShare(
   blockNumber: number,
   timeStamp: number
@@ -19,10 +20,10 @@ export async function fetchAllPendleShare(
   const dataSize = 20000;
   let page = 0;
 
-  let day = Math.round((timeStamp - 1724122487) / 86400);
+  let hoursPassed = Math.round((timeStamp - EARLIEST_TIME) / 3600);
   const totalShares = [];
   while (true) {
-    const postData = apiPostData(day, page, dataSize);
+    const postData = apiPostData(hoursPassed, page, dataSize);
 
     const responseRaw = await post(PendleURL, postData);
     const result: Result = responseRaw.result;
@@ -59,16 +60,19 @@ async function convertLpToAgETH(
   });
 }
 
-function apiPostData(day: number, page: number, dataSize: number) {
-  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - 1724122487) / 86400) as day FROM UserDailyShare WHERE day = ${day} LIMIT ${dataSize} OFFSET ${
+function apiPostData(hour: number, page: number, dataSize: number) {
+  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - ${EARLIEST_TIME}) / 3600) as hour FROM UserHourlyShare WHERE hour = ${hour} LIMIT ${dataSize} OFFSET ${
     page * dataSize
   }`;
+
+  console.log(queryStr);
+
   return {
     sqlQuery: {
       sql: queryStr,
       size: dataSize
     },
-    version: 2
+    version: 3
   };
 }
 
