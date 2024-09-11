@@ -11,7 +11,18 @@ import {
   agETH
 } from "./utils";
 
-export async function getEtherumBlock(blockTimestampSecs: number) {
+export async function getEtherumBlock(
+  blockTimestampSecs: number
+): Promise<number> {
+  return retry({
+    fn: async () => {
+      return await _getEtherumBlock(blockTimestampSecs);
+    },
+    name: `_getEtherumBlock`
+  });
+}
+
+export async function _getEtherumBlock(blockTimestampSecs: number) {
   const blockTimestampInMill = blockTimestampSecs * 1000;
   const date = new Date(blockTimestampInMill); //
   // External API
@@ -98,7 +109,6 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
-
 // Giving rsETH, return agETH
 export async function rsEthToAgEth(blockNumber: number): Promise<bigint> {
   const rate = await agETHContract.convertToShares(BigInt(10 ** 18), {
@@ -131,3 +141,43 @@ export async function getRsETHPrice(blockNumber: number): Promise<BigNumber> {
 
   return rsEthRate.times(ethPrice);
 }
+
+/**
+ * A wrapper function that retries a function that returns a promise of some resource
+ * @param fn - The function that returns a promise of some resource
+ * @param retries - The number of times to retry the function
+ * @param delayInSecs - The delay between retries in seconds
+ * @returns - A promise of the resource
+ */
+export async function retry<T>({
+  fn,
+  retries = 10,
+  delayInSecs = 1000,
+  name = "Function"
+}: SimpleRetry<T>): Promise<T> {
+  let currentAttempt = 0;
+  do {
+    try {
+      const res = await fn();
+      return res as T;
+    } catch (error) {
+      currentAttempt++;
+      console.log(
+        `Error in retry(${name}):  Retry count ${currentAttempt}`,
+        error
+      );
+    }
+    await wait(delayInSecs);
+  } while (currentAttempt <= retries);
+
+  throw new Error(`Error in retry(${name})`);
+}
+
+const wait = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+type SimpleRetry<T> = {
+  fn: () => T | Promise<T>;
+  retries?: number;
+  delayInSecs?: number;
+  name?: string;
+};

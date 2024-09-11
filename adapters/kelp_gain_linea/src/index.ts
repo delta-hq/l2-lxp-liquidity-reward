@@ -141,7 +141,9 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   return blocks;
 };
 
-readBlocksFromCSV("hourly_blocks.csv")
+readBlocksFromCSV(
+  "/Users/batphonghan/coding/stader_labs/l2-lxp-liquidity-reward/adapters/kelp_gain_linea/test/sample_hourly_blocks.csv"
+)
   .then(async (blocks: any[]) => {
     console.log(blocks);
     const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
