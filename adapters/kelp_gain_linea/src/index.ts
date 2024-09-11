@@ -95,12 +95,10 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
 
   allUser.forEach((item: UserBalanceSubgraphEntry) => {
-    const userBalanceAgEth = item.balance;
+    const userBalance = item.balance;
+    const balanceInRsEthRaw = BigInt(userBalance) * BigInt(agEthPerRsEthRate);
     const mainnetUserBalanceRsEth =
-      (((BigInt(userBalanceAgEth) * BigInt(agEthPerRsEthRate)) /
-        BigInt(10 ** 18)) *
-        BigInt(mulPercent)) /
-      100n;
+      ((balanceInRsEthRaw / BigInt(10 ** 18)) * BigInt(mulPercent)) / 100n;
 
     const lineaUserBalance =
       (lineaToMainnetRatio * mainnetUserBalanceRsEth) / BigInt(10 ** 18);
