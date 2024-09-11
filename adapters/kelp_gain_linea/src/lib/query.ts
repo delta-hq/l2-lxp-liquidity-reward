@@ -5,8 +5,6 @@ import { fetchAllBalancerShare } from "./balancer";
 import { BigNumber } from "bignumber.js";
 import { ethers } from "ethers";
 import { agETH, balancerVault, pendleSYAgETH } from "./utils";
-import { fetchSpectraPoolShares } from "./spectra";
-import { agEthToRsEth } from "./fetcher";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
@@ -144,35 +142,6 @@ export async function getAllAgEthHodlers(
       };
     })
   );
-
-  const rsEthPerAgEth = await agEthToRsEth(blockNumber);
-
-  let spectraShare = await fetchSpectraPoolShares(blockNumber);
-  positions.push(
-    ...spectraShare.map((e) => {
-      let totalBalance = e.portfolio.reduce(
-        (acc, s) => acc + BigInt(s.balance),
-        0n
-      );
-      let balance = BigInt(totalBalance) * BigInt(rsEthPerAgEth);
-      return {
-        id: e.id,
-        balance: balance.toString()
-      };
-    })
-  );
-
-  let spectraShare_ = spectraShare.reduce((acc, s) => {
-    let totalBalance = s.portfolio.reduce(
-      (acc, s) => acc + BigInt(s.balance),
-      0n
-    );
-
-    return acc + totalBalance;
-  }, 0n);
-
-  let spectraBalance = ethers.utils.formatEther(spectraShare_.toString());
-  console.log(`Spectra agETH: ${spectraBalance.toString()} `);
 
   const balanceMap = new Map<string, bigint>();
   for (const balance of [...positions]) {
