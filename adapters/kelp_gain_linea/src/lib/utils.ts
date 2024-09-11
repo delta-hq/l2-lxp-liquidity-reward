@@ -23,6 +23,7 @@ const rsEthAbi = [
 ];
 
 const agEthAbi = [
+  "function convertToShares(uint256 shares) public view returns (uint256)",
   "function convertToAssets(uint256 shares) public view returns (uint256)",
   "function totalSupply() public view returns (uint256)",
   "function balanceOf(address account) public view returns (uint256)"
