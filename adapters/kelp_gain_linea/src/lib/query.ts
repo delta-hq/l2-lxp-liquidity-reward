@@ -122,7 +122,7 @@ export async function getAllAgEthHodlers(
 
   let agETHHodlers = positions.reduce((acc, s) => acc + BigInt(s.balance), 0n);
 
-  let totalPendeShares = pendleShares.reduce(
+  let totalPendleShares = pendleShares.reduce(
     (acc, s) => acc + BigInt(s.share),
     0n
   );
@@ -146,7 +146,7 @@ export async function getAllAgEthHodlers(
     `Hodlers agETH: ${ethers.utils.formatEther(agETHHodlers.toString())}`
   );
   console.log(
-    `Pendle agETH: ${ethers.utils.formatEther(totalPendeShares.toString())}`
+    `Pendle agETH: ${ethers.utils.formatEther(totalPendleShares.toString())}`
   );
   console.log(
     `Balancer agETH: ${ethers.utils

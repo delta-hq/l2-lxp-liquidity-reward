@@ -54,6 +54,7 @@ const SHARES_QUERY: GraphQLQuery = {
         id
         portfolio(
           where: {
+            balance_not: "0"
             asset_in: [
               "0x2d176fc14374201a1641db67e5a9761bf92726f8"
               "0xfe469c17898082dbdc1e969fb36fe4e7c56b5014"
