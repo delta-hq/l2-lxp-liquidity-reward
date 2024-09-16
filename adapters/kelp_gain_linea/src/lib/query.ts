@@ -5,12 +5,22 @@ import { fetchAllBalancerShare } from "./balancer";
 import { BigNumber } from "bignumber.js";
 import { ethers } from "ethers";
 import { agETH, balancerVault, pendleSYAgETH } from "./utils";
-import { fetchSpectraPoolShares } from "./spectra";
-import { agEthToRsEth } from "./fetcher";
+import {
+  fetchSpectraPoolShares,
+  SPECTRA_LP_ADDRESS,
+  SPECTRA_YT_ADDRESS
+} from "./spectra";
+import { agEthToRsEth, rsEthToAgEth } from "./fetcher";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
-const Blacklisted = [agETH, balancerVault, pendleSYAgETH];
+const Blacklisted = [
+  agETH,
+  balancerVault,
+  pendleSYAgETH,
+  SPECTRA_LP_ADDRESS,
+  SPECTRA_YT_ADDRESS
+];
 export const agETHSubgraph =
   "https://api.studio.thegraph.com/query/70817/ageth-lp/version/latest";
 interface IDwise {
@@ -109,6 +119,39 @@ export async function getAllAgEthHodlers(
 
   let agETHHodlers = positions.reduce((acc, s) => acc + BigInt(s.balance), 0n);
 
+  let totalPendeShares = pendleShares.reduce(
+    (acc, s) => acc + BigInt(s.share),
+    0n
+  );
+
+  let totalBalancerShares = balancerShares.reduce(
+    (acc, s) => acc.plus(BigNumber(s.balance)),
+    new BigNumber(0)
+  );
+
+  let spectraShare = await fetchSpectraPoolShares(blockNumber);
+  let spectraShare_ = spectraShare.reduce(
+    (acc, s) => acc.plus(BigNumber(s.balance)),
+    new BigNumber(0)
+  );
+
+  let spectraAgETHBalance = ethers.utils.formatEther(
+    spectraShare_.toFixed().toString()
+  );
+
+  console.log(
+    `Hodlers agETH: ${ethers.utils.formatEther(agETHHodlers.toString())}`
+  );
+  console.log(
+    `Pendle agETH: ${ethers.utils.formatEther(totalPendeShares.toString())}`
+  );
+  console.log(
+    `Balancer agETH: ${ethers.utils
+      .formatEther(totalBalancerShares.toFixed().toString())
+      .toString()} `
+  );
+  console.log(`Spectra agETH: ${spectraAgETHBalance.toString()} `);
+
   positions.push(
     ...pendleShares.map((e) => {
       return {
@@ -117,24 +160,6 @@ export async function getAllAgEthHodlers(
       };
     })
   );
-
-  let pendeShares = pendleShares.reduce((acc, s) => acc + BigInt(s.share), 0n);
-
-  let x = ethers.utils.formatEther(pendeShares.toString());
-  console.log(
-    `Hodlers agETH: ${ethers.utils.formatEther(agETHHodlers.toString())}`
-  );
-  console.log(`Pendle agETH: ${x}`);
-
-  let balancerShares_ = balancerShares.reduce(
-    (acc, s) => acc.plus(BigNumber(s.balance)),
-    new BigNumber(0)
-  );
-
-  let balancerBalance = ethers.utils.formatEther(
-    balancerShares_.toFixed().toString()
-  );
-  console.log(`Balancer agETH: ${balancerBalance.toString()} `);
 
   positions.push(
     ...balancerShares.map((e) => {
@@ -145,34 +170,7 @@ export async function getAllAgEthHodlers(
     })
   );
 
-  const rsEthPerAgEth = await agEthToRsEth(blockNumber);
-
-  let spectraShare = await fetchSpectraPoolShares(blockNumber);
-  positions.push(
-    ...spectraShare.map((e) => {
-      let totalBalance = e.portfolio.reduce(
-        (acc, s) => acc + BigInt(s.balance),
-        0n
-      );
-      let balance = BigInt(totalBalance) * BigInt(rsEthPerAgEth);
-      return {
-        id: e.id,
-        balance: balance.toString()
-      };
-    })
-  );
-
-  let spectraShare_ = spectraShare.reduce((acc, s) => {
-    let totalBalance = s.portfolio.reduce(
-      (acc, s) => acc + BigInt(s.balance),
-      0n
-    );
-
-    return acc + totalBalance;
-  }, 0n);
-
-  let spectraBalance = ethers.utils.formatEther(spectraShare_.toString());
-  console.log(`Spectra agETH: ${spectraBalance.toString()} `);
+  positions.push(...spectraShare);
 
   const balanceMap = new Map<string, bigint>();
   for (const balance of [...positions]) {
@@ -187,5 +185,7 @@ export async function getAllAgEthHodlers(
     balance: balance.toString()
   }));
 
+  const allAgETH = balances.reduce((acc, s) => acc + BigInt(s.balance), 0n);
+  console.log(`TOTAL agETH: ${ethers.utils.formatEther(allAgETH).toString()} `);
   return balances;
 }

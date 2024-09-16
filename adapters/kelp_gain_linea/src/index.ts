@@ -7,7 +7,8 @@ import {
   getEtherumBlock,
   getRsETHBalance,
   getRsETHPrice,
-  getWRsETHBalance
+  getWRsETHBalance,
+  rsETHTotalSupply
 } from "./lib/fetcher";
 import { rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
@@ -73,9 +74,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     ]
   );
 
-  console.log(
-    `agEthTotal liquid: ${BigInt(agEthTotalSupply) / BigInt(10 ** 18)}`
-  );
   // Total rsETH deposit to mainnet
   const mainnetTVLInRsETH =
     BigInt(agEthTotalSupply * agEthPerRsEthRate) / BigInt(10 ** 18);
@@ -84,15 +82,17 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     (BigInt(tvl.lineaTVLInRsEth) * BigInt(10 ** 18)) /
     BigInt(mainnetTVLInRsETH);
 
+  const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
   console.log(
     `Ratio linea/mainnet ${ethers.utils.formatEther(
       lineaToMainnetRatio
-    )}, lineaTVL: ${ethers.utils.formatEther(
+    )}, lineaTVL : ${ethers.utils.formatEther(
       tvl.lineaTVLInRsEth
-    )} rsETH, mainnetTVL: ${ethers.utils.formatEther(mainnetTVLInRsETH)} rsETH`
+    )} rsETH, mainnetTVL: ${ethers.utils.formatEther(
+      mainnetTVLInRsETH
+    )} rsETH mulPercent: ${mulPercent}`
   );
   const csvRows: OutputDataSchemaRow[] = [];
-  const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
 
   allUser.forEach((item: UserBalanceSubgraphEntry) => {
     const userBalance = item.balance;
@@ -113,6 +113,27 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       usd_price: tvl.rsEthPrice.toNumber()
     });
   });
+
+  let totalRsEthSaveToCSV = csvRows.reduce(
+    (acc, s) => acc + s.token_balance,
+    0n
+  );
+
+  const rsEthTotalSupply = await rsETHTotalSupply(blockNumber);
+
+  console.log(
+    `TOTAL rsEth balance  in CSV : ${ethers.utils.formatEther(
+      totalRsEthSaveToCSV.toString()
+    )}\nTOTAL rsETH supply linea: ${ethers.utils.formatEther(
+      rsEthTotalSupply.toString()
+    )}`
+  );
+
+  if (totalRsEthSaveToCSV > rsEthTotalSupply) {
+    throw new Error(
+      `The total balance in CSV ${totalRsEthSaveToCSV} can not more than total supply ${rsEthTotalSupply}`
+    );
+  }
 
   return csvRows;
 };
