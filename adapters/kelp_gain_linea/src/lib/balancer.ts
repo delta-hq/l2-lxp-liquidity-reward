@@ -1,12 +1,12 @@
 import { gql } from "graphql-request";
 import { ethers } from "ethers";
 import { subgraphFetchAllById, subgraphFetchOne } from "./query";
+import { BALANCER_START_BLOCK } from "./utils";
 
 const BALANCER_V2_ENDPOINT =
   "https://api.thegraph.com/subgraphs/id/QmQ5TT2yYBZgoUxsat3bKmNe5Fr9LW9YAtDs8aeuc1BRhj";
 const AGETH_POOL_ID =
   "0xf1bbc5d95cd5ae25af9916b8a193748572050eb00000000000000000000006bc";
-
 interface GraphQLQuery {
   query: string;
   collection: string;
@@ -121,6 +121,9 @@ function convertLpToAgETH(balances: Share[], poolDetails: Pool) {
 }
 
 export async function fetchAllBalancerShare(blockNumber: number) {
+  if (blockNumber < BALANCER_START_BLOCK) {
+    return [];
+  }
   let balances = await fetchBalancerAgEthPoolShares(blockNumber);
   const poolDetails = await getPoolDetails(blockNumber);
   return convertLpToAgETH(balances, poolDetails);

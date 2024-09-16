@@ -4,7 +4,7 @@ import { fetchAllPendleShare } from "./pendle";
 import { fetchAllBalancerShare } from "./balancer";
 import { BigNumber } from "bignumber.js";
 import { ethers } from "ethers";
-import { agETH, balancerVault, pendleSYAgETH } from "./utils";
+import { agETH, AGETH_BLOCK, balancerVault, pendleSYAgETH } from "./utils";
 import {
   fetchSpectraPoolShares,
   SPECTRA_LP_ADDRESS,
@@ -103,6 +103,9 @@ export async function getAllAgEthHodlers(
   blockNumber: number,
   timestamp: number
 ) {
+  if (blockNumber < AGETH_BLOCK) {
+    return [];
+  }
   const positions = await subgraphFetchAllById<UserBalanceSubgraphEntry>(
     agETHSubgraph,
     USER_BALANCES_QUERY.query,

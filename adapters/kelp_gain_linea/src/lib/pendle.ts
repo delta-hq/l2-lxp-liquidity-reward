@@ -1,6 +1,6 @@
 import { Result, Row } from "./models";
 import { agETHBalancerOf } from "./fetcher";
-import { pendleSYAgETH } from "./utils";
+import { PENDLE_START_BLOCK, pendleSYAgETH } from "./utils";
 
 const PendleURL =
   "https://app.sentio.xyz/api/v1/analytics/kelpdao/pendle_mainnet_ageth_v2/sql/execute";
@@ -12,6 +12,9 @@ export async function fetchAllPendleShare(
   blockNumber: number,
   timeStamp: number
 ) {
+  if (blockNumber <= PENDLE_START_BLOCK) {
+    return [];
+  }
   const cur = new Date();
   if (cur.getTime() / 1000 - timeStamp < 3600) {
     timeStamp = cur.getTime() / 1000 - 3600;

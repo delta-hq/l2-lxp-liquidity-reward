@@ -1,8 +1,10 @@
 import { gql } from "graphql-request";
 import { subgraphFetchAllById, subgraphFetchOne } from "./query";
 import { rsEthToAgEth } from "./fetcher";
+import { SPECTRA_START_BLOCK } from "./utils";
 
-export const SPECTRA_YT_ADDRESS = "0x2d176fc14374201a1641db67e5a9761bf92726f8";
+export const SPECTRA_YT_ADDRESS = "0x2d176fc14374201a1641db67e5a9761bf92726f8"; // 20521549 (YT-agETH-1739404813) Aug-13-2024 06:39:11 PM UTC
+
 export const SPECTRA_LP_ADDRESS = "0xfe469c17898082dbdc1e969fb36fe4e7c56b5014";
 
 const spectra =
@@ -89,6 +91,9 @@ const POOL_QUERY: GraphQLQuery = {
 };
 
 export async function fetchSpectraPoolShares(block: number) {
+  if (block < SPECTRA_START_BLOCK) {
+    return [];
+  }
   const shares = await subgraphFetchAllById<Share>(
     spectra,
     SHARES_QUERY.query,
