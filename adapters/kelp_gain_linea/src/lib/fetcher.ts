@@ -43,6 +43,14 @@ export async function agETHTotalLiquid(blockNumber: number): Promise<bigint> {
   return totalSupply - locked;
 }
 
+export async function rsETHTotalSupply(blockNumber: number): Promise<bigint> {
+  let totalSupply = await rsETHContract.totalSupply({
+    blockTag: blockNumber
+  });
+
+  return totalSupply;
+}
+
 async function agETHTotalSupply(blockNumber: number): Promise<bigint> {
   let totalSupply = await agETHContract.totalSupply({
     blockTag: blockNumber
@@ -109,6 +117,14 @@ async function decimals(blockNumber: number): Promise<string> {
   return decimals;
 }
 
+// Giving rsETH, return agETH
+export async function rsEthToAgEth(blockNumber: number): Promise<bigint> {
+  const rate = await agETHContract.convertToShares(BigInt(10 ** 18), {
+    blockTag: blockNumber
+  });
+
+  return rate;
+}
 // Giving agETH, return rsETH
 export async function agEthToRsEth(blockNumber: number): Promise<bigint> {
   const rate = await agETHContract.convertToAssets(BigInt(10 ** 18), {

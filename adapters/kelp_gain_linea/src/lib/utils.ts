@@ -9,7 +9,9 @@ export const chainLinkOracle = "0x3c6Cd9Cc7c7a4c2Cf5a82734CD249D7D593354dA";
 export const pendleSYAgETH = "0xb1b9150f2085f6a553b547099977181ca802752a";
 export const balancerVault = "0xba12222222228d8ba445958a75a0704d566bf2c8";
 
-const ethProvider = new ethers.providers.CloudflareProvider();
+const ethProvider = new ethers.providers.JsonRpcProvider(
+  "https://eth.llamarpc.com"
+);
 
 export const dater = new EthDater(ethProvider);
 
@@ -18,10 +20,12 @@ export const providerLinea = new ethers.providers.JsonRpcProvider(
 );
 
 const rsEthAbi = [
-  "function balanceOf(address account) public view returns (uint256)"
+  "function balanceOf(address account) public view returns (uint256)",
+  "function totalSupply() public view returns (uint256)"
 ];
 
 const agEthAbi = [
+  "function convertToShares(uint256 shares) public view returns (uint256)",
   "function convertToAssets(uint256 shares) public view returns (uint256)",
   "function totalSupply() public view returns (uint256)",
   "function balanceOf(address account) public view returns (uint256)"
