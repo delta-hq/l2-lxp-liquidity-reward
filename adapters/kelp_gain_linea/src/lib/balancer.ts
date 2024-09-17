@@ -126,5 +126,10 @@ export async function fetchAllBalancerShare(blockNumber: number) {
   }
   let balances = await fetchBalancerAgEthPoolShares(blockNumber);
   const poolDetails = await getPoolDetails(blockNumber);
-  return convertLpToAgETH(balances, poolDetails);
+  let shares = convertLpToAgETH(balances, poolDetails);
+
+  if (shares.length == 0) {
+    throw new Error(`Empty share Spectra BLOCK: ${blockNumber}`);
+  }
+  return shares;
 }

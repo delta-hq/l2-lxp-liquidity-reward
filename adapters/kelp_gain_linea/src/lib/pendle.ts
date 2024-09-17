@@ -15,15 +15,11 @@ export async function fetchAllPendleShare(
   if (blockNumber <= PENDLE_START_BLOCK) {
     return [];
   }
-  const cur = new Date();
-  if (cur.getTime() / 1000 - timeStamp < 3600) {
-    timeStamp = cur.getTime() / 1000 - 3600;
-  }
-
   const dataSize = 20000;
   let page = 0;
 
   let hoursPassed = Math.round((timeStamp - EARLIEST_TIME) / 3600);
+
   const totalShares = [];
   while (true) {
     const postData = apiPostData(hoursPassed, page, dataSize);
@@ -41,7 +37,13 @@ export async function fetchAllPendleShare(
     totalShares.push(...result.rows);
   }
 
-  return await convertLpToAgETH(blockNumber, totalShares);
+  const shares = await convertLpToAgETH(blockNumber, totalShares);
+
+  if (shares.length == 0) {
+    throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
+  }
+  throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
+  return shares;
 }
 
 async function convertLpToAgETH(

@@ -117,7 +117,7 @@ async function convertToAgEth(blockNumber: number, spectraShare: Share[]) {
   const ibtAmount = BigInt(pool.ibtAsset.amount);
   const lpTotalSupply = BigInt(pool.lpTotalSupply);
 
-  return spectraShare.map((e) => {
+  const shares = spectraShare.map((e) => {
     const ytAccounts = e.portfolio.filter(
       (token) => token.asset.address == SPECTRA_YT_ADDRESS
     );
@@ -146,4 +146,10 @@ async function convertToAgEth(blockNumber: number, spectraShare: Share[]) {
       balance: balance.toString()
     };
   });
+
+  if (shares.length == 0) {
+    throw new Error(`Empty share Spectra BLOCK: ${blockNumber}`);
+  }
+
+  return shares;
 }

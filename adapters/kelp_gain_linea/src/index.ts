@@ -65,6 +65,8 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
 
   const ethBlockNumber = await getEtherumBlock(blockTimestamp);
+  console.log(`ETH BLOCK ${ethBlockNumber}, linea block: ${blockNumber}`);
+
   const [tvl, agEthPerRsEthRate, agEthTotalSupply, allUser] = await Promise.all(
     [
       getRsEthTVLInUSD(blockNumber),
@@ -174,7 +176,10 @@ readBlocksFromCSV("hourly_blocks.csv")
         const result = await getUserTVLByBlock(block);
         allCsvRows.push(...result);
       } catch (error) {
-        console.error(`An error occurred for block ${block}:`, error);
+        console.error(
+          `An error occurred for block ${JSON.stringify(block)}:`,
+          error
+        );
       }
     }
     await new Promise((resolve, reject) => {
