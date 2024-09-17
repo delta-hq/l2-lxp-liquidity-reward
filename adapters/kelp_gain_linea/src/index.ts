@@ -2,12 +2,13 @@ import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
 import {
-  agConvertToAssets,
+  agEthToRsEth,
   agETHTotalLiquid,
   getEtherumBlock,
   getRsETHBalance,
   getRsETHPrice,
-  getWRsETHBalance
+  getWRsETHBalance,
+  rsETHTotalSupply
 } from "./lib/fetcher";
 import { rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
@@ -40,6 +41,7 @@ const getMultiplierPercent = (tvlInUSD: BigNumber) => {
   }
   return 156;
 };
+
 export const getRsEthTVLInUSD = async (blockNumber: number) => {
   const [rsETHBalanceRaw, wrsETHBalanceRaw, rsEthPrice] = await Promise.all([
     getRsETHBalance(blockNumber),
@@ -63,37 +65,42 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
   const { blockNumber, blockTimestamp } = blocks;
 
   const ethBlockNumber = await getEtherumBlock(blockTimestamp);
-  const [tvl, agRate, agEthTotalSupply, allUser] = await Promise.all([
-    getRsEthTVLInUSD(blockNumber),
-    agConvertToAssets(ethBlockNumber),
-    agETHTotalLiquid(ethBlockNumber),
-    getAllAgEthHodlers(ethBlockNumber)
-  ]);
+  console.log(`ETH BLOCK ${ethBlockNumber}, linea block: ${blockNumber}`);
+
+  const [tvl, agEthPerRsEthRate, agEthTotalSupply, allUser] = await Promise.all(
+    [
+      getRsEthTVLInUSD(blockNumber),
+      agEthToRsEth(ethBlockNumber),
+      agETHTotalLiquid(ethBlockNumber),
+      getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
+    ]
+  );
 
   // Total rsETH deposit to mainnet
   const mainnetTVLInRsETH =
-    BigInt(agEthTotalSupply * agRate) / BigInt(10 ** 18);
+    BigInt(agEthTotalSupply * agEthPerRsEthRate) / BigInt(10 ** 18);
 
   const lineaToMainnetRatio =
     (BigInt(tvl.lineaTVLInRsEth) * BigInt(10 ** 18)) /
     BigInt(mainnetTVLInRsETH);
 
+  const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
   console.log(
     `Ratio linea/mainnet ${ethers.utils.formatEther(
       lineaToMainnetRatio
-    )}, lineaTVL: ${ethers.utils.formatEther(
+    )}, lineaTVL : ${ethers.utils.formatEther(
       tvl.lineaTVLInRsEth
-    )} rsETH, mainnetTVL: ${ethers.utils.formatEther(mainnetTVLInRsETH)} rsETH`
+    )} rsETH, mainnetTVL: ${ethers.utils.formatEther(
+      mainnetTVLInRsETH
+    )} rsETH mulPercent: ${mulPercent}`
   );
   const csvRows: OutputDataSchemaRow[] = [];
-  const mulPercent = getMultiplierPercent(tvl.tvlInUSD);
 
   allUser.forEach((item: UserBalanceSubgraphEntry) => {
-    const userBalanceAgEth = item.balance;
+    const userBalance = item.balance;
+    const balanceInRsEthRaw = BigInt(userBalance) * BigInt(agEthPerRsEthRate);
     const mainnetUserBalanceRsEth =
-      (((BigInt(userBalanceAgEth) * BigInt(agRate)) / BigInt(10 ** 18)) *
-        BigInt(mulPercent)) /
-      100n;
+      ((balanceInRsEthRaw / BigInt(10 ** 18)) * BigInt(mulPercent)) / 100n;
 
     const lineaUserBalance =
       (lineaToMainnetRatio * mainnetUserBalanceRsEth) / BigInt(10 ** 18);
@@ -108,6 +115,27 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       usd_price: tvl.rsEthPrice.toNumber()
     });
   });
+
+  let totalRsEthSaveToCSV = csvRows.reduce(
+    (acc, s) => acc + s.token_balance,
+    0n
+  );
+
+  const rsEthTotalSupply = await rsETHTotalSupply(blockNumber);
+
+  console.log(
+    `TOTAL rsEth balance  in CSV : ${ethers.utils.formatEther(
+      totalRsEthSaveToCSV.toString()
+    )}\nTOTAL rsETH supply linea: ${ethers.utils.formatEther(
+      rsEthTotalSupply.toString()
+    )}`
+  );
+
+  if (totalRsEthSaveToCSV > rsEthTotalSupply) {
+    throw new Error(
+      `The total balance in CSV ${totalRsEthSaveToCSV} can not more than total supply ${rsEthTotalSupply}`
+    );
+  }
 
   return csvRows;
 };
@@ -148,7 +176,10 @@ readBlocksFromCSV("hourly_blocks.csv")
         const result = await getUserTVLByBlock(block);
         allCsvRows.push(...result);
       } catch (error) {
-        console.error(`An error occurred for block ${block}:`, error);
+        console.error(
+          `An error occurred for block ${JSON.stringify(block)}:`,
+          error
+        );
       }
     }
     await new Promise((resolve, reject) => {
