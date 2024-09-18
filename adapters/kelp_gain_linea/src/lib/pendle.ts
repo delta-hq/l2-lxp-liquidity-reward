@@ -12,7 +12,7 @@ export async function fetchAllPendleShare(
   blockNumber: number,
   timeStamp: number
 ) {
-  if (blockNumber <= PENDLE_START_BLOCK) {
+  if (blockNumber <= PENDLE_START_BLOCK || timeStamp < EARLIEST_TIME) {
     return [];
   }
   const dataSize = 20000;
@@ -42,7 +42,6 @@ export async function fetchAllPendleShare(
   if (shares.length == 0) {
     throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
   }
-  throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
   return shares;
 }
 
