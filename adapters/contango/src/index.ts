@@ -118,22 +118,28 @@ export const getUserTVLByBlock = async (
     `Processing block ${block.blockNumber} with ${positions.length} positions`,
   );
 
-  const positionsByUser = new Map<User, Map<AssetAddress, Map<Side,OutputDataSchemaRow >>>();
+  const positionsByUser = new Map<
+    User,
+    Map<AssetAddress, Map<Side, OutputDataSchemaRow>>
+  >();
 
   positions.forEach((position) => {
     const { owner, collateral, debt, instrument } = position;
     const { base, quote } = instrument;
 
     if (!positionsByUser.has(owner)) {
-      positionsByUser.set(owner, new Map<AssetAddress, Map<Side,OutputDataSchemaRow >>());
+      positionsByUser.set(
+        owner,
+        new Map<AssetAddress, Map<Side, OutputDataSchemaRow>>(),
+      );
     }
     const userAssets = positionsByUser.get(owner)!;
 
     if (!userAssets.has(base.id)) {
-      userAssets.set(base.id, new Map<Side,OutputDataSchemaRow >());
+      userAssets.set(base.id, new Map<Side, OutputDataSchemaRow>());
     }
     if (!userAssets.has(quote.id)) {
-      userAssets.set(quote.id, new Map<Side,OutputDataSchemaRow >());
+      userAssets.set(quote.id, new Map<Side, OutputDataSchemaRow>());
     }
     if (!userAssets.get(base.id)!.has(Side.Collateral)) {
       userAssets.get(base.id)!.set(Side.Collateral, row(block, owner, base));
@@ -142,13 +148,14 @@ export const getUserTVLByBlock = async (
       userAssets.get(quote.id)!.set(Side.Debt, row(block, owner, quote));
     }
 
-    userAssets.get(base.id)!.get(Side.Collateral)!.token_balance += BigInt(collateral);
+    userAssets.get(base.id)!.get(Side.Collateral)!.token_balance +=
+      BigInt(collateral);
     userAssets.get(quote.id)!.get(Side.Debt)!.token_balance -= BigInt(debt);
   });
 
   return Array.from(positionsByUser.values())
     .flatMap((positions) => Array.from(positions.values()))
-    .flatMap((sides) => Array.from(sides.values()))
+    .flatMap((sides) => Array.from(sides.values()));
 };
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
