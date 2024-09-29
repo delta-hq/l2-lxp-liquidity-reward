@@ -1,9 +1,16 @@
+import axios from "axios";
+import rateLimit from "axios-rate-limit";
 import {
   BlockData,
   IUserReserve,
   ILPResponse,
   OutputDataSchemaRow,
 } from "./types";
+
+const axiosInstance = rateLimit(axios.create(), {
+  maxRequests: 5,
+  perMilliseconds: 1000,
+});
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
@@ -39,12 +46,15 @@ export const getUserTVLLegacyByBlock = async (
       }
     }`;
 
-    const response = await fetch(queryURL, {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const batch: ILPResponse = await response.json();
+    const response = await axiosInstance.post(
+      queryURL,
+      { query },
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    const batch: ILPResponse = await response.data;
 
     if (!batch.data || batch.data.userReserves.length == 0) break;
 

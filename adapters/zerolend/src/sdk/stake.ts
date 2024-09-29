@@ -1,9 +1,16 @@
+import axios from "axios";
+import rateLimit from "axios-rate-limit";
 import {
   BlockData,
   IOmniStakingData,
   IOmniStakingResponse,
   OutputDataSchemaRow,
 } from "./types";
+
+const axiosInstance = rateLimit(axios.create(), {
+  maxRequests: 5,
+  perMilliseconds: 1000,
+});
 
 const queryURL =
   "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-omnistaking/1.0.2/gn";
@@ -34,12 +41,15 @@ export const getUserStakeByBlock = async (
       }
     }`;
 
-    const response = await fetch(queryURL, {
-      method: "POST",
-      body: JSON.stringify({ query }),
-      headers: { "Content-Type": "application/json" },
-    });
-    const batch: IOmniStakingResponse = await response.json();
+    const response = await axiosInstance.post(
+      queryURL,
+      { query },
+      {
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    const batch: IOmniStakingResponse = await response.data;
 
     if (!batch.data || batch.data.tokenBalances.length == 0) break;
 
