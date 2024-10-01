@@ -41,6 +41,7 @@ const SHARES_QUERY: GraphQLQuery = {
   query: gql`
     query GetAccounts($block: Int, $lastId: ID!) {
       accounts(
+        block: { number: $block }
         where: {
           portfolio_: {
             balance_not: "0"
@@ -77,7 +78,10 @@ const SHARES_QUERY: GraphQLQuery = {
 const POOL_QUERY: GraphQLQuery = {
   query: gql`
     query GetAccounts($block: Int) {
-      pool(id: "0x952ac974ff2f3ee5c05534961b661fe70fd38b8a") {
+      pool(
+        id: "0x952ac974ff2f3ee5c05534961b661fe70fd38b8a"
+        block: { number: $block }
+      ) {
         lpTotalSupply
         ibtAsset {
           amount
