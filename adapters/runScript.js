@@ -5,7 +5,7 @@ const csv = require('csv-parser');
 const { write } =require('fast-csv');
 
 // Get the folder name from command line arguments
-const folderName = "wagETH_linea";
+const folderName = process.argv[2];
 
 if (!folderName) {
   console.error('Folder name not provided. Please provide the folder name as an argument.');
