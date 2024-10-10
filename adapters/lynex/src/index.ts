@@ -155,7 +155,7 @@ export const getUserStakedTVLByBlock = async ({
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0
-      ).plus(userVote.result.amount.toString());
+      ).plus(userVote.result.amount?.toString() ?? '0');
     }
   }
 

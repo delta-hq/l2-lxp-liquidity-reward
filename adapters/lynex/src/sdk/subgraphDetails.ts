@@ -19,7 +19,7 @@ export const getUserAddresses = async (
   while (fetchNext) {
     let query = `
             query UserQuery {
-              users(${blockQuery} first:1000,skip:${skip}) {
+              users(${blockQuery} first:1000,skip:${skip}, where:{liquidityPositions_: {amount_gt: 0}}) {
                 id
                 liquidityPositions {
                   id
@@ -50,7 +50,7 @@ export const getUserAddresses = async (
       headers: { "Content-Type": "application/json" },
     });
     let data = await response.json();
-    let userStakes = data.data.users;
+    let userStakes = data.data?.users ?? [];
     for (let i = 0; i < userStakes.length; i++) {
       let userStake = userStakes[i];
       let transformedUserStake: UserStake = {
