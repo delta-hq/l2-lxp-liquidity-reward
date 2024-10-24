@@ -91,7 +91,7 @@ export const getUserStakedTVLByBlock = async ({
   let userPoolFetch = [];
   let userVotesFetch = [];
 
-  const batchSize = 400;
+  const batchSize = 100;
   let position = 0;
   let userFetchResult: any = [];
   let userVotesResult: any = [];
@@ -112,6 +112,9 @@ export const getUserStakedTVLByBlock = async ({
         ...(await Promise.all(userVotesFetch)),
       ];
       userVotesFetch = [];
+      console.timeEnd("Batch");
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
+      await delay(60000)
     }
     position++;
   }
