@@ -41,7 +41,7 @@ export type BeefyBoost = {
 export type BeefyProtocolType =
   | "gamma"
   | "ichi"
-  | "mendi"
+  | "single_token"
   | "solidly"
   | "beefy_clm"
   | "beefy_clm_vault";
@@ -52,6 +52,7 @@ type ApiPlatformId =
   | "lynex"
   | "mendi"
   | "nile"
+  | "stargate"
   | "velodrome"
   | "beefy"; // and more but we don't use those on linea
 
@@ -133,10 +134,11 @@ const protocol_map: Record<ApiPlatformId, BeefyProtocolType> = {
   gamma: "gamma",
   ichi: "ichi",
   lynex: "solidly",
-  mendi: "mendi",
+  mendi: "single_token",
   nile: "solidly",
   velodrome: "solidly",
   beefy: "beefy_clm",
+  stargate: "single_token",
 };
 
 export const getBeefyVaultConfig = memoize(

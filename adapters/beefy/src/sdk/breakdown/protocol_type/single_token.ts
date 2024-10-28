@@ -4,7 +4,7 @@ import { BeefyViemClient } from "../../viemClient";
 import { BeefyVaultBreakdown } from "../types";
 import { BeefyVaultV7Abi } from "../../../abi/BeefyVaultV7Abi";
 
-export const getMendiVaultBreakdown = async (
+export const getSingleTokenVaultBreakdown = async (
   client: BeefyViemClient,
   blockNumber: bigint,
   vault: BeefyVault
