@@ -10,7 +10,10 @@ export const V3_SUBGRAPH_URL =
 
 export const client = createPublicClient({
   chain: linea,
-  transport: http("https://rpc.linea.build"),
+  transport: http("https://rpc.linea.build", {
+    retryCount: 5,
+    timeout: 60_000,
+  }),
 });
 
 export const PROBLEM_POOLS = {
