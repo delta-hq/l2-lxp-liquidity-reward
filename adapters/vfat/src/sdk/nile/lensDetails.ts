@@ -2,7 +2,7 @@ import { Abi, Address, MulticallParameters, PublicClient } from "viem";
 import { client } from "./config";
 import veNILEAbi from "./abis/veNILE.json";
 
-export const VE_NILE_ADDRESS = "0xaaaea1fb9f3de3f70e89f37b69ab11b47eb9ce6f"; // veNILE
+export const VE_NILE_ADDRESS = "0xaaaea1fb9f3de3f70e89f37b69ab11b47eb9ce6f";
 
 export interface VoteRequest {
   userAddress: string;
@@ -13,71 +13,73 @@ export interface VoteResponse {
   result: VoteRequest;
 }
 
-// Function to fetch user votes with batching
 export const fetchUserVotes = async (
   blockNumber: bigint,
-  userAddress: string,
+  userAddresses: string[],
 ): Promise<VoteResponse[]> => {
   const publicClient = client;
 
-  const userBalanceCall = await multicall(
+  const balanceCalls = userAddresses.map((userAddress) => ({
+    address: VE_NILE_ADDRESS,
+    name: "balanceOf",
+    params: [userAddress],
+  }));
+
+  const userBalances = await batchMulticall(
     publicClient,
     veNILEAbi as Abi,
-    [
-      {
-        address: VE_NILE_ADDRESS,
-        name: "balanceOf",
-        params: [userAddress],
-      },
-    ],
+    balanceCalls,
     blockNumber,
+    200,
+    2000,
   );
 
-  const userBalance = userBalanceCall[0].result as number;
+  const tokenCalls: any = [];
+  userBalances.forEach((balance, index) => {
+    const userAddress = userAddresses[index];
+    const userBalance = balance.result as number;
 
-  if (userBalance === 0) return [];
-
-  const calls = [];
-  for (let i = 0; i < userBalance; i++) {
-    calls.push({
-      address: VE_NILE_ADDRESS,
-      name: "tokenOfOwnerByIndex",
-      params: [userAddress, i],
-    });
-  }
+    if (userBalance > 0) {
+      for (let i = 0; i < userBalance; i++) {
+        tokenCalls.push({
+          address: VE_NILE_ADDRESS,
+          name: "tokenOfOwnerByIndex",
+          params: [userAddress, i],
+        });
+      }
+    }
+  });
 
   const userTokensCalls = await batchMulticall(
     publicClient,
     veNILEAbi as Abi,
-    calls,
+    tokenCalls,
     blockNumber,
     500,
-    200
+    200,
   );
 
-  const detailsCall = userTokensCalls.map((call) => {
-    return {
-      address: VE_NILE_ADDRESS,
-      name: "locked",
-      params: [call.result],
-    };
-  });
+  const detailsCalls = userTokensCalls.map((call) => ({
+    address: VE_NILE_ADDRESS,
+    name: "locked",
+    params: [call.result],
+  }));
 
   const res = (await batchMulticall(
     publicClient,
     veNILEAbi as Abi,
-    detailsCall,
+    detailsCalls,
     blockNumber,
-    500,
-    200
+    200,
+    2000,
   )) as any;
 
-  return res.map((r: any) => {
+  return res.map((r: any, index: any) => {
+    const userAddress = userAddresses[Math.floor(index / tokenCalls.length)];
     return { result: { amount: r.result[0], userAddress } };
   }) as VoteResponse[];
 };
 
-// Batch multicall function with a delay
 async function batchMulticall(
   publicClient: PublicClient,
   abi: Abi,
@@ -101,37 +103,13 @@ async function batchMulticall(
       blockNumber,
     };
 
-    // Send the batch of requests
     const res = await publicClient.multicall(call);
     results.push(...res);
 
-    // Introduce delay before sending the next batch
     if (i + batchSize < calls.length) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
   return results;
-}
-
-// Regular multicall function
-function multicall(
-  publicClient: PublicClient,
-  abi: Abi,
-  calls: any[],
-  blockNumber: bigint,
-) {
-  const call: MulticallParameters = {
-    contracts: calls.map((call) => {
-      return {
-        address: call.address as Address,
-        abi,
-        functionName: call.name,
-        args: call.params,
-      };
-    }),
-    blockNumber,
-  };
-
-  return publicClient.multicall(call);
 }

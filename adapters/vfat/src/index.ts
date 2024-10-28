@@ -5,7 +5,6 @@ import fs from 'fs';
 import { write } from 'fast-csv';
 
 import { BlockData, OutputSchemaRow } from './sdk/pancake/types';
-
 import { UserVote, UserPosition } from './sdk/nile/types';
 
 import {
@@ -24,7 +23,6 @@ import { fetchUserVotes } from './sdk/nile/lensDetails';
 import BigNumber from 'bignumber.js';
 
 const pipeline = promisify(stream.pipeline);
-
 const NILE_ADDRESS = '0xAAAac83751090C6ea42379626435f805DDF54DC8'.toLowerCase();
 
 export const getUserTVLByBlock = async ({
@@ -69,10 +67,10 @@ export const getUserTVLByBlock = async ({
   // Get sickles and their owners
   const sickleAddresses = await getSickles(blockNumber);
   const sickleOwners = await getSickleOwners(
-    sickleAddresses.map((s: any) => s.sickle)
+    sickleAddresses.map((s: any) => s.sickle),
+    BigInt(blockNumber) // Pass blockNumber as the second argument
   );
-
-// remove non sickle addresses from balances
+  // Remove non-sickle addresses from balances
   for (const [user, tokenBalances] of Object.entries(balances)) {
     if (!sickleOwners[user]) {
       delete balances[user];
@@ -84,7 +82,7 @@ export const getUserTVLByBlock = async ({
   for (const [user, tokenBalances] of Object.entries(balances)) {
     const owner = (
       (sickleOwners as Record<string, string>)[user] || user
-    ).toLowerCase(); // Replace sickle address with owner address
+    ).toLowerCase();
     if (!updatedBalances[owner]) {
       updatedBalances[owner] = {};
     }
@@ -183,24 +181,13 @@ export const getUserVotesTVLByBlock = async (
     [userAddress: string]: BigNumber;
   };
 
-  const batchSize = 300;
-  let userVotesResult: any[] = [];
-  for (let i = 0; i < userAddresses.length; i += batchSize) {
-    const batch = userAddresses.slice(i, i + batchSize);
-    userVotesResult = userVotesResult.concat(
-      await Promise.all(
-        batch.map((user) => fetchUserVotes(BigInt(blockNumber), user))
-      )
-    );
-  }
+  const userVotesResult = await fetchUserVotes(BigInt(blockNumber), userAddresses);
 
   for (const userFecthedVotes of userVotesResult) {
-    for (const userVote of userFecthedVotes) {
-      const userAddress = userVote.result.userAddress.toLowerCase();
-      tokenBalanceMap[userAddress] = BigNumber(
-        tokenBalanceMap[userAddress] ?? 0
-      ).plus(userVote.result.amount.toString());
-    }
+    const userAddress = userFecthedVotes.result.userAddress.toLowerCase();
+    tokenBalanceMap[userAddress] = BigNumber(
+      tokenBalanceMap[userAddress] ?? 0
+    ).plus(userFecthedVotes.result.amount.toString());
   }
 
   Object.entries(tokenBalanceMap).forEach(([userAddress, balance]) => {
@@ -220,7 +207,7 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
   await new Promise<void>((resolve, reject) => {
     fs.createReadStream(filePath)
-      .pipe(csv()) // Specify the separator as '\t' for TSV files
+      .pipe(csv())
       .on('data', (row) => {
         const blockNumber = parseInt(row.number, 10);
         const blockTimestamp = parseInt(row.timestamp, 10);
@@ -228,26 +215,20 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
           blocks.push({ blockNumber: blockNumber, blockTimestamp });
         }
       })
-      .on('end', () => {
-        resolve();
-      })
-      .on('error', (err) => {
-        reject(err);
-      });
+      .on('end', resolve)
+      .on('error', reject);
   });
 
   return blocks;
 };
 
 readBlocksFromCSV('hourly_blocks.csv')
-  .then(async (blocks: any[]) => {
-    console.log(blocks);
-    const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
+  .then(async (blocks: BlockData[]) => {
+    const allCsvRows: OutputSchemaRow[] = [];
 
     for (const block of blocks) {
       try {
         const result = await getUserTVLByBlock(block);
-        // Accumulate CSV rows for all blocks
         allCsvRows.push(...result);
       } catch (error) {
         console.error(`An error occurred for block ${block.blockNumber}:`, error);
@@ -262,9 +243,7 @@ readBlocksFromCSV('hourly_blocks.csv')
           console.log('CSV file has been written.');
           resolve;
         })
-        .on('error', (err) => {
-          reject(err);
-        });
+        .on('error', reject);
     });
   })
   .catch((err) => {

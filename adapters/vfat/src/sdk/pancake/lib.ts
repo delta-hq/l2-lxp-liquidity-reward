@@ -172,80 +172,70 @@ export const getSickles = async (blockNumber: number) => {
         }
     }`;
 
-  const response = await fetch(VFAT_SUBGRAPH_URL, {
-    method: 'POST',
-    body: JSON.stringify({ query }),
-    headers: { 'Content-Type': 'application/json' },
-  });
-
-  const { data } = await response.json();
-
-  return (data as { sickleAddresses: { sickle: `0x${string}` }[] }).sickleAddresses;
+  try {
+    const response = await fetch(VFAT_SUBGRAPH_URL, {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    const rawBody = await response.text();
+    try {
+      const { data } = JSON.parse(rawBody);
+      return (data as { sickleAddresses: { sickle: `0x${string}` }[] }).sickleAddresses;
+    } catch (jsonError) {
+      console.error(`JSON parsing error for block ${blockNumber}:`, jsonError);
+      console.error('Raw response body:', rawBody); // Log raw body
+      throw jsonError;
+    }
+  } catch (error) {
+    // Log network or other fetch errors
+    console.error(`Error fetching data for block ${blockNumber}:`, error);
+    throw error;
+  }
 };
 
 
-const getOwnerFromMasterChef = async (
+
+export const getOwnerFromMasterChef = async (
   pids: string[],
   blockNumber: bigint,
-) => {
+): Promise<string[]> => {
   const abi = [
     {
-      inputs: [
-        { internalType: 'uint256', name: '', type: 'uint256' },
-      ],
+      inputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
       name: 'userPositionInfos',
       outputs: [
-        {
-          internalType: 'uint128',
-          name: 'liquidity',
-          type: 'uint128',
-        },
-        {
-          internalType: 'uint128',
-          name: 'boostLiquidity',
-          type: 'uint128',
-        },
+        { internalType: 'uint128', name: 'liquidity', type: 'uint128' },
+        { internalType: 'uint128', name: 'boostLiquidity', type: 'uint128' },
         { internalType: 'int24', name: 'tickLower', type: 'int24' },
         { internalType: 'int24', name: 'tickUpper', type: 'int24' },
-        {
-          internalType: 'uint256',
-          name: 'rewardGrowthInside',
-          type: 'uint256',
-        },
+        { internalType: 'uint256', name: 'rewardGrowthInside', type: 'uint256' },
         { internalType: 'uint256', name: 'reward', type: 'uint256' },
         { internalType: 'address', name: 'user', type: 'address' },
         { internalType: 'uint256', name: 'pid', type: 'uint256' },
-        {
-          internalType: 'uint256',
-          name: 'boostMultiplier',
-          type: 'uint256',
-        },
+        { internalType: 'uint256', name: 'boostMultiplier', type: 'uint256' },
       ],
       stateMutability: 'view',
       type: 'function',
     },
   ] as const;
 
-  const results = await client.multicall({
-    allowFailure: false,
-    blockNumber,
-    contracts: pids.map(
-      (pid) =>
-        ({
-          abi,
-          address: masterChefAddress,
-          functionName: 'userPositionInfos',
-          args: [BigInt(pid)],
-        } as const),
-    ),
-  });
+  const calls = pids.map((pid) => ({
+    address: masterChefAddress,
+    name: 'userPositionInfos',
+    params: [BigInt(pid)],
+  }));
 
-  return results.map((r) => {
-    return r[6];
-  });
+  const results = await batchMulticall(abi, calls, blockNumber, 300, 200);
+
+  return results.map((r) => (r as any)[6] as string);
 };
 
-export const getSickleOwners = async (sickleAddresses: `0x${string}`[]): Promise<Record<string, string>> => {
+
+export const getSickleOwners = async (
+  sickleAddresses: `0x${string}`[],
+  blockNumber: bigint,
+): Promise<Record<string, string>> => {
   const abi: Abi = [
     {
       inputs: [],
@@ -256,26 +246,19 @@ export const getSickleOwners = async (sickleAddresses: `0x${string}`[]): Promise
     },
   ] as const;
 
-  const results = await client.multicall({
-    allowFailure: false,
-    contracts: sickleAddresses.map(
-      (sickle) =>
-        ({
-          abi,
-          address: sickle,
-          functionName: 'owner',
-          args: [],
-        } as const),
-    ),
-  });
+  const calls = sickleAddresses.map((sickle) => ({
+    address: sickle,
+    name: 'owner',
+    params: [],
+  }));
 
-  const resultsArray = results as string[];
+  const results = await batchMulticall(abi, calls, blockNumber, 300, 2000);
 
   const sickleOwners: Record<string, string> = {};
   for (let i = 0; i < sickleAddresses.length; i++) {
-    sickleOwners[sickleAddresses[i]] = resultsArray[i];
+    sickleOwners[sickleAddresses[i]] = results[i] as string;
   }
-  
+
   return sickleOwners;
 };
 
@@ -287,3 +270,32 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
   });
   return Number(block.timestamp * 1000n);
 };
+
+async function batchMulticall(
+  abi: Abi,
+  calls: any[],
+  blockNumber: bigint,
+  batchSize: number,
+  delay: number,
+) {
+  const results = [];
+  for (let i = 0; i < calls.length; i += batchSize) {
+    const batch = calls.slice(i, i + batchSize);
+    const res = await client.multicall({
+      allowFailure: false,
+      blockNumber,
+      contracts: batch.map((call) => ({
+        abi,
+        address: call.address,
+        functionName: call.name,
+        args: call.params,
+      })),
+    });
+    results.push(...res);
+
+    if (i + batchSize < calls.length) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+  return results;
+}
