@@ -6,7 +6,7 @@ export const SUBGRAPH_URL =
 
 export const client = createPublicClient({
   chain: linea,
-  transport: http("https://rpc.linea.build", {
+  transport: http(process.env.OPENBLOCK_LINEA_INFURA_RPC_URL, {
     retryCount: 5,
     timeout: 60_000,
   }),
