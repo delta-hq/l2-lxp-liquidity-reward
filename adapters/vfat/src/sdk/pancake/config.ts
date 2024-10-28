@@ -12,5 +12,5 @@ export const VFAT_SUBGRAPH_URL =
 
 export const client = createPublicClient({
   chain: linea,
-  transport: http(process.env.OPENBLOCK_LINEA_INFURA_RPC_URL),
+  transport: http(`https://linea-mainnet.infura.io/v3/${process.env.OPENBLOCK_LINEA_INFURA_API_KEY}`),
 });
