@@ -38,7 +38,7 @@ export const getUserTVLByBlock = async (
       block_number: blockNumber,
       timestamp: blockTimestamp,
       user_address: item.id,
-      token_address: LINEA_WAGETH_ADDR,
+      token_address: LINEA_WAGETH_ADDR.toLowerCase(),
       token_balance: BigInt(item.balance),
       token_symbol: LINEA_WAGETH_SYMBOL,
       usd_price: 0
