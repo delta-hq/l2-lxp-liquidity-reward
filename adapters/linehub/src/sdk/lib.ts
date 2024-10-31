@@ -70,7 +70,13 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         })
-        const { data: { liquidityPositions } } = await response.json();
+
+        const jsonData = await response.json();
+
+        let liquidityPositions: V2Position[] = [];
+        if (jsonData?.data?.liquidityPositions) {
+            liquidityPositions = jsonData.data.liquidityPositions
+        }
 
         result.push(...liquidityPositions.map((position: V2Position) => {
             const { reserve0, reserve1 } = getV2PositionReserves(position)
@@ -107,7 +113,6 @@ export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: numb
     let skip = 0;
     let fetchNext = true;
     let result: any[] = [];
-    let _stores: any[] = [];
     while (fetchNext) {
         let query = `{
             liquidities(where: {period: "user" amountDelta_gt: 1 } ${blockQuery} orderBy: createTimestamp, first:1000,skip:${skip}) {
@@ -124,8 +129,14 @@ export const getTradeLiquidityForAddressByPoolAtBlock = async (blockNumber: numb
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         });
-        const { data: { liquidities, stores } } = await response.json();
-        _stores = stores
+
+        const jsonData = await response.json();
+
+        let liquidities = []
+        if (jsonData?.data?.liquidities) {
+            liquidities = jsonData.data.liquidities
+        }
+
         result = result.concat(liquidities)
 
         if (liquidities.length < 1000) {
@@ -244,8 +255,12 @@ export const getV3UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             body: JSON.stringify({ query }),
             headers: { "Content-Type": "application/json" },
         })
+        const jsonData = await response.json();
 
-        const { data: { positions } } = await response.json();
+        let positions: V3Position[] = [];
+        if (jsonData?.data?.positions) {
+            positions = jsonData.data.positions
+        }
 
         result.push(...positions.map((position: V3Position) => {
             const { reserve0, reserve1 } = getV3PositionReserves(position)
