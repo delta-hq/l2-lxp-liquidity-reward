@@ -19,7 +19,7 @@ export const getUserAddresses = async (
   while (fetchNext) {
     let query = `
             query UserQuery {
-              users(${blockQuery} first:1000,skip:${skip}, where:{liquidityPositions_: {amount_gt: 0}}) {
+              users(${blockQuery} first:1000,skip:${skip}) {
                 id
                 liquidityPositions {
                   id
