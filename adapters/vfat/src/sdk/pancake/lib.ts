@@ -226,7 +226,7 @@ export const getOwnerFromMasterChef = async (
     params: [BigInt(pid)],
   }));
 
-  const results = await batchMulticall(abi, calls, blockNumber, 300, 200);
+  const results = await batchMulticall(abi, calls, blockNumber, 300, 2000);
 
   return results.map((r) => (r as any)[6] as string);
 };

@@ -56,7 +56,7 @@ export const fetchUserVotes = async (
     tokenCalls,
     blockNumber,
     500,
-    200,
+    2000,
   );
 
   const detailsCalls = userTokensCalls.map((call) => ({
