@@ -3,6 +3,7 @@ import { client } from "./config";
 import { Position } from "./types";
 
 const WHITELISTED_TOKEN_ADDRESS = "0xeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee";
+const FETCH_DELAY_MS = 5000
 
 export const getTimestampAtBlock = async (blockNumber: number) => {
   const block = await client.getBlock({
@@ -23,6 +24,7 @@ export class PositionsStream extends Readable {
   }
 
   async _read() {
+    await new Promise(resolve => setTimeout(resolve, FETCH_DELAY_MS));
     const query = `
       query {
         farmPositions(
