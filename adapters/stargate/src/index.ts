@@ -36,16 +36,16 @@ const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
 
 readBlocksFromCSV(path.resolve(__dirname, "../hourly_blocks.csv"))
   .then(async (blocks) => {
-    const streams = blocks.flatMap((block) => [
-      new PositionsStream(block, POSITIONS_V1_SUBGRAPH_URL),
-      new PositionsStream(block, POSITIONS_V2_SUBGRAPH_URL),
-    ]);
-
-    mergeStreams(streams);
-  })
-  .catch((err) => {
-    console.error("Error reading CSV file:", err);
-  });
+    for (const block of blocks) {
+      // Sequentially process each stream for the block
+      const v2Stream = new PositionsStream(block, POSITIONS_V2_SUBGRAPH_URL);
+      const v1Stream = new PositionsStream(block, POSITIONS_V1_SUBGRAPH_URL);
+      await mergeStreams([v1Stream, v2Stream]);
+  }
+})
+.catch((err) => {
+  console.error("Error reading CSV file:", err);
+});
 
 function mergeStreams(positionStreams: PositionsStream[]) {
   const csvWriteStream = fs.createWriteStream(`outputData.csv`, {
