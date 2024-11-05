@@ -8,7 +8,9 @@ import {
   dater,
   agETHContract,
   wrsETHContract,
-  agETH
+  agETH,
+  scrollDater,
+  arbDater
 } from "./utils";
 
 export async function getEtherumBlock(
@@ -22,12 +24,54 @@ export async function getEtherumBlock(
   });
 }
 
+export async function getArbBlock(blockTimestampSecs: number): Promise<number> {
+  return retry({
+    fn: async () => {
+      return await _getArbBlock(blockTimestampSecs);
+    },
+    name: `_getARBBlock`
+  });
+}
+
+export async function getScrollBlock(
+  blockTimestampSecs: number
+): Promise<number> {
+  return retry({
+    fn: async () => {
+      return await _getScrollBlock(blockTimestampSecs);
+    },
+    name: `_getScrollBlock`
+  });
+}
+
 export async function _getEtherumBlock(blockTimestampSecs: number) {
   const blockTimestampInMill = blockTimestampSecs * 1000;
   const date = new Date(blockTimestampInMill); //
   // External API
 
   const res = await dater.getDate(date);
+  let blockNumber = res.block; // Try to get the exact block number
+
+  return blockNumber;
+}
+
+export async function _getScrollBlock(blockTimestampSecs: number) {
+  const blockTimestampInMill = blockTimestampSecs * 1000;
+  const date = new Date(blockTimestampInMill); //
+  // External API
+
+  const res = await scrollDater.getDate(date);
+  let blockNumber = res.block; // Try to get the exact block number
+
+  return blockNumber;
+}
+
+export async function _getArbBlock(blockTimestampSecs: number) {
+  const blockTimestampInMill = blockTimestampSecs * 1000;
+  const date = new Date(blockTimestampInMill); //
+  // External API
+
+  const res = await arbDater.getDate(date);
   let blockNumber = res.block; // Try to get the exact block number
 
   return blockNumber;
