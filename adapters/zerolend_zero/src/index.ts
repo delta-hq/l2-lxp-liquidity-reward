@@ -2,10 +2,8 @@ import { write } from "fast-csv";
 import fs from "fs";
 import csv from "csv-parser";
 import { BlockData, OutputDataSchemaRow } from "./sdk/types";
-import { getUserTVLLegacyByBlock } from "./sdk/tvl";
 import { getUserStakeByBlock } from "./sdk/stake";
 import { getUserLPByBlock } from "./sdk/lp";
-import { getUserTVLFoxyByBlock } from "./sdk/foxy";
 
 const readBlocksFromCSV = async (filePath: string): Promise<BlockData[]> => {
   const blocks: BlockData[] = [];
