@@ -228,15 +228,19 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
   console.log(blocks);
   const allCsvRows: any[] = []; // Array to accumulate CSV rows for all blocks
 
-  for (const block of blocks) {
-      try {
-          const result = await getUserTVLByBlock(block);
-          for(let i = 0; i < result.length; i++){
-            allCsvRows.push(result[i])
-          }
-      } catch (error) {
-          console.error(`An error occurred for block ${block}:`, error);
+  for (let block of blocks) {
+    try {
+      if (block <= 12028521) {
+        block = 12030222;
       }
+      console.log(`Running for block number: ${block}`)
+      const result = await getUserTVLByBlock(block);
+      for (let i = 0; i < result.length; i++) {
+        allCsvRows.push(result[i]);
+      }
+    } catch (error) {
+      console.error(`An error occurred for block ${block}:`, error);
+    }
   }
   await new Promise((resolve, reject) => {
     const ws = fs.createWriteStream(`outputData.csv`, { flags: 'w' });
