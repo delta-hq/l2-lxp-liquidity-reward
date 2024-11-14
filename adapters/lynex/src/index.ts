@@ -230,10 +230,10 @@ readBlocksFromCSV('hourly_blocks.csv').then(async (blocks: any[]) => {
 
   for (let block of blocks) {
     try {
-      if (block <= 12028521) {
-        block = 12030222;
+      if (block.blockNumber <= 12028521) {
+        block.blockNumber = 12030222
+        block.blockTimestamp = 1731545998
       }
-      console.log(`Running for block number: ${block}`)
       const result = await getUserTVLByBlock(block);
       for (let i = 0; i < result.length; i++) {
         allCsvRows.push(result[i]);
