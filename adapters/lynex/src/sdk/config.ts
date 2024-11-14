@@ -10,7 +10,7 @@ export const V3_SUBGRAPH_URL =
 
 export const client = createPublicClient({
   chain: linea,
-  transport: http(`https://linea-mainnet.infura.io/v3/${process.env.OPENBLOCK_LINEA_INFURA_API_KEY}`, {
+  transport: http(`https://linea-mainnet.infura.io/v3/${process.env.OPENBLOCK_LINEA_INFURA_API_KEY2}`, {
     retryCount: 5,
     timeout: 60_000,
   }),
