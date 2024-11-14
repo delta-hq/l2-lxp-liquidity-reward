@@ -41,14 +41,14 @@ const getV2PositionReserves = (position: V2Position) => {
 }
 
 export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<UserPosition[]> => {
-    const result: UserPosition[] = []
+    let result: UserPosition[] = []
 
     let skip = 0
     let fetchNext = true
     let lastLiquidityTokenBalance = '0.000000000000000001'
-    const uniqueMap = new Map<string, number>();
+    const uniqueMap = new Set<string>();
     while (fetchNext) {
-        // console.log(`fetching SyncSwap liquidityPositions size:${uniqueMap.size}, lastLiquidityTokenBalance: ${lastLiquidityTokenBalance}`)
+        console.log(`fetching SyncSwap liquidityPositions size:${uniqueMap.size}, lastLiquidityTokenBalance: ${lastLiquidityTokenBalance}`)
         const query = `query {
             liquidityPositions(
                 first: 1000,
@@ -83,36 +83,36 @@ export const getV2UserPositionsAtBlock = async (blockNumber: number): Promise<Us
             }
         }`
 
-        const response = await fetch(V2_SUBGRAPH_URL, {
-            method: "POST",
-            body: JSON.stringify({ query }),
-            headers: { "Content-Type": "application/json" },
-        })
-        const jsonData = await response.json();
+        const jsonData = await retry(() => {
+            return fetch(V2_SUBGRAPH_URL, {
+                method: "POST",
+                body: JSON.stringify({ query }),
+                headers: { "Content-Type": "application/json" },
+            }).then(res => res.json());
+        }, 10);
 
         const liquidityPositions: V2Position[] = [];
-        if(jsonData.data.hasOwnProperty('liquidityPositions')) {
+        if(jsonData.hasOwnProperty('data') && jsonData.data.hasOwnProperty('liquidityPositions')) {
             liquidityPositions.push(...jsonData.data.liquidityPositions)
         }
-        result.push(...liquidityPositions.filter(lp => !uniqueMap.has(lp['id']) && uniqueMap.set(lp['id'], 1)).map((position: V2Position) => {
+        result.push(...liquidityPositions.filter(lp => !uniqueMap.has(lp['id']) && uniqueMap.add(lp['id'])).map((position: V2Position) => {
             const { reserve0, reserve1 } = getV2PositionReserves(position)
             return {
-                user: position.user.id,
-                token0: {
-                    address: position.pair.token0.id,
-                    balance: reserve0,
-                    symbol: position.pair.token0.symbol,
-                    usdPrice: +position.pair.token0Price
-                },
-                token1: {
-                    address: position.pair.token1.id,
-                    balance: reserve1,
-                    symbol: position.pair.token1.symbol,
-                    usdPrice: +position.pair.token1Price
-                }
-        }
-        }))
-
+                    user: position.user.id,
+                    token0: {
+                        address: position.pair.token0.id,
+                        balance: reserve0,
+                        symbol: position.pair.token0.symbol,
+                        usdPrice: position.pair.token0Price
+                    },
+                    token1: {
+                        address: position.pair.token1.id,
+                        balance: reserve1,
+                        symbol: position.pair.token1.symbol,
+                        usdPrice: position.pair.token1Price
+                    }
+                } as UserPosition
+        }));
         if (liquidityPositions.length < 1000) {
             fetchNext = false;
         } else {
@@ -134,4 +134,20 @@ export const getTimestampAtBlock = async (blockNumber: number) => {
         blockNumber: BigInt(blockNumber),
     });
     return Number(block.timestamp * 1000n);
+};
+
+export const retry = function<T> (promiseFn: () => Promise<T>, times = 3): Promise<Awaited<T>> {
+    // eslint-disable-next-line no-async-promise-executor
+    return new Promise(async (resolve, reject) => {
+        while (times--) {
+            try {
+
+                const ret = await promiseFn();
+                resolve(ret);
+                break;
+            } catch (error) {
+                if (!times) reject(error);
+            }
+        }
+    });
 };
