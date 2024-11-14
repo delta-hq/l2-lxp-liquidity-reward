@@ -132,12 +132,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
     )}`
   );
 
-  if (totalRsEthSaveToCSV > rsEthTotalSupply) {
-    throw new Error(
-      `The total balance in CSV ${totalRsEthSaveToCSV} can not more than total supply ${rsEthTotalSupply}`
-    );
-  }
-
   return csvRows;
 };
 
