@@ -10,6 +10,8 @@ import {
 import { client, PROBLEM_POOLS } from "./config";
 import lensABI from "./abis/PairAPIABI.json";
 import veLYNXAbi from "./abis/veLYNX.json";
+import { Gauge } from "./subgraphDetails";
+import { chunk, flatten, groupBy } from 'lodash';
 
 export const LENS_ADDRESS = "0x6c84329CC8c37376eb32db50a17F3bFc917c3665"; // PairAPI
 export const VE_LYNX_ADDRESS = "0x8d95f56b0bac46e8ac1d3a3f12fb1e5bc39b4c0c"; // veLYNX
@@ -53,6 +55,10 @@ export interface LensResponseWithBlock {
   result: LensResponse;
 }
 
+export interface PoolsLensResponseWithBlock {
+  [key: string]: LensResponse[];
+}
+
 export interface VoteRequest {
   userAddress: string;
   amount: bigint;
@@ -92,6 +98,41 @@ export const fetchUserPools = async (
   }
     return { result: { ...r.result, userAddress } };
   }) as LensResponseWithBlock[];
+};
+
+export const fetchPools = async (
+  blockNumber: bigint,
+  allGauges: Gauge[],
+): Promise<PoolsLensResponseWithBlock> => {
+  const publicClient = client;
+  const validPools = allGauges.filter(
+    (gauge) =>
+      PROBLEM_POOLS[gauge.pool] === undefined ||
+      PROBLEM_POOLS[gauge.pool] > blockNumber,
+  );
+
+  const calls = validPools.map((gauge: Gauge) => {
+    return {
+      address: LENS_ADDRESS,
+      name: 'getPair',
+      params: [gauge.pool, '0x0000000000000000000000000000000000000000'],
+    };
+  });
+
+  const res = await multicall(
+    publicClient,
+    lensABI as Abi,
+    calls,
+    blockNumber,
+  );
+
+  const mapped = res.map((r: any) => {
+    return { ...r.result, pair_address: r.result.pair_address.toLowerCase() };
+  });
+
+  const grouped = groupBy(mapped, 'pair_address');
+
+  return grouped;
 };
 
 export const fetchUserVotes = async (
@@ -151,6 +192,81 @@ export const fetchUserVotes = async (
     return { result: { ...r.result, userAddress } };
   }) as VoteResponse[];
 };
+
+export const fetchVeLynx = async (
+  blockNumber: bigint,
+): Promise<VoteResponse[]> => {
+  const publicClient = client;
+
+  const totalNftIdsCall =  await multicall(
+    publicClient,
+    veLYNXAbi as Abi,
+    [
+      {
+        address: VE_LYNX_ADDRESS,
+        name: "totalNftsMinted",
+      },
+    ],
+    blockNumber
+  );
+
+  const totalNftIds = parseInt(totalNftIdsCall[0].result as string)
+
+  const calls = [];
+  for (let i = 2; i <= totalNftIds; i++) {
+    calls.push({
+      address: VE_LYNX_ADDRESS,
+      name: "ownerOf",
+      params: [i],
+    });
+  }
+
+  const addressCalls = await multicallChunk(
+    publicClient,
+    veLYNXAbi as Abi,
+    calls,
+    blockNumber,
+    3000
+  );
+
+  const detailsCall = addressCalls.map((call, i) => {
+    return {
+      address: VE_LYNX_ADDRESS,
+      name: "lockDetails",
+      params: [i + 2],
+    };
+  });
+
+  const res = (await multicallChunk(
+    publicClient,
+    veLYNXAbi as Abi,
+    detailsCall,
+    blockNumber,
+    3000
+  )) as any;
+  const result = res.map((r: any, i: number) => {
+    return { result: { ...r.result, userAddress: addressCalls[i].result } };
+  }) as VoteResponse[];
+  return result
+};
+
+async function multicallChunk(
+  publicClient: PublicClient,
+  abi: Abi,
+  calls: any[],
+  blockNumber: bigint,
+  size = 100
+) {
+  const chunked = chunk(calls, size);
+  const callsPromises = [];
+  for (let i = 0; i < chunked.length; i++) {
+    callsPromises.push(
+      multicall(publicClient, abi, chunked[i], blockNumber),
+    );
+  }
+  const res = await Promise.all(callsPromises);
+  return flatten(res);
+}
 
 function multicall(
   publicClient: PublicClient,

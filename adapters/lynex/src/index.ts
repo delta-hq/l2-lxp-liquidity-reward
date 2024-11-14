@@ -1,12 +1,12 @@
 import fs from "fs";
 import { write } from "fast-csv";
 import csv from "csv-parser";
-import { getTimestampAtBlock, getUserAddresses } from "./sdk/subgraphDetails";
 import {
-  LYNX_ADDRESS,
-  fetchUserPools,
-  fetchUserVotes,
-} from "./sdk/lensDetails";
+  getGauges,
+  getTimestampAtBlock,
+  getUserAddresses,
+} from "./sdk/subgraphDetails";
+import { LYNX_ADDRESS, fetchPools, fetchVeLynx } from "./sdk/lensDetails";
 import BigNumber from "bignumber.js";
 import { BlockData, OutputSchemaRow } from "./sdk/types";
 import {
@@ -80,64 +80,38 @@ export const getUserStakedTVLByBlock = async ({
   blockTimestamp,
 }: BlockData): Promise<OutputSchemaRow[]> => {
   const result: OutputSchemaRow[] = [];
-  const [userAddresses] = await Promise.all([getUserAddresses(blockNumber)]);
+  const [userAddresses, allGauges] = await Promise.all([
+    getUserAddresses(blockNumber),
+    getGauges(blockNumber),
+  ]);
   console.log(`Block: ${blockNumber}`);
   console.log("UserAddresses: ", userAddresses.length);
+  console.log("Gauges: ", allGauges.length);
+
+  const pools = await fetchPools(BigInt(blockNumber), allGauges);
 
   const tokenBalanceMap = {} as {
     [userAddress: string]: { [tokenAddress: string]: BigNumber };
   };
 
-  let userPoolFetch = [];
-  let userVotesFetch = [];
-
-  const batchSize = 100;
-  let position = 0;
-  let userFetchResult: any = [];
-  let userVotesResult: any = [];
+  let userVotesResult = await fetchVeLynx(BigInt(blockNumber));
 
   for (const user of userAddresses) {
-    userPoolFetch.push(
-      fetchUserPools(BigInt(blockNumber), user.id, user.pools)
-    );
-    userVotesFetch.push(fetchUserVotes(BigInt(blockNumber), user.id));
-    if (position % batchSize === 0) {
-      userFetchResult = [
-        ...userFetchResult,
-        ...(await Promise.all(userPoolFetch)),
-      ];
-      userPoolFetch = [];
-      userVotesResult = [
-        ...userVotesResult,
-        ...(await Promise.all(userVotesFetch)),
-      ];
-      userVotesFetch = [];
-      console.timeEnd("Batch");
-      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
-      await delay(60000)
-    }
-    position++;
-  }
-
-  userVotesResult = [
-    ...userVotesResult,
-    ...(await Promise.all(userVotesFetch)),
-  ];
-
-  userFetchResult = [...userFetchResult, ...(await Promise.all(userPoolFetch))];
-
-  for (const userFetchedPools of userFetchResult) {
-    for (const userPool of userFetchedPools) {
-      const user_address = userPool.result.userAddress.toLowerCase();
-      const totalLPBalance = userPool.result.account_gauge_balance;
+    for (const userPool of user.liquidityPositions) {
+      const currentPool = pools[userPool.gauge.pool.toLowerCase()]
+        ? pools[userPool.gauge.pool.toLowerCase()][0]
+        : undefined;
+      if (currentPool) {
+        const user_address = user.id.toLowerCase();
+        const totalLPBalance = BigInt(userPool.amount);
       const total0 =
-        (totalLPBalance * userPool.result.reserve0) /
-        userPool.result.total_supply;
+          (totalLPBalance * BigInt(currentPool.reserve0)) /
+          BigInt(currentPool.total_supply);
       const total1 =
-        (totalLPBalance * userPool.result.reserve1) /
-        userPool.result.total_supply;
-      const token0Address = userPool.result.token0.toLowerCase();
-      const token1Address = userPool.result.token1.toLowerCase();
+          (totalLPBalance * BigInt(currentPool.reserve1)) /
+          BigInt(currentPool.total_supply);
+        const token0Address = currentPool.token0.toLowerCase();
+        const token1Address = currentPool.token1.toLowerCase();
 
       // Aggregate tokens
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
@@ -148,18 +122,18 @@ export const getUserStakedTVLByBlock = async ({
       tokenBalanceMap[user_address][token1Address] = BigNumber(
         tokenBalanceMap[user_address][token1Address] ?? 0
       ).plus(total1.toString());
+      }
     }
   }
 
-  for (const userFecthedVotes of userVotesResult) {
-    for (const userVote of userFecthedVotes) {
+  for (const userVote of userVotesResult) {
+    if (!userVote.result?.userAddress) continue;
       const user_address = userVote.result.userAddress.toLowerCase();
       const token0Address = LYNX_ADDRESS.toLowerCase();
       tokenBalanceMap[user_address] = tokenBalanceMap[user_address] ?? {};
       tokenBalanceMap[user_address][token0Address] = BigNumber(
         tokenBalanceMap[user_address][token0Address] ?? 0
-      ).plus(userVote.result.amount?.toString() ?? '0');
-    }
+    ).plus(userVote.result.amount?.toString() ?? "0");
   }
 
   Object.entries(tokenBalanceMap).forEach(([user_address, balances]) => {
