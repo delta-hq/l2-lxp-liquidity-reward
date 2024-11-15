@@ -11,6 +11,16 @@ import {
   SPECTRA_YT_ADDRESS
 } from "./spectra";
 import { agEthToRsEth, rsEthToAgEth } from "./fetcher";
+import { getYayAgEthHodlers } from "./yay";
+import {
+  GraphQLQuery,
+  PoolPositionSubgraphEntry,
+  UserBalanceSubgraphEntry,
+  UserPositionSubgraphEntry
+} from "./models";
+import { getCamelotAgEthHodlers } from "./camelot";
+import { getNileAgEthHodlers } from "./nile";
+import { getNuriAgEthHodlers } from "./nuri";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
@@ -71,16 +81,6 @@ export async function subgraphFetchOne<T>(
   return resp[collection];
 }
 
-interface GraphQLQuery {
-  query: string;
-  collection: string;
-}
-
-export type UserBalanceSubgraphEntry = {
-  id: string;
-  balance: string;
-};
-
 export const USER_BALANCES_QUERY: GraphQLQuery = {
   query: gql`
     query PositionsQuery($block: Int, $lastId: ID!, $blacklisted: [ID!]!) {
@@ -100,10 +100,11 @@ export const USER_BALANCES_QUERY: GraphQLQuery = {
 };
 
 export async function getAllAgEthHodlers(
-  blockNumber: number,
+  ethBlockNumber: number,
+  lineaBlockNumber: number,
   timestamp: number
 ) {
-  if (blockNumber < AGETH_BLOCK) {
+  if (ethBlockNumber < AGETH_BLOCK) {
     return [];
   }
   const positions = await subgraphFetchAllById<UserBalanceSubgraphEntry>(
@@ -111,14 +112,29 @@ export async function getAllAgEthHodlers(
     USER_BALANCES_QUERY.query,
     USER_BALANCES_QUERY.collection,
     {
-      block: blockNumber,
+      block: ethBlockNumber,
       lastId: "0x0000000000000000000000000000000000000000",
       blacklisted: Blacklisted
     }
   );
 
-  const pendleShares = await fetchAllPendleShare(blockNumber, timestamp);
-  const balancerShares = await fetchAllBalancerShare(blockNumber);
+  const [
+    pendleShares,
+    balancerShares,
+    yayShares,
+    camelotShares,
+    nileShares,
+    nuriShares,
+    spectraShare
+  ] = await Promise.all([
+    fetchAllPendleShare(ethBlockNumber, timestamp),
+    fetchAllBalancerShare(ethBlockNumber),
+    getYayAgEthHodlers(ethBlockNumber),
+    getCamelotAgEthHodlers(timestamp),
+    getNileAgEthHodlers(lineaBlockNumber),
+    getNuriAgEthHodlers(timestamp),
+    fetchSpectraPoolShares(ethBlockNumber)
+  ]);
 
   let agETHHodlers = positions.reduce((acc, s) => acc + BigInt(s.balance), 0n);
 
@@ -132,7 +148,6 @@ export async function getAllAgEthHodlers(
     new BigNumber(0)
   );
 
-  let spectraShare = await fetchSpectraPoolShares(blockNumber);
   let spectraShare_ = spectraShare.reduce(
     (acc, s) => acc.plus(BigNumber(s.balance)),
     new BigNumber(0)
@@ -142,6 +157,22 @@ export async function getAllAgEthHodlers(
     spectraShare_.toFixed().toString()
   );
 
+  const nuriAgETHBalance = nuriShares
+    .reduce((acc, s) => acc.plus(BigNumber(s.balance)), new BigNumber(0))
+    .toFixed()
+    .toString();
+  const nileAgETHBalance = nileShares
+    .reduce((acc, s) => acc.plus(BigNumber(s.balance)), new BigNumber(0))
+    .toFixed()
+    .toString();
+  const camelotAgETHBalance = camelotShares
+    .reduce((acc, s) => acc.plus(BigNumber(s.balance)), new BigNumber(0))
+    .toFixed()
+    .toString();
+  const yayAgETHBalance = yayShares
+    .reduce((acc, s) => acc.plus(BigNumber(s.balance)), new BigNumber(0))
+    .toFixed()
+    .toString();
   console.log(
     `Hodlers agETH: ${ethers.utils.formatEther(agETHHodlers.toString())}`
   );
@@ -154,6 +185,27 @@ export async function getAllAgEthHodlers(
       .toString()} `
   );
   console.log(`Spectra agETH: ${spectraAgETHBalance.toString()} `);
+
+  console.log(
+    `Nuri agETH: ${ethers.utils.formatEther(nuriAgETHBalance.toString())}`
+  );
+
+  console.log(
+    `Nile agETH: ${ethers.utils.formatEther(nileAgETHBalance.toString())}`
+  );
+
+  console.log(
+    `Camelot agETH: ${ethers.utils.formatEther(camelotAgETHBalance.toString())}`
+  );
+
+  console.log(
+    `yay agETH: ${ethers.utils.formatEther(yayAgETHBalance.toString())}`
+  );
+
+  positions.push(...yayShares);
+  positions.push(...nileShares);
+  positions.push(...nuriShares);
+  positions.push(...camelotShares);
 
   positions.push(
     ...pendleShares.map((e) => {

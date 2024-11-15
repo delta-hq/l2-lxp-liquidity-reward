@@ -14,12 +14,27 @@ export const SPECTRA_START_BLOCK = 20521549;
 export const BALANCER_START_BLOCK = 20520908;
 export const PENDLE_START_BLOCK = 20561468;
 export const AGETH_BLOCK = 20483695;
+export const YAY_START_BLOCK = 20833064;
+
+export const NURI_START_TIMESTAMP = 1727716475; // scroll block 9751486 Sep-30-2024 05:14:35 PM UTC
+export const NILE_START_BLOCK = 10144961; //  linea block 10144961 Sep-30-2024 04:29:28 PM UTC
+export const CAMELOT_START_TIMESTAMP = 1727719180; // arb block 258999746 Sep-30-2024 05:59:40 PM +UTC
 
 const ethProvider = new ethers.providers.JsonRpcProvider(
   "https://eth.llamarpc.com"
 );
 
+const scrollProvider = new ethers.providers.JsonRpcProvider(
+  "https://rpc.scroll.io/"
+);
+
+const arbProvider = new ethers.providers.JsonRpcProvider(
+  "https://arb1.arbitrum.io/rpc"
+);
+
 export const dater = new EthDater(ethProvider);
+export const scrollDater = new EthDater(scrollProvider);
+export const arbDater = new EthDater(arbProvider);
 
 export const providerLinea = new ethers.providers.JsonRpcProvider(
   "https://rpc.linea.build"

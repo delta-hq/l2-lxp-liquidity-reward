@@ -13,7 +13,8 @@ import {
 import { rsETH } from "./lib/utils";
 import BigNumber from "bignumber.js";
 import { ethers } from "ethers";
-import { getAllAgEthHodlers, UserBalanceSubgraphEntry } from "./lib/query";
+import { getAllAgEthHodlers } from "./lib/query";
+import { UserBalanceSubgraphEntry } from "./lib/models";
 interface BlockData {
   blockTimestamp: number;
   blockNumber: number;
@@ -72,7 +73,7 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       getRsEthTVLInUSD(blockNumber),
       agEthToRsEth(ethBlockNumber),
       agETHTotalLiquid(ethBlockNumber),
-      getAllAgEthHodlers(ethBlockNumber, blockTimestamp)
+      getAllAgEthHodlers(ethBlockNumber, blockNumber, blockTimestamp)
     ]
   );
 
@@ -130,12 +131,6 @@ export const getUserTVLByBlock = async (blocks: BlockData) => {
       rsEthTotalSupply.toString()
     )}`
   );
-
-  if (totalRsEthSaveToCSV > rsEthTotalSupply) {
-    throw new Error(
-      `The total balance in CSV ${totalRsEthSaveToCSV} can not more than total supply ${rsEthTotalSupply}`
-    );
-  }
 
   return csvRows;
 };
