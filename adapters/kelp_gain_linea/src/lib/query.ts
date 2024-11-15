@@ -11,16 +11,16 @@ import {
   SPECTRA_YT_ADDRESS
 } from "./spectra";
 import { agEthToRsEth, rsEthToAgEth } from "./fetcher";
-import { getYayAgEthHodlers } from "./yay";
+import { getYayAgEthHodlers, YAY_LP_ADDRESS } from "./yay";
 import {
   GraphQLQuery,
   PoolPositionSubgraphEntry,
   UserBalanceSubgraphEntry,
   UserPositionSubgraphEntry
 } from "./models";
-import { getCamelotAgEthHodlers } from "./camelot";
-import { getNileAgEthHodlers } from "./nile";
-import { getNuriAgEthHodlers } from "./nuri";
+import { CAMELOT_AGETH_RSETH_POOL, getCamelotAgEthHodlers } from "./camelot";
+import { getNileAgEthHodlers, NILE_AGETH_RSETH_POOL } from "./nile";
+import { getNuriAgEthHodlers, NURI_AGETH_RSETH_POOL } from "./nuri";
 
 const MULTICALL_BATCH_SIZE = 1000;
 
@@ -29,7 +29,11 @@ const Blacklisted = [
   balancerVault,
   pendleSYAgETH,
   SPECTRA_LP_ADDRESS,
-  SPECTRA_YT_ADDRESS
+  SPECTRA_YT_ADDRESS,
+  YAY_LP_ADDRESS,
+  CAMELOT_AGETH_RSETH_POOL,
+  NURI_AGETH_RSETH_POOL,
+  NILE_AGETH_RSETH_POOL
 ];
 export const agETHSubgraph =
   "https://api.studio.thegraph.com/query/70817/ageth-lp/version/latest";
