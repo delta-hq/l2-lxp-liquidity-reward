@@ -7,7 +7,8 @@ import {
 } from "./v3query";
 import { NILE_START_BLOCK } from "./utils";
 
-const NILE_AGETH_RSETH_POOL = "0x6d1ff6a6ea1b54dacd9609949593e7244aea8a4c";
+export const NILE_AGETH_RSETH_POOL =
+  "0x6d1ff6a6ea1b54dacd9609949593e7244aea8a4c";
 
 const NILE_SUBGRAPH_BY_DEPLOY_ID =
   "https://api.thegraph.com/subgraphs/id/QmPWcLm9K92GkSwD4UtikFqpHbrHgC2tRMUEiaZ8B7p2Xb";

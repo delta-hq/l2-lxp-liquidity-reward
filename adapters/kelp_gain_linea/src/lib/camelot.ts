@@ -10,7 +10,8 @@ import { getArbBlock } from "./fetcher";
 
 const CAMELOT_SUBGRAPH_BY_GATEWAY =
   "https://api.thegraph.com/subgraphs/id/QmUjsQpF3mewR2nNyWkpCeKqosaNbRefeqiJJtdEoHQpC7";
-const CAMELOT_AGETH_RSETH_POOL = "0x8039cd846fd1f1fe3f560bdbea5f799e499f7873";
+export const CAMELOT_AGETH_RSETH_POOL =
+  "0x8039cd846fd1f1fe3f560bdbea5f799e499f7873";
 
 export async function getCamelotAgEthHodlers(timestamp: number) {
   if (timestamp < CAMELOT_START_TIMESTAMP) {

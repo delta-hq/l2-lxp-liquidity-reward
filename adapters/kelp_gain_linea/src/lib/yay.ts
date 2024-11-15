@@ -3,7 +3,7 @@ import { subgraphFetchAllById } from "./query";
 import { gql } from "graphql-request";
 import { YAY_START_BLOCK } from "./utils";
 
-export const YAY_LP_ADDRESS = "0x0341d2c2CE65B62aF8887E905245B8CfEA2a3b97";
+export const YAY_LP_ADDRESS = "0x0341d2c2ce65b62af8887e905245b8cfea2a3b97";
 
 export async function getYayAgEthHodlers(block: number) {
   if (block < YAY_START_BLOCK) {

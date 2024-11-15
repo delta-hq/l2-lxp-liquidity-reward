@@ -8,7 +8,8 @@ import {
 import { NURI_START_TIMESTAMP } from "./utils";
 import { getScrollBlock } from "./fetcher";
 
-const NURI_AGETH_RSETH_POOL = "0x107d317617e82f1871906cf6fee702a5daa4d135";
+export const NURI_AGETH_RSETH_POOL =
+  "0x107d317617e82f1871906cf6fee702a5daa4d135";
 const API_KEY = process.env.KELPGAIN_SUBGRAPH_API_KEY || "";
 const NURI_SUBGRAPH_BY_GATEWAY = `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/Eqr2CueSusTohoTsXCiQgQbaApjuK2ikFvpqkVTPo1y5`;
 
