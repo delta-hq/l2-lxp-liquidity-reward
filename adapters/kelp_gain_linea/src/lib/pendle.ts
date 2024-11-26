@@ -5,9 +5,14 @@ import { PENDLE_START_BLOCK, pendleSYAgETH } from "./utils";
 const PendleURL =
   "https://app.sentio.xyz/api/v1/analytics/kelpdao/pendle_mainnet_ageth_v2/sql/execute";
 
+const PendleJuneURL =
+  "https://app.sentio.xyz/api/v1/analytics/kelpdao/pendle-ageth-eth-june25/sql/execute";
+
 const API_KEY = process.env.KELPDAO_SENTIO_API_KEY || "";
 
 const EARLIEST_TIME = 1724122800;
+const EARLIEST_TIME_JUNE = 1731484800;
+
 export async function fetchAllPendleShare(
   blockNumber: number,
   timeStamp: number
@@ -15,16 +20,57 @@ export async function fetchAllPendleShare(
   if (blockNumber <= PENDLE_START_BLOCK || timeStamp < EARLIEST_TIME) {
     return [];
   }
+
+  const totalShares: Row[] = [];
+  const pendeShares = await _fetchAllPendleShare(
+    timeStamp,
+    EARLIEST_TIME,
+    PendleURL,
+    3
+  );
+  const pendeJuneShares = await _fetchAllPendleShare(
+    timeStamp,
+    EARLIEST_TIME_JUNE,
+    PendleJuneURL,
+    2
+  );
+
+  totalShares.push(...pendeShares);
+  totalShares.push(...pendeJuneShares);
+
+  const shares = await convertLpToAgETH(blockNumber, totalShares);
+
+  if (shares.length == 0) {
+    throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
+  }
+  return shares;
+}
+
+export async function _fetchAllPendleShare(
+  timeStamp: number,
+  earliestTime: number,
+  url: string,
+  version: number
+) {
+  if (timeStamp < earliestTime) {
+    return [];
+  }
   const dataSize = 20000;
   let page = 0;
 
-  let hoursPassed = Math.round((timeStamp - EARLIEST_TIME) / 3600);
+  let hoursPassed = Math.round((timeStamp - earliestTime) / 3600);
 
-  const totalShares = [];
+  const totalShares: Row[] = [];
   while (true) {
-    const postData = apiPostData(hoursPassed, page, dataSize);
+    const postData = apiPostData(
+      hoursPassed,
+      page,
+      dataSize,
+      earliestTime,
+      version
+    );
 
-    const responseRaw = await post(PendleURL, postData);
+    const responseRaw = await post(url, postData);
     const result: Result = responseRaw.result;
 
     page = page + 1;
@@ -37,12 +83,7 @@ export async function fetchAllPendleShare(
     totalShares.push(...result.rows);
   }
 
-  const shares = await convertLpToAgETH(blockNumber, totalShares);
-
-  if (shares.length == 0) {
-    throw new Error(`Empty share pendle BLOCK: ${blockNumber}`);
-  }
-  return shares;
+  return totalShares;
 }
 
 async function convertLpToAgETH(
@@ -64,8 +105,14 @@ async function convertLpToAgETH(
   });
 }
 
-function apiPostData(hour: number, page: number, dataSize: number) {
-  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - ${EARLIEST_TIME}) / 3600) as hour FROM UserHourlyShare WHERE hour = ${hour} LIMIT ${dataSize} OFFSET ${
+function apiPostData(
+  hour: number,
+  page: number,
+  dataSize: number,
+  earliestTime: number,
+  version: number
+) {
+  const queryStr = `SELECT DISTINCT user, share, recordedAtBlock as block_number, ROUND((recordedAtTimestamp - ${earliestTime}) / 3600) as hour FROM UserHourlyShare WHERE hour = ${hour} LIMIT ${dataSize} OFFSET ${
     page * dataSize
   }`;
 
@@ -76,7 +123,7 @@ function apiPostData(hour: number, page: number, dataSize: number) {
       sql: queryStr,
       size: dataSize
     },
-    version: 3
+    version: version
   };
 }
 
