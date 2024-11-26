@@ -32,7 +32,8 @@ const Blacklisted = [
   SPECTRA_YT_ADDRESS
 ];
 export const agETHSubgraph =
-  "https://api.studio.thegraph.com/query/70817/ageth-lp/version/latest";
+  "https://api.thegraph.com/subgraphs/id/QmQtVYZ1DLfEJBHVfbCkHF2pbuQRnH1U88VGX3WBWgxoii";
+//
 interface IDwise {
   id: string;
 }
