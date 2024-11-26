@@ -24,13 +24,13 @@ export async function fetchAllPendleShare(
   const totalShares: Row[] = [];
   const pendeShares = await _fetchAllPendleShare(
     timeStamp,
-    EARLIEST_TIME_JUNE,
+    EARLIEST_TIME,
     PendleURL,
     3
   );
   const pendeJuneShares = await _fetchAllPendleShare(
     timeStamp,
-    EARLIEST_TIME,
+    EARLIEST_TIME_JUNE,
     PendleJuneURL,
     2
   );
