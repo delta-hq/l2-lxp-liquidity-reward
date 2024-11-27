@@ -6,11 +6,10 @@ import {
   getToken0And1
 } from "./v3query";
 import { NILE_START_BLOCK } from "./utils";
+import { API_KEY } from "./nuri";
 
 const NILE_AGETH_RSETH_POOL = "0x6d1ff6a6ea1b54dacd9609949593e7244aea8a4c";
-
-const NILE_SUBGRAPH_BY_DEPLOY_ID =
-  "https://api.thegraph.com/subgraphs/id/QmPWcLm9K92GkSwD4UtikFqpHbrHgC2tRMUEiaZ8B7p2Xb";
+const NILE_SUBGRAPH_BY_DEPLOY_ID = `https://gateway.thegraph.com/api/${API_KEY}/subgraphs/id/8KNrMAiPqegNtKCP8RdhF8uaPyt8vzKkxuYVzbtHTMQk`;
 
 export async function getNileAgEthHodlers(lineaBlockNumber: number) {
   if (lineaBlockNumber < NILE_START_BLOCK) {
