@@ -13,7 +13,7 @@ const axiosInstance = rateLimit(axios.create(), {
 });
 
 const queryURL =
-  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-linea/1.0.0/gn";
+  "https://api.goldsky.com/api/public/project_clsk1wzatdsls01wchl2e4n0y/subgraphs/zerolend-obl-linea/1.0.1/gn";
 
 export const getUserTVLLegacyByBlock = async (
   blocks: BlockData
